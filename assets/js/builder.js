@@ -525,6 +525,7 @@
 				if ( ! name ) { return; }
 
 				var slug = name.toLowerCase().replace( /\s+/g, '-' ).replace( /[^a-z0-9-]/g, '' );
+				if ( ! slug ) { return; }
 				$( '#naano-section-checkboxes' ).append(
 					'<label class="naano-checkbox-label">' +
 					'<input type="checkbox" name="sections[]" value="' + slug + '" checked> ' +
@@ -532,6 +533,13 @@
 					'</label>'
 				);
 				$( '#naano-custom-section-input' ).val( '' );
+			} );
+
+			$( document ).on( 'keydown', '#naano-custom-section-input', function ( e ) {
+				if ( e.key === 'Enter' ) {
+					e.preventDefault();
+					$( '#naano-add-custom-section' ).trigger( 'click' );
+				}
 			} );
 		},
 

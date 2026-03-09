@@ -50,11 +50,31 @@ class Naano_Ajax_Handler {
 		self::verify_nonce();
 
 		$page_id     = self::get_int( 'page_id' );
+		$page_name   = sanitize_text_field( wp_unslash( $_POST['page_name'] ?? '' ) );
 		$description = sanitize_textarea_field( wp_unslash( $_POST['description'] ?? '' ) );
 		$sections    = array_map( 'sanitize_text_field', (array) ( $_POST['sections'] ?? [] ) );
 
-		if ( ! $page_id || ! $description || empty( $sections ) ) {
+		if ( ! $description || empty( $sections ) ) {
 			wp_send_json_error( [ 'message' => __( 'Missing required fields.', 'naano-ai-website-builder' ) ] );
+		}
+
+		// Create a new WordPress page when none exists yet.
+		if ( ! $page_id ) {
+			if ( ! current_user_can( 'edit_pages' ) ) {
+				wp_send_json_error( [ 'message' => __( 'Insufficient permissions to create pages.', 'naano-ai-website-builder' ) ] );
+			}
+
+			$new_id = wp_insert_post( [
+				'post_title'  => $page_name ?: __( 'Untitled', 'naano-ai-website-builder' ),
+				'post_status' => 'draft',
+				'post_type'   => 'page',
+			] );
+
+			if ( is_wp_error( $new_id ) ) {
+				wp_send_json_error( [ 'message' => $new_id->get_error_message() ] );
+			}
+
+			$page_id = $new_id;
 		}
 
 		try {
@@ -94,6 +114,7 @@ class Naano_Ajax_Handler {
 			$conversation->add_message( $page_id, 'assistant', $raw_html );
 
 			wp_send_json_success( [
+				'page_id'  => $page_id,
 				'sections' => $parsed,
 				'html'     => $section_manager->get_assembled_html( $page_id ),
 			] );
