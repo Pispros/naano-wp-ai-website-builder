@@ -25,6 +25,18 @@
 			// Activate full-screen layout.
 			$( 'body' ).addClass( 'naano-fullscreen' );
 
+			// Inject skeleton bars into the canvas placeholder for the generation animation.
+			$( '#naano-canvas-placeholder' ).append(
+				'<div class="naano-canvas-placeholder__skeleton" aria-hidden="true">' +
+				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--full"></div>' +
+				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--lg"></div>' +
+				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--md"></div>' +
+				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--full"></div>' +
+				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--sm"></div>' +
+				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--lg"></div>' +
+				'</div>'
+			);
+
 			NaanoBuilder._bindGenerationForm();
 			NaanoBuilder._bindActionBar();
 			NaanoBuilder._bindDrawer();
@@ -57,16 +69,32 @@
 				sections.push( $( this ).val() );
 			} );
 
+			var valid = true;
+
 			if ( ! description ) {
-				NaanoBuilder._toast( 'Please enter a site description.', 'error' );
-				return;
-			}
-			if ( sections.length === 0 ) {
-				NaanoBuilder._toast( 'Please select at least one section.', 'error' );
-				return;
+				$( '#naano-description-error' ).show();
+				$( '#naano-description' ).focus();
+				valid = false;
+			} else {
+				$( '#naano-description-error' ).hide();
 			}
 
+			if ( sections.length === 0 ) {
+				$( '#naano-sections-error' ).show();
+				if ( valid ) { $( '#naano-section-checkboxes' ).find( 'input' ).first().focus(); }
+				valid = false;
+			} else {
+				$( '#naano-sections-error' ).hide();
+			}
+
+			if ( ! valid ) { return; }
+
 			NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', true );
+
+			// Show animated skeleton in the canvas while the LLM is generating.
+			$( '#naano-canvas-placeholder' )
+				.show()
+				.addClass( 'naano-canvas-placeholder--loading' );
 
 			$.post( data.ajaxUrl, {
 				action:      'naano_generate_site',
@@ -78,6 +106,7 @@
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
+				$( '#naano-canvas-placeholder' ).removeClass( 'naano-canvas-placeholder--loading' );
 				if ( response.success ) {
 					NaanoBuilder.pageId = response.data.page_id || NaanoBuilder.pageId;
 
@@ -106,6 +135,7 @@
 			} )
 			.fail( function () {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
+				$( '#naano-canvas-placeholder' ).removeClass( 'naano-canvas-placeholder--loading' );
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
 		},
@@ -200,8 +230,9 @@
 
 			NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', true );
 
-			// Show loading overlay on the section inside the iframe.
+			// Show loading overlay on the section and dim the canvas.
 			NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: true } );
+			$( '#naano-live-iframe-wrap' ).addClass( 'naano-live-iframe-wrap--loading' );
 
 			$.post( data.ajaxUrl, {
 				action:      'naano_update_section',
@@ -212,6 +243,7 @@
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+				$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
 
 				if ( response.success ) {
 					var id   = response.data.section_id;
@@ -223,12 +255,19 @@
 						NaanoBuilder.sectionsData[ idx ].html = html;
 					}
 
-					// Real-time update: only replace this section inside the iframe.
+					// Live-update the section inside the iframe via postMessage.
+					// The [data-section] wrapper is always present (see _buildIframeSrcdoc),
+					// so the innerHTML swap is reliable without a full reload.
 					NaanoBuilder._iframePost( {
 						type:      'naano-update-section',
 						sectionId: id,
 						html:      html
 					} );
+
+					// Reset the edit panel so the user can start a fresh instruction.
+					$( '#naano-instruction' ).val( '' );
+					$( '#naano-add-url-form' ).hide();
+					NaanoBuilder._renderReferenceList( [] );
 
 					NaanoBuilder._toast( 'Section updated! ✨', 'success' );
 				} else {
@@ -239,6 +278,7 @@
 			} )
 			.fail( function () {
 				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+				$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
 				NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: false } );
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
@@ -521,18 +561,37 @@
 			} );
 
 			$( document ).on( 'click', '#naano-add-custom-section', function () {
-				var name = $( '#naano-custom-section-input' ).val().trim();
-				if ( ! name ) { return; }
+				var $input = $( '#naano-custom-section-input' );
+				var $error = $( '#naano-custom-section-error' );
+				var name   = $input.val().trim();
+
+				if ( ! name ) {
+					$error.show();
+					$input.focus();
+					return;
+				}
+				$error.hide();
 
 				var slug = name.toLowerCase().replace( /\s+/g, '-' ).replace( /[^a-z0-9-]/g, '' );
 				if ( ! slug ) { return; }
-				$( '#naano-section-checkboxes' ).append(
-					'<label class="naano-checkbox-label">' +
-					'<input type="checkbox" name="sections[]" value="' + slug + '" checked> ' +
-					$( '<span>' ).text( name ).html() +
-					'</label>'
+
+				var $label = $( '<label class="naano-checkbox-label naano-checkbox-label--custom">' );
+				$label.append(
+					$( '<input>', { type: 'checkbox', name: 'sections[]', value: slug, checked: true } ),
+					document.createTextNode( ' ' + name + ' ' ),
+					$( '<button>', {
+						type: 'button',
+						'class': 'naano-remove-custom-section',
+						title: 'Remove'
+					} ).text( '×' )
 				);
-				$( '#naano-custom-section-input' ).val( '' );
+				$( '#naano-section-checkboxes' ).append( $label );
+				$input.val( '' );
+			} );
+
+			$( document ).on( 'click', '.naano-remove-custom-section', function ( e ) {
+				e.preventDefault();
+				$( this ).closest( 'label' ).remove();
 			} );
 
 			$( document ).on( 'keydown', '#naano-custom-section-input', function ( e ) {
@@ -602,10 +661,36 @@
 			} );
 
 			$( document ).on( 'click', '#naano-add-new-section-btn', function () {
-				/* global prompt */
-				var name = window.prompt( data.strings.new_section_name );
-				if ( ! name ) { return; }
+				$( '#naano-add-new-section-btn' ).hide();
+				$( '#naano-new-section-form' ).show();
+				$( '#naano-new-section-name' ).val( '' ).focus();
+				$( '#naano-new-section-error' ).hide();
+			} );
+
+			$( document ).on( 'click', '#naano-cancel-new-section-btn', function () {
+				$( '#naano-new-section-form' ).hide();
+				$( '#naano-new-section-error' ).hide();
+				$( '#naano-add-new-section-btn' ).show();
+			} );
+
+			$( document ).on( 'click', '#naano-confirm-new-section-btn', function () {
+				var name = $( '#naano-new-section-name' ).val().trim();
+				if ( ! name ) {
+					$( '#naano-new-section-error' )
+						.text( 'Please enter a section name.' )
+						.show();
+					$( '#naano-new-section-name' ).focus();
+					return;
+				}
+				$( '#naano-new-section-form' ).hide();
+				$( '#naano-new-section-error' ).hide();
+				$( '#naano-add-new-section-btn' ).show();
 				NaanoBuilder._addNewSection( name );
+			} );
+
+			$( document ).on( 'keydown', '#naano-new-section-name', function ( e ) {
+				if ( e.key === 'Enter' ) { $( '#naano-confirm-new-section-btn' ).trigger( 'click' ); }
+				if ( e.key === 'Escape' ) { $( '#naano-cancel-new-section-btn' ).trigger( 'click' ); }
 			} );
 		},
 
@@ -642,7 +727,9 @@
 		_buildIframeSrcdoc: function () {
 			var sectionsHtml = '';
 			NaanoBuilder.sectionsData.forEach( function ( sec ) {
-				sectionsHtml += sec.html;
+				// Wrap each section so [data-section] is always present in the iframe
+				// for click detection, highlight, loading overlay and live HTML updates.
+				sectionsHtml += '<div data-section="' + sec.id + '">' + sec.html + '</div>';
 			} );
 
 			// Interaction helper script injected into the iframe.
@@ -665,24 +752,14 @@
 				'window.addEventListener("message",function(e){',
 				'  var m=e.data;if(!m||!m.type)return;',
 
-				// Update a specific section's HTML.
+				// Update a specific section's HTML (el is always the [data-section] wrapper).
 				'  if(m.type==="naano-update-section"){',
 				'    var el=document.querySelector(\'[data-section="\'+m.sectionId+\'"]\');',
 				'    if(el){',
-				'      var tmp=document.createElement("div");',
-				'      tmp.innerHTML=m.html;',
-				'      var newEl=tmp.firstElementChild;',
-				'      if(newEl){',
-				'        newEl.classList.remove("naano-section-loading");',
-				'        el.parentNode.insertBefore(newEl,el);',
-				'        el.parentNode.removeChild(el);',
-				'        newEl.style.animation="naano-flash 1.5s ease forwards";',
-				'        setTimeout(function(){newEl.style.animation="";},1600);',
-				'      } else {',
-				'        el.classList.remove("naano-section-loading");',
-				'        el.style.animation="naano-flash 1.5s ease forwards";',
-				'        setTimeout(function(){el.style.animation="";},1600);',
-				'      }',
+				'      el.classList.remove("naano-section-loading");',
+				'      el.innerHTML=m.html;',
+				'      el.style.animation="naano-flash 1.5s ease forwards";',
+				'      setTimeout(function(){el.style.animation="";},1600);',
 				'    }',
 				'  }',
 
@@ -755,11 +832,14 @@
 				var displayName = NaanoBuilder._displayName( sec.id );
 
 				var $item = $( '<li>', {
-					'class': 'naano-sections-list__item',
-					'id':    'naano-sl-item-' + sec.id
+					'class':     'naano-sections-list__item',
+					'id':        'naano-sl-item-' + sec.id,
+					'draggable': 'true',
+					'data-id':   sec.id
 				} );
 
 				$item.html(
+					'<span class="naano-sections-list__handle" title="Drag to reorder">⠿</span>' +
 					'<span class="naano-sections-list__name">' + $( '<span>' ).text( displayName ).html() + '</span>' +
 					'<span class="naano-sections-list__actions">' +
 					'<button type="button" class="naano-sections-list__btn" data-action="edit" data-id="' + sec.id + '" title="Edit">✏️</button>' +
@@ -769,7 +849,7 @@
 
 				// Click on the item row selects the section.
 				$item.on( 'click', function ( e ) {
-					if ( $( e.target ).closest( '[data-action]' ).length ) { return; }
+					if ( $( e.target ).closest( '[data-action], .naano-sections-list__handle' ).length ) { return; }
 					NaanoBuilder.openEditPanel( sec.id );
 				} );
 
@@ -782,6 +862,56 @@
 				$item.find( '[data-action=delete]' ).on( 'click', function ( e ) {
 					e.stopPropagation();
 					NaanoBuilder.deleteSection( sec.id );
+				} );
+
+				// ── Drag-and-drop reordering ──────────────────────────────────
+				var el = $item.get( 0 );
+
+				el.addEventListener( 'dragstart', function ( e ) {
+					e.dataTransfer.effectAllowed = 'move';
+					e.dataTransfer.setData( 'text/plain', sec.id );
+					setTimeout( function () { $item.addClass( 'naano-sections-list__item--dragging' ); }, 0 );
+				} );
+
+				el.addEventListener( 'dragend', function () {
+					$item.removeClass( 'naano-sections-list__item--dragging' );
+					$( '#naano-sections-list .naano-sections-list__item' )
+						.removeClass( 'naano-sections-list__item--dragover' );
+				} );
+
+				el.addEventListener( 'dragover', function ( e ) {
+					e.preventDefault();
+					e.dataTransfer.dropEffect = 'move';
+					$( '#naano-sections-list .naano-sections-list__item' )
+						.removeClass( 'naano-sections-list__item--dragover' );
+					$item.addClass( 'naano-sections-list__item--dragover' );
+				} );
+
+				el.addEventListener( 'dragleave', function ( e ) {
+					if ( ! el.contains( e.relatedTarget ) ) {
+						$item.removeClass( 'naano-sections-list__item--dragover' );
+					}
+				} );
+
+				el.addEventListener( 'drop', function ( e ) {
+					e.preventDefault();
+					$item.removeClass( 'naano-sections-list__item--dragover' );
+
+					var fromId = e.dataTransfer.getData( 'text/plain' );
+					var toId   = sec.id;
+					if ( fromId === toId ) { return; }
+
+					var fromIdx = NaanoBuilder._findSectionIndex( fromId );
+					var toIdx   = NaanoBuilder._findSectionIndex( toId );
+					if ( fromIdx === -1 || toIdx === -1 ) { return; }
+
+					// Move dragged item to drop target position.
+					var moved = NaanoBuilder.sectionsData.splice( fromIdx, 1 )[ 0 ];
+					NaanoBuilder.sectionsData.splice( toIdx, 0, moved );
+
+					NaanoBuilder._refreshLivePreview();
+					NaanoBuilder._renderSectionsList();
+					NaanoBuilder.reorderSections();
 				} );
 
 				$list.append( $item );

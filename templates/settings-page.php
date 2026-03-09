@@ -75,7 +75,7 @@ if ( ! is_array( $variables ) ) {
 							   value="<?php echo esc_attr( $model ); ?>"
 							   placeholder="<?php esc_attr_e( 'Leave blank for default model', 'naano-ai-website-builder' ); ?>">
 						<p class="description">
-							<?php esc_html_e( 'Defaults: Claude → claude-sonnet-4-20250514 | Gemini → gemini-2.0-flash | Kimi → moonshot-v1-8k', 'naano-ai-website-builder' ); ?>
+							<?php esc_html_e( 'Defaults: Claude → claude-sonnet-4-20250514 | Gemini → gemini-2.5-flash | Kimi → kimi-k2-0711-preview', 'naano-ai-website-builder' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -185,16 +185,23 @@ jQuery(function($){
 		var $btn    = $(this);
 		var $load   = $('#naano-test-loading');
 		var $result = $('#naano-test-result');
+		var model   = $('#naano_model').val().trim();
+
+		if ( ! model ) {
+			$result.show().html('<span class="naano-error">⚠️ <?php echo esc_js( __( 'Please enter a Model Override before testing.', 'naano-ai-website-builder' ) ); ?></span>');
+			$('#naano_model').focus();
+			return;
+		}
 
 		$btn.prop('disabled', true);
 		$load.show();
 		$result.hide();
 
 		$.post(
-			naanoBuilderData.ajaxUrl,
+			<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
 			{
 				action:   'naano_test_connection',
-				nonce:    naanoBuilderData.nonce,
+				nonce:    <?php echo wp_json_encode( wp_create_nonce( 'naano_builder_nonce' ) ); ?>,
 				provider: $('#naano_provider').val(),
 				api_key:  $('#naano_api_key').val(),
 				model:    $('#naano_model').val()

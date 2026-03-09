@@ -28,12 +28,29 @@ class Naano_Admin_Page {
 		// "Build with Naano AI" in the Pages list row actions.
 		add_filter( 'page_row_actions', [ $this, 'add_page_row_action' ], 10, 2 );
 
-		// "Build with Naano AI" in the admin bar.
-		add_action( 'admin_bar_menu', [ $this, 'add_admin_bar_item' ], 100 );
+		// Frontend builder: intercept ?naano_builder=1 on frontend pages.
+		add_action( 'template_redirect', [ $this, 'maybe_render_frontend_builder' ] );
+
+		// Hide the WordPress admin bar when the frontend builder is active.
+		add_filter( 'show_admin_bar', [ $this, 'maybe_hide_admin_bar' ] );
+	}
+
+	/**
+	 * Suppress the WP admin bar when the frontend builder overlay is active.
+	 *
+	 * @param bool $show
+	 * @return bool
+	 */
+	public function maybe_hide_admin_bar( bool $show ): bool {
+		if ( ! empty( $_GET['naano_builder'] ) && current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+		return $show;
 	}
 
 	/**
 	 * Add "Build with Naano AI" to the Pages list row actions.
+	 * Links to the frontend page URL with the builder overlay activated.
 	 *
 	 * @param string[]  $actions Current row action links.
 	 * @param \WP_Post  $post    Current post object.
@@ -42,11 +59,8 @@ class Naano_Admin_Page {
 	public function add_page_row_action( array $actions, \WP_Post $post ): array {
 		if ( current_user_can( 'manage_options' ) ) {
 			$url = add_query_arg(
-				[
-					'page'    => 'naano-ai-builder',
-					'page_id' => $post->ID,
-				],
-				admin_url( 'admin.php' )
+				[ 'naano_builder' => '1' ],
+				get_permalink( $post->ID )
 			);
 
 			$actions['naano_build'] = sprintf(
@@ -60,40 +74,6 @@ class Naano_Admin_Page {
 	}
 
 	/**
-	 * Add "Naano AI" quick-access node to the WordPress admin bar.
-	 *
-	 * @param \WP_Admin_Bar $wp_admin_bar
-	 * @return void
-	 */
-	public function add_admin_bar_item( \WP_Admin_Bar $wp_admin_bar ): void {
-		if ( ! current_user_can( 'manage_options' ) || ! is_admin() ) {
-			return;
-		}
-
-		$wp_admin_bar->add_node( [
-			'id'    => 'naano-ai-builder',
-			'title' => '<span class="ab-icon dashicons dashicons-admin-site-alt3"></span>'
-						. __( 'Naano AI', 'naano-ai-website-builder' ),
-			'href'  => admin_url( 'admin.php?page=naano-new-page' ),
-			'meta'  => [ 'title' => __( 'Create a new page with Naano AI', 'naano-ai-website-builder' ) ],
-		] );
-
-		$wp_admin_bar->add_node( [
-			'parent' => 'naano-ai-builder',
-			'id'     => 'naano-ai-new-page',
-			'title'  => __( 'Create New Page', 'naano-ai-website-builder' ),
-			'href'   => admin_url( 'admin.php?page=naano-new-page' ),
-		] );
-
-		$wp_admin_bar->add_node( [
-			'parent' => 'naano-ai-builder',
-			'id'     => 'naano-ai-builder-main',
-			'title'  => __( 'Builder', 'naano-ai-website-builder' ),
-			'href'   => admin_url( 'admin.php?page=naano-ai-builder' ),
-		] );
-	}
-
-	/**
 	 * Register top-level and sub-menus.
 	 *
 	 * @return void
@@ -104,27 +84,18 @@ class Naano_Admin_Page {
 			__( 'Naano AI Builder', 'naano-ai-website-builder' ),
 			'manage_options',
 			'naano-ai-builder',
-			[ $this, 'render_builder_page' ],
+			[ $this, 'render_pages_list' ],
 			'dashicons-admin-site-alt3',
 			30
 		);
 
 		$this->page_hooks[] = add_submenu_page(
 			'naano-ai-builder',
-			__( 'Builder', 'naano-ai-website-builder' ),
-			__( 'Builder', 'naano-ai-website-builder' ),
+			__( 'AI Pages', 'naano-ai-website-builder' ),
+			__( 'AI Pages', 'naano-ai-website-builder' ),
 			'manage_options',
 			'naano-ai-builder',
-			[ $this, 'render_builder_page' ]
-		);
-
-		$this->page_hooks[] = add_submenu_page(
-			'naano-ai-builder',
-			__( 'New Page', 'naano-ai-website-builder' ),
-			__( 'New Page', 'naano-ai-website-builder' ),
-			'manage_options',
-			'naano-new-page',
-			[ $this, 'render_new_page' ]
+			[ $this, 'render_pages_list' ]
 		);
 
 		$this->page_hooks[] = add_submenu_page(
@@ -214,7 +185,6 @@ class Naano_Admin_Page {
 	public function enqueue_assets( string $hook_suffix ): void {
 		$plugin_pages = [
 			'toplevel_page_naano-ai-builder',
-			'naano-ai-builder_page_naano-new-page',
 			'naano-ai-builder_page_naano-settings',
 		];
 
@@ -222,18 +192,68 @@ class Naano_Admin_Page {
 			return;
 		}
 
-		// CSS.
+		// CSS for the admin pages list / settings.
 		wp_enqueue_style(
 			'naano-builder',
 			NAANO_PLUGIN_URL . 'assets/css/builder.css',
 			[],
 			NAANO_VERSION
 		);
+	}
 
-		// WordPress media uploader.
+	// -------------------------------------------------------------------------
+	// Page renderers
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Render the admin pages list (backoffice dashboard).
+	 *
+	 * @return void
+	 */
+	public function render_pages_list(): void {
+		require NAANO_PLUGIN_DIR . 'templates/admin-pages-list.php';
+	}
+
+	/**
+	 * Render the settings page.
+	 *
+	 * @return void
+	 */
+	public function render_settings_page(): void {
+		require NAANO_PLUGIN_DIR . 'templates/settings-page.php';
+	}
+
+	// -------------------------------------------------------------------------
+	// Frontend builder
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Intercept frontend requests with ?naano_builder=1 and render the
+	 * full visual builder instead of the normal page template.
+	 *
+	 * Only accessible to logged-in users with manage_options capability.
+	 *
+	 * @return void
+	 */
+	public function maybe_render_frontend_builder(): void {
+		if ( empty( $_GET['naano_builder'] ) || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		// Determine the page ID from the queried object (e.g. /my-page/?naano_builder=1).
+		$page_id = get_queried_object_id() ?: 0;
+
+		// Enqueue all required assets for the builder.
+		wp_enqueue_style( 'dashicons' );
+		wp_enqueue_style(
+			'naano-builder',
+			NAANO_PLUGIN_URL . 'assets/css/builder.css',
+			[ 'dashicons' ],
+			NAANO_VERSION
+		);
+
 		wp_enqueue_media();
 
-		// Builder JS.
 		wp_enqueue_script(
 			'naano-builder',
 			NAANO_PLUGIN_URL . 'assets/js/builder.js',
@@ -242,7 +262,6 @@ class Naano_Admin_Page {
 			true
 		);
 
-		// Preview JS.
 		wp_enqueue_script(
 			'naano-preview',
 			NAANO_PLUGIN_URL . 'assets/js/preview.js',
@@ -251,13 +270,12 @@ class Naano_Admin_Page {
 			true
 		);
 
-		$page_id  = isset( $_GET['page_id'] ) ? (int) $_GET['page_id'] : 0;
-		$sections = [];
+		$sections   = [];
 		$references = [];
 
 		if ( $page_id ) {
-			$sm       = new Naano_Section_Manager();
-			$rm       = new Naano_Reference_Manager();
+			$sm = new Naano_Section_Manager();
+			$rm = new Naano_Reference_Manager();
 			$sections = $sm->get_sections( $page_id );
 			foreach ( $sections as $sec ) {
 				$references[ $sec['id'] ] = $rm->get_references( $page_id, $sec['id'] );
@@ -281,36 +299,9 @@ class Naano_Admin_Page {
 				'click_section'     => __( '— click a section in the preview —', 'naano-ai-website-builder' ),
 			],
 		] );
-	}
 
-	// -------------------------------------------------------------------------
-	// Page renderers
-	// -------------------------------------------------------------------------
-
-	/**
-	 * Render the main builder page.
-	 *
-	 * @return void
-	 */
-	public function render_builder_page(): void {
-		require NAANO_PLUGIN_DIR . 'templates/builder-page.php';
-	}
-
-	/**
-	 * Render the "New Page" page (builder without a page_id pre-set).
-	 *
-	 * @return void
-	 */
-	public function render_new_page(): void {
-		require NAANO_PLUGIN_DIR . 'templates/builder-page.php';
-	}
-
-	/**
-	 * Render the settings page.
-	 *
-	 * @return void
-	 */
-	public function render_settings_page(): void {
-		require NAANO_PLUGIN_DIR . 'templates/settings-page.php';
+		// Output a standalone full-page builder and stop WP from rendering anything else.
+		require NAANO_PLUGIN_DIR . 'templates/frontend-builder.php';
+		exit;
 	}
 }

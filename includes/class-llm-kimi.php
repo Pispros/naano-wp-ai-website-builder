@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface {
 
 	private const API_ENDPOINT    = 'https://api.moonshot.cn/v1/chat/completions';
-	private const DEFAULT_MODEL   = 'moonshot-v1-8k';
+	private const DEFAULT_MODEL   = 'kimi-k2-0711-preview';
 	private const TIMEOUT_SECONDS = 120;
 
 	private string $api_key;

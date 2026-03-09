@@ -392,6 +392,23 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	accent-color: #2271b1;
 }
 
+.naano-remove-custom-section {
+	margin-left: auto;
+	background: none;
+	border: none;
+	color: #6b7280;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	padding: 0 2px;
+	border-radius: 3px;
+	transition: color 0.15s;
+}
+
+.naano-remove-custom-section:hover {
+	color: #f87171;
+}
+
 .naano-custom-section-row {
 	display: flex;
 	gap: 8px;
@@ -546,6 +563,35 @@ body.naano-fullscreen #wpbody-content > .wrap {
 .naano-sections-list__item--active {
 	background: rgba(34, 113, 177, 0.2) !important;
 	border-color: #2271b1 !important;
+}
+
+.naano-sections-list__item--dragging {
+	opacity: 0.4;
+}
+
+.naano-sections-list__item--dragover {
+	border-color: #2271b1;
+	background: rgba(34, 113, 177, 0.15);
+	box-shadow: 0 0 0 1px #2271b1 inset;
+}
+
+.naano-sections-list__handle {
+	color: #50575e;
+	cursor: grab;
+	font-size: 14px;
+	line-height: 1;
+	padding: 0 6px 0 0;
+	flex-shrink: 0;
+	user-select: none;
+	transition: color 0.1s;
+}
+
+.naano-sections-list__item:hover .naano-sections-list__handle {
+	color: #a7aaad;
+}
+
+.naano-sections-list__handle:active {
+	cursor: grabbing;
 }
 
 .naano-sections-list__name {
@@ -917,4 +963,69 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	.naano-vb__page-name {
 		max-width: 100px;
 	}
+}
+
+/* ============================================================
+   CANVAS LOADING ANIMATIONS
+   ============================================================ */
+
+/* Skeleton shimmer bars — shown while the LLM generates the site */
+.naano-canvas-placeholder__skeleton {
+	display: none;
+	flex-direction: column;
+	gap: 14px;
+	width: 60%;
+	max-width: 480px;
+}
+
+.naano-canvas-placeholder--loading .naano-canvas-placeholder__inner {
+	display: none;
+}
+
+.naano-canvas-placeholder--loading .naano-canvas-placeholder__skeleton {
+	display: flex;
+}
+
+.naano-canvas-skeleton-bar {
+	height: 18px;
+	border-radius: 4px;
+	background: linear-gradient(
+		90deg,
+		#3d4246 0%,
+		#50575e 40%,
+		#3d4246 80%
+	);
+	background-size: 300% 100%;
+	animation: naano-shimmer 1.6s ease-in-out infinite;
+}
+
+.naano-canvas-skeleton-bar--sm   { width: 35%; height: 14px; }
+.naano-canvas-skeleton-bar--md   { width: 65%; }
+.naano-canvas-skeleton-bar--lg   { width: 85%; }
+.naano-canvas-skeleton-bar--full { width: 100%; }
+
+@keyframes naano-shimmer {
+	0%   { background-position: 100% 0; }
+	100% { background-position: -100% 0; }
+}
+
+/* Iframe canvas dimming overlay — shown while a section update is in progress */
+.naano-live-iframe-wrap--loading {
+	position: relative;
+}
+
+.naano-live-iframe-wrap--loading::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.35);
+	border-radius: 4px;
+	z-index: 10;
+	pointer-events: none;
+	animation: naano-overlay-fade-in 0.2s ease;
+}
+
+@keyframes naano-overlay-fade-in {
+	from { opacity: 0; }
+	to   { opacity: 1; }
 }

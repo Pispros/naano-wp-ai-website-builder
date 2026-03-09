@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface {
 
 	private const API_BASE        = 'https://generativelanguage.googleapis.com/v1beta/models/';
-	private const DEFAULT_MODEL   = 'gemini-2.0-flash';
+	private const DEFAULT_MODEL   = 'gemini-2.5-flash';
 	private const TIMEOUT_SECONDS = 120;
 
 	private string $api_key;
@@ -163,6 +163,23 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface {
 
 		if ( $code !== 200 ) {
 			$msg = $data['error']['message'] ?? $body;
+
+			// Provide a clear, actionable message for quota / rate-limit errors.
+			if ( $code === 429 ) {
+				$retry_match = [];
+				if ( preg_match( '/retry in ([\d.]+)s/i', $msg, $retry_match ) ) {
+					$wait = (int) ceil( (float) $retry_match[1] );
+					$hint = sprintf( 'Rate limit reached — please retry in %d seconds.', $wait );
+				} elseif ( strpos( $msg, 'free_tier' ) !== false ) {
+					$hint = 'Your Gemini API key has exceeded the free-tier quota for this model. '
+						. 'Try switching to "gemini-2.5-flash" in Settings → Model Override, '
+						. 'or enable billing at https://aistudio.google.com/.';
+				} else {
+					$hint = 'Gemini API rate limit reached. Please wait a moment and try again.';
+				}
+				throw new RuntimeException( $hint );
+			}
+
 			throw new RuntimeException( "Gemini API error (HTTP {$code}): {$msg}" );
 		}
 

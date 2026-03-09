@@ -1,6 +1,10 @@
 <?php
 /**
- * Builder Admin Page Template — Elementor-style Visual Builder
+ * Frontend Builder Template — standalone full-page visual builder.
+ *
+ * Rendered when a logged-in admin visits any page with ?naano_builder=1.
+ * Outputs a complete HTML document; WordPress template rendering is aborted
+ * after this file via exit() in maybe_render_frontend_builder().
  *
  * @package NaanoAIWebsiteBuilder
  */
@@ -9,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$page_id  = isset( $_GET['page_id'] ) ? (int) $_GET['page_id'] : 0;
+$page_id  = get_queried_object_id() ?: 0;
 $has_page = $page_id > 0;
 
 $section_types = [
@@ -23,7 +27,33 @@ $section_types = [
 	'contact'      => __( 'Contact', 'naano-ai-website-builder' ),
 	'footer'       => __( 'Footer', 'naano-ai-website-builder' ),
 ];
+
+// Back-to-admin URL.
+$admin_pages_url = admin_url( 'admin.php?page=naano-ai-builder' );
 ?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo( 'charset' ); ?>">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title><?php esc_html_e( 'Naano AI Builder', 'naano-ai-website-builder' ); ?></title>
+	<?php wp_head(); ?>
+	<style>
+		/* Reset any theme styles that may bleed into the builder. */
+		html, body {
+			margin: 0 !important;
+			padding: 0 !important;
+			overflow: hidden !important;
+			background: #1d2327 !important;
+		}
+		/* Override naano-vb height: fills the full viewport (no WP admin bar). */
+		.naano-vb {
+			height: 100vh !important;
+		}
+	</style>
+</head>
+<body class="naano-frontend-builder">
+
 <div class="naano-vb" id="naano-vb">
 
 	<!-- ===================================================================
@@ -32,6 +62,11 @@ $section_types = [
 	<div class="naano-vb__toolbar" id="naano-vb-toolbar">
 
 		<div class="naano-vb__toolbar-left">
+			<a href="<?php echo esc_url( $admin_pages_url ); ?>"
+			   class="naano-drawer-toggle"
+			   title="<?php esc_attr_e( 'Back to Dashboard', 'naano-ai-website-builder' ); ?>">
+				<span class="dashicons dashicons-arrow-left-alt"></span>
+			</a>
 			<button type="button" class="naano-drawer-toggle" id="naano-drawer-toggle"
 					title="<?php esc_attr_e( 'Toggle Panel', 'naano-ai-website-builder' ); ?>">
 				<span class="dashicons dashicons-menu-alt"></span>
@@ -288,3 +323,7 @@ $section_types = [
 	</div><!-- .naano-vb__body -->
 
 </div><!-- .naano-vb -->
+
+<?php wp_footer(); ?>
+</body>
+</html>
