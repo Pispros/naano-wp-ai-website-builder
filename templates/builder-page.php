@@ -1,6 +1,6 @@
 <?php
 /**
- * Builder Admin Page Template
+ * Builder Admin Page Template — Elementor-style Visual Builder
  *
  * @package NaanoAIWebsiteBuilder
  */
@@ -24,200 +24,245 @@ $section_types = [
 	'footer'       => __( 'Footer', 'naano-ai-website-builder' ),
 ];
 ?>
-<div class="wrap naano-builder-wrap">
-	<h1 class="naano-page-title">
-		<span class="dashicons dashicons-admin-site-alt3"></span>
-		<?php esc_html_e( 'Naano AI Website Builder', 'naano-ai-website-builder' ); ?>
-	</h1>
+<div class="naano-vb" id="naano-vb">
 
-	<?php if ( ! $has_page ) : ?>
-	<!-- ============================================================
-	     GENERATION FORM (no page selected yet)
-	     ============================================================ -->
-	<div class="naano-generation-form" id="naano-generation-form">
-		<div class="naano-card">
-			<h2><?php esc_html_e( 'Create a New AI Website', 'naano-ai-website-builder' ); ?></h2>
-			<p class="description">
-				<?php esc_html_e( 'Describe your site and select the sections you want. The AI will generate a complete website section-by-section.', 'naano-ai-website-builder' ); ?>
-			</p>
+	<!-- ===================================================================
+	     TOP TOOLBAR
+	     =================================================================== -->
+	<div class="naano-vb__toolbar" id="naano-vb-toolbar">
 
-			<table class="form-table">
-				<tr>
-					<th scope="row">
-						<label for="naano-page-name"><?php esc_html_e( 'Page Name', 'naano-ai-website-builder' ); ?></label>
-					</th>
-					<td>
-						<input type="text"
-							   id="naano-page-name"
-							   class="regular-text"
+		<div class="naano-vb__toolbar-left">
+			<button type="button" class="naano-drawer-toggle" id="naano-drawer-toggle"
+					title="<?php esc_attr_e( 'Toggle Panel', 'naano-ai-website-builder' ); ?>">
+				<span class="dashicons dashicons-menu-alt"></span>
+			</button>
+			<span class="naano-vb__brand">
+				<span class="dashicons dashicons-admin-site-alt3"></span>
+				<?php esc_html_e( 'Naano AI', 'naano-ai-website-builder' ); ?>
+			</span>
+			<span class="naano-vb__separator"></span>
+			<span class="naano-vb__page-name" id="naano-current-page-name">
+				<?php echo $has_page ? esc_html( get_the_title( $page_id ) ) : esc_html__( 'New Page', 'naano-ai-website-builder' ); ?>
+			</span>
+		</div>
+
+		<div class="naano-vb__toolbar-center">
+			<div class="naano-viewport-group" id="naano-viewport-group">
+				<button type="button" class="naano-viewport-btn naano-viewport-btn--active"
+						data-width="100%" title="<?php esc_attr_e( 'Desktop', 'naano-ai-website-builder' ); ?>">
+					<span class="dashicons dashicons-desktop"></span>
+				</button>
+				<button type="button" class="naano-viewport-btn"
+						data-width="768px" title="<?php esc_attr_e( 'Tablet', 'naano-ai-website-builder' ); ?>">
+					<span class="dashicons dashicons-tablet"></span>
+				</button>
+				<button type="button" class="naano-viewport-btn"
+						data-width="375px" title="<?php esc_attr_e( 'Mobile', 'naano-ai-website-builder' ); ?>">
+					<span class="dashicons dashicons-smartphone"></span>
+				</button>
+			</div>
+		</div>
+
+		<div class="naano-vb__toolbar-right">
+			<button type="button" class="naano-tb-btn" id="naano-preview-btn"
+					title="<?php esc_attr_e( 'Preview', 'naano-ai-website-builder' ); ?>">
+				<span class="dashicons dashicons-visibility"></span>
+				<span class="naano-tb-btn__label"><?php esc_html_e( 'Preview', 'naano-ai-website-builder' ); ?></span>
+			</button>
+			<button type="button" class="naano-tb-btn" id="naano-export-btn"
+					title="<?php esc_attr_e( 'Export HTML', 'naano-ai-website-builder' ); ?>">
+				<span class="dashicons dashicons-download"></span>
+				<span class="naano-tb-btn__label"><?php esc_html_e( 'Export', 'naano-ai-website-builder' ); ?></span>
+			</button>
+			<button type="button" class="naano-tb-btn" id="naano-copy-btn"
+					title="<?php esc_attr_e( 'Copy HTML', 'naano-ai-website-builder' ); ?>">
+				<span class="dashicons dashicons-admin-page"></span>
+				<span class="naano-tb-btn__label"><?php esc_html_e( 'Copy', 'naano-ai-website-builder' ); ?></span>
+			</button>
+			<button type="button" class="naano-tb-btn naano-tb-btn--primary" id="naano-save-page-btn"
+					title="<?php esc_attr_e( 'Save as WP Page', 'naano-ai-website-builder' ); ?>">
+				<span class="dashicons dashicons-saved"></span>
+				<span class="naano-tb-btn__label"><?php esc_html_e( 'Save', 'naano-ai-website-builder' ); ?></span>
+			</button>
+		</div>
+
+	</div><!-- .naano-vb__toolbar -->
+
+	<!-- ===================================================================
+	     BODY  (DRAWER + CANVAS)
+	     =================================================================== -->
+	<div class="naano-vb__body">
+
+		<!-- ===============================================================
+		     LEFT DRAWER
+		     =============================================================== -->
+		<div class="naano-vb__drawer" id="naano-drawer">
+			<div class="naano-drawer__inner">
+
+				<!-- STATE 1 : Initial generation -->
+				<div class="naano-drawer-panel" id="naano-drawer-generate"
+					 <?php echo $has_page ? 'style="display:none;"' : ''; ?>>
+
+					<div class="naano-drawer__header">
+						<h3><?php esc_html_e( 'Create New Page', 'naano-ai-website-builder' ); ?></h3>
+						<p><?php esc_html_e( 'Describe your site and choose which sections to generate.', 'naano-ai-website-builder' ); ?></p>
+					</div>
+
+					<div class="naano-drawer__field">
+						<label for="naano-page-name">
+							<?php esc_html_e( 'Page Name', 'naano-ai-website-builder' ); ?>
+						</label>
+						<input type="text" id="naano-page-name" class="naano-input"
 							   placeholder="<?php esc_attr_e( 'e.g. My Awesome Product', 'naano-ai-website-builder' ); ?>">
-					</td>
-				</tr>
-				<tr>
-					<th scope="row">
-						<label for="naano-description"><?php esc_html_e( 'Site Description', 'naano-ai-website-builder' ); ?></label>
-					</th>
-					<td>
-						<textarea id="naano-description"
-								  class="large-text"
-								  rows="5"
+					</div>
+
+					<div class="naano-drawer__field">
+						<label for="naano-description">
+							<?php esc_html_e( 'Site Description', 'naano-ai-website-builder' ); ?>
+						</label>
+						<textarea id="naano-description" class="naano-textarea" rows="6"
 								  placeholder="<?php esc_attr_e( 'Describe your business, product, service, tone, target audience…', 'naano-ai-website-builder' ); ?>"></textarea>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Sections', 'naano-ai-website-builder' ); ?></th>
-					<td>
+					</div>
+
+					<div class="naano-drawer__field">
+						<label><?php esc_html_e( 'Sections to Generate', 'naano-ai-website-builder' ); ?></label>
 						<div class="naano-section-checkboxes" id="naano-section-checkboxes">
 							<?php foreach ( $section_types as $type => $label ) : ?>
 							<label class="naano-checkbox-label">
-								<input type="checkbox"
-									   name="sections[]"
-									   value="<?php echo esc_attr( $type ); ?>"
-									   checked>
+								<input type="checkbox" name="sections[]"
+									   value="<?php echo esc_attr( $type ); ?>" checked>
 								<?php echo esc_html( $label ); ?>
 							</label>
 							<?php endforeach; ?>
 						</div>
-						<div class="naano-custom-section-row" style="margin-top:8px;">
-							<input type="text"
-								   id="naano-custom-section-input"
-								   class="regular-text"
+						<div class="naano-custom-section-row">
+							<input type="text" id="naano-custom-section-input" class="naano-input"
 								   placeholder="<?php esc_attr_e( 'Custom section name…', 'naano-ai-website-builder' ); ?>">
-							<button type="button" class="button" id="naano-add-custom-section">
-								<?php esc_html_e( '+ Add Section', 'naano-ai-website-builder' ); ?>
+							<button type="button" class="naano-btn-secondary" id="naano-add-custom-section">
+								<?php esc_html_e( '+ Add', 'naano-ai-website-builder' ); ?>
 							</button>
 						</div>
-					</td>
-				</tr>
-			</table>
+					</div>
 
-			<div class="naano-form-actions">
-				<button type="button" class="button button-primary button-hero" id="naano-generate-btn">
-					<span class="dashicons dashicons-superhero-alt" style="margin-top:3px;"></span>
-					<?php esc_html_e( 'Generate Full Website', 'naano-ai-website-builder' ); ?>
-				</button>
-				<span class="naano-loading" id="naano-generate-loading" style="display:none;">
-					<span class="spinner is-active"></span>
-					<?php esc_html_e( 'Generating your website…', 'naano-ai-website-builder' ); ?>
-				</span>
-			</div>
-		</div>
-	</div>
-	<?php endif; ?>
-
-	<!-- ============================================================
-	     SECTION CARDS AREA (shown after generation or when editing)
-	     ============================================================ -->
-	<div class="naano-builder-main" id="naano-builder-main" <?php echo $has_page ? '' : 'style="display:none;"'; ?>>
-
-		<!-- Action Bar -->
-		<div class="naano-action-bar" id="naano-action-bar">
-			<div class="naano-action-bar__left">
-				<strong><?php esc_html_e( 'Page:', 'naano-ai-website-builder' ); ?></strong>
-				<span id="naano-current-page-name"><?php echo $has_page ? esc_html( get_the_title( $page_id ) ) : ''; ?></span>
-			</div>
-			<div class="naano-action-bar__right">
-				<button type="button" class="button naano-btn-preview" id="naano-preview-btn">
-					<span class="dashicons dashicons-visibility"></span>
-					<?php esc_html_e( 'Preview', 'naano-ai-website-builder' ); ?>
-				</button>
-				<button type="button" class="button naano-btn-export" id="naano-export-btn">
-					<span class="dashicons dashicons-download"></span>
-					<?php esc_html_e( 'Export HTML', 'naano-ai-website-builder' ); ?>
-				</button>
-				<button type="button" class="button naano-btn-copy" id="naano-copy-btn">
-					<span class="dashicons dashicons-admin-page"></span>
-					<?php esc_html_e( 'Copy HTML', 'naano-ai-website-builder' ); ?>
-				</button>
-				<button type="button" class="button button-primary naano-btn-save-page" id="naano-save-page-btn">
-					<span class="dashicons dashicons-saved"></span>
-					<?php esc_html_e( 'Save as WP Page', 'naano-ai-website-builder' ); ?>
-				</button>
-			</div>
-		</div>
-
-		<!-- Section Cards Container -->
-		<div class="naano-section-cards" id="naano-section-cards">
-			<?php if ( $has_page ) :
-				$sm = new Naano_Section_Manager();
-				foreach ( $sm->get_sections( $page_id ) as $section ) :
-					$section_id   = $section['id'];
-					$section_html = $section['html'];
-					include NAANO_PLUGIN_DIR . 'templates/section-card.php';
-				endforeach;
-			endif; ?>
-		</div>
-
-		<!-- Edit Panel (hidden, shown when editing a section) -->
-		<div class="naano-edit-panel" id="naano-edit-panel" style="display:none;">
-			<div class="naano-edit-panel__inner">
-				<h3 class="naano-edit-panel__title">
-					<?php esc_html_e( 'Edit Section', 'naano-ai-website-builder' ); ?>:
-					<span id="naano-editing-section-name"></span>
-				</h3>
-
-				<label for="naano-instruction">
-					<strong><?php esc_html_e( 'Instruction', 'naano-ai-website-builder' ); ?></strong>
-				</label>
-				<textarea id="naano-instruction"
-						  class="large-text"
-						  rows="4"
-						  placeholder="<?php esc_attr_e( 'Describe what you want to change…', 'naano-ai-website-builder' ); ?>"></textarea>
-
-				<!-- Screenshot References -->
-				<div class="naano-reference-section">
-					<h4><?php esc_html_e( 'Screenshot References', 'naano-ai-website-builder' ); ?></h4>
-					<ul class="naano-reference-list" id="naano-screenshot-list"></ul>
-					<button type="button" class="button" id="naano-add-screenshot-btn">
-						<span class="dashicons dashicons-format-image"></span>
-						<?php esc_html_e( 'Add Screenshot', 'naano-ai-website-builder' ); ?>
-					</button>
-				</div>
-
-				<!-- URL References -->
-				<div class="naano-reference-section">
-					<h4><?php esc_html_e( 'URL References', 'naano-ai-website-builder' ); ?></h4>
-					<ul class="naano-reference-list" id="naano-url-list"></ul>
-					<div class="naano-add-url-form" id="naano-add-url-form" style="display:none;">
-						<input type="url" id="naano-ref-url" class="regular-text"
-							   placeholder="https://example.com">
-						<input type="text" id="naano-ref-notes" class="regular-text"
-							   placeholder="<?php esc_attr_e( 'Notes (optional)', 'naano-ai-website-builder' ); ?>">
-						<button type="button" class="button" id="naano-save-url-btn">
-							<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
+					<div class="naano-drawer__actions">
+						<button type="button" class="naano-btn-generate" id="naano-generate-btn">
+							<span class="dashicons dashicons-superhero-alt"></span>
+							<?php esc_html_e( 'Generate Full Website', 'naano-ai-website-builder' ); ?>
 						</button>
-						<button type="button" class="button" id="naano-cancel-url-btn">
-							<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+						<div class="naano-loading" id="naano-generate-loading" style="display:none;">
+							<span class="spinner is-active"></span>
+							<?php esc_html_e( 'Generating your website…', 'naano-ai-website-builder' ); ?>
+						</div>
+					</div>
+
+				</div><!-- #naano-drawer-generate -->
+
+				<!-- STATE 2 : Section editing -->
+				<div class="naano-drawer-panel" id="naano-drawer-edit"
+					 <?php echo $has_page ? '' : 'style="display:none;"'; ?>>
+
+					<div class="naano-drawer__header">
+						<h3><?php esc_html_e( 'Edit Section', 'naano-ai-website-builder' ); ?></h3>
+						<div class="naano-editing-section-badge" id="naano-editing-section-name">
+							<?php esc_html_e( '— click a section in the preview —', 'naano-ai-website-builder' ); ?>
+						</div>
+					</div>
+
+					<!-- Sections list (quick-select) -->
+					<div class="naano-drawer__field naano-sections-list-wrap" id="naano-sections-list-wrap">
+						<label><?php esc_html_e( 'Page Sections', 'naano-ai-website-builder' ); ?></label>
+						<ul class="naano-sections-list" id="naano-sections-list"></ul>
+					</div>
+
+					<div class="naano-drawer__field">
+						<label for="naano-instruction">
+							<?php esc_html_e( 'Instruction', 'naano-ai-website-builder' ); ?>
+						</label>
+						<textarea id="naano-instruction" class="naano-textarea" rows="5"
+								  placeholder="<?php esc_attr_e( 'Describe what you want to change…', 'naano-ai-website-builder' ); ?>"></textarea>
+					</div>
+
+					<!-- Screenshot References -->
+					<div class="naano-drawer__field naano-reference-section">
+						<label><?php esc_html_e( 'Screenshot References', 'naano-ai-website-builder' ); ?></label>
+						<ul class="naano-reference-list" id="naano-screenshot-list"></ul>
+						<button type="button" class="naano-btn-secondary" id="naano-add-screenshot-btn">
+							<span class="dashicons dashicons-format-image"></span>
+							<?php esc_html_e( 'Add Screenshot', 'naano-ai-website-builder' ); ?>
 						</button>
 					</div>
-					<button type="button" class="button" id="naano-add-url-btn">
-						<span class="dashicons dashicons-admin-links"></span>
-						<?php esc_html_e( 'Add URL Reference', 'naano-ai-website-builder' ); ?>
-					</button>
-				</div>
 
-				<div class="naano-edit-panel__actions">
-					<button type="button" class="button button-primary" id="naano-update-section-btn">
-						<span class="dashicons dashicons-superhero-alt" style="margin-top:3px;"></span>
-						<?php esc_html_e( 'Update Section', 'naano-ai-website-builder' ); ?>
-					</button>
-					<button type="button" class="button" id="naano-cancel-edit-btn">
-						<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
-					</button>
-					<span class="naano-loading" id="naano-update-loading" style="display:none;">
-						<span class="spinner is-active"></span>
-						<?php esc_html_e( 'Updating…', 'naano-ai-website-builder' ); ?>
-					</span>
+					<!-- URL References -->
+					<div class="naano-drawer__field naano-reference-section">
+						<label><?php esc_html_e( 'URL References', 'naano-ai-website-builder' ); ?></label>
+						<ul class="naano-reference-list" id="naano-url-list"></ul>
+						<div class="naano-add-url-form" id="naano-add-url-form" style="display:none;">
+							<input type="url" id="naano-ref-url" class="naano-input"
+								   placeholder="https://example.com">
+							<input type="text" id="naano-ref-notes" class="naano-input"
+								   placeholder="<?php esc_attr_e( 'Notes (optional)', 'naano-ai-website-builder' ); ?>">
+							<div class="naano-add-url-form__btns">
+								<button type="button" class="naano-btn-secondary" id="naano-save-url-btn">
+									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
+								</button>
+								<button type="button" class="naano-btn-ghost" id="naano-cancel-url-btn">
+									<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+								</button>
+							</div>
+						</div>
+						<button type="button" class="naano-btn-secondary" id="naano-add-url-btn">
+							<span class="dashicons dashicons-admin-links"></span>
+							<?php esc_html_e( 'Add URL', 'naano-ai-website-builder' ); ?>
+						</button>
+					</div>
+
+					<div class="naano-drawer__actions">
+						<button type="button" class="naano-btn-generate" id="naano-update-section-btn" disabled>
+							<span class="dashicons dashicons-superhero-alt"></span>
+							<?php esc_html_e( 'Update Section', 'naano-ai-website-builder' ); ?>
+						</button>
+						<div class="naano-loading" id="naano-update-loading" style="display:none;">
+							<span class="spinner is-active"></span>
+							<?php esc_html_e( 'Updating…', 'naano-ai-website-builder' ); ?>
+						</div>
+						<button type="button" class="naano-btn-secondary naano-mt-8" id="naano-add-new-section-btn">
+							+ <?php esc_html_e( 'Add New Section', 'naano-ai-website-builder' ); ?>
+						</button>
+					</div>
+
+				</div><!-- #naano-drawer-edit -->
+
+			</div><!-- .naano-drawer__inner -->
+		</div><!-- .naano-vb__drawer -->
+
+		<!-- ===============================================================
+		     LIVE PREVIEW CANVAS
+		     =============================================================== -->
+		<div class="naano-vb__canvas" id="naano-vb-canvas">
+
+			<!-- Empty state placeholder -->
+			<div class="naano-canvas-placeholder" id="naano-canvas-placeholder"
+				 <?php echo $has_page ? 'style="display:none;"' : ''; ?>>
+				<div class="naano-canvas-placeholder__inner">
+					<span class="dashicons dashicons-admin-site-alt3 naano-canvas-placeholder__icon"></span>
+					<h2><?php esc_html_e( 'Your page preview will appear here', 'naano-ai-website-builder' ); ?></h2>
+					<p><?php esc_html_e( 'Fill in the form on the left and click "Generate Full Website" to get started.', 'naano-ai-website-builder' ); ?></p>
 				</div>
 			</div>
-		</div>
 
-		<!-- Add New Section -->
-		<div class="naano-add-section-bar">
-			<button type="button" class="button naano-add-section-btn" id="naano-add-new-section-btn">
-				+ <?php esc_html_e( 'Add New Section', 'naano-ai-website-builder' ); ?>
-			</button>
-		</div>
-	</div>
+			<!-- Live preview iframe -->
+			<div class="naano-live-iframe-wrap" id="naano-live-iframe-wrap"
+				 <?php echo $has_page ? '' : 'style="display:none;"'; ?>>
+				<iframe
+					id="naano-live-preview"
+					class="naano-live-iframe"
+					sandbox="allow-scripts"
+					title="<?php esc_attr_e( 'Live page preview', 'naano-ai-website-builder' ); ?>"
+				></iframe>
+			</div>
 
-</div><!-- .naano-builder-wrap -->
+		</div><!-- .naano-vb__canvas -->
+
+	</div><!-- .naano-vb__body -->
+
+</div><!-- .naano-vb -->

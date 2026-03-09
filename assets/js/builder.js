@@ -2,6 +2,7 @@
  * Naano AI Website Builder — builder.js
  *
  * Handles all builder UI interactions, AJAX calls, and section management.
+ * Visual builder (Elementor-style) with real-time live preview.
  */
 /* global naanoBuilderData, wp */
 ( function ( $, data ) {
@@ -12,21 +13,31 @@
 		pageId: 0,
 		editingSectionId: null,
 
+		/** @type {Array<{id: string, html: string}>} In-memory sections store. */
+		sectionsData: [],
+
 		/**
 		 * Initialise the builder.
 		 */
 		init: function () {
 			NaanoBuilder.pageId = parseInt( data.pageId, 10 ) || 0;
 
+			// Activate full-screen layout.
+			$( 'body' ).addClass( 'naano-fullscreen' );
+
 			NaanoBuilder._bindGenerationForm();
 			NaanoBuilder._bindActionBar();
+			NaanoBuilder._bindDrawer();
+			NaanoBuilder._bindViewportToggle();
 			NaanoBuilder._bindEditPanel();
-			NaanoBuilder._bindDragDrop();
+			NaanoBuilder._bindIframeMessages();
 
 			// If we already have sections (page reload), render them.
 			if ( data.sections && data.sections.length > 0 ) {
+				NaanoBuilder.sectionsData = data.sections.slice();
 				NaanoBuilder._showBuilder();
-				NaanoBuilder._rebuildCardsFromData( data.sections );
+				NaanoBuilder._refreshLivePreview();
+				NaanoBuilder._renderSectionsList();
 			}
 		},
 
@@ -69,8 +80,25 @@
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
 				if ( response.success ) {
 					NaanoBuilder.pageId = response.data.page_id || NaanoBuilder.pageId;
+
+					// Store sections in memory.
+					if ( Array.isArray( response.data.sections ) ) {
+						NaanoBuilder.sectionsData = response.data.sections.slice();
+					} else {
+						NaanoBuilder.sectionsData = [];
+						$.each( response.data.sections, function ( id, html ) {
+							NaanoBuilder.sectionsData.push( { id: id, html: html } );
+						} );
+					}
+
+					// Update page name display.
+					if ( pageName ) {
+						$( '#naano-current-page-name' ).text( pageName );
+					}
+
 					NaanoBuilder._showBuilder();
-					NaanoBuilder.renderSections( response.data.sections );
+					NaanoBuilder._refreshLivePreview();
+					NaanoBuilder._renderSectionsList();
 					NaanoBuilder._toast( 'Website generated successfully! 🎉', 'success' );
 				} else {
 					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
@@ -87,64 +115,38 @@
 		// =====================================================================
 
 		/**
-		 * Render multiple sections from a {id: html} object.
+		 * (Legacy) Render multiple sections — kept for backward compat.
 		 *
-		 * @param {Object} sections
+		 * @param {Object|Array} sections
 		 */
 		renderSections: function ( sections ) {
-			$( '#naano-section-cards' ).empty();
 			if ( Array.isArray( sections ) ) {
-				sections.forEach( function ( sec ) {
-					NaanoBuilder.renderSectionCard( sec.id, sec.html );
-				} );
+				NaanoBuilder.sectionsData = sections.slice();
 			} else {
+				NaanoBuilder.sectionsData = [];
 				$.each( sections, function ( id, html ) {
-					NaanoBuilder.renderSectionCard( id, html );
+					NaanoBuilder.sectionsData.push( { id: id, html: html } );
 				} );
 			}
+			NaanoBuilder._refreshLivePreview();
+			NaanoBuilder._renderSectionsList();
 		},
 
 		/**
-		 * Create and append a single section card.
+		 * (Legacy) Render a single section card — now adds/updates in sectionsData.
 		 *
-		 * @param {string} id   Section identifier.
-		 * @param {string} html Section HTML.
+		 * @param {string} id
+		 * @param {string} html
 		 */
 		renderSectionCard: function ( id, html ) {
-			var displayName = id
-				.replace( /[-_]/g, ' ' )
-				.replace( /\b\w/g, function ( c ) { return c.toUpperCase(); } );
-
-			var $card = $( '<div>', {
-				'class':          'naano-section-card',
-				'id':             'naano-card-' + id,
-				'data-section-id': id,
-				'draggable':       'true'
-			} );
-
-			var $header = $( '<div class="naano-section-card__header">' +
-				'<span class="naano-drag-handle" title="Drag to reorder">⠿</span>' +
-				'<span class="naano-section-card__name">' + $( '<span>' ).text( displayName ).html() + '</span>' +
-				'<div class="naano-section-card__badges"></div>' +
-				'<div class="naano-section-card__actions">' +
-					'<button type="button" class="naano-btn-icon naano-btn-edit" data-section-id="' + id + '" title="Edit">✏️</button>' +
-					'<button type="button" class="naano-btn-icon naano-btn-screenshot" data-section-id="' + id + '" title="Add screenshot">🖼️</button>' +
-					'<button type="button" class="naano-btn-icon naano-btn-url-ref" data-section-id="' + id + '" title="Add URL">🔗</button>' +
-					'<button type="button" class="naano-btn-icon naano-btn-delete" data-section-id="' + id + '" title="Delete">🗑️</button>' +
-				'</div>' +
-			'</div>' );
-
-			var $preview = $( '<div class="naano-section-card__preview">' +
-				'<iframe class="naano-section-iframe" sandbox="allow-same-origin" loading="lazy"></iframe>' +
-			'</div>' );
-
-			$card.append( $header ).append( $preview );
-			$( '#naano-section-cards' ).append( $card );
-
-			// Set iframe srcdoc after appending (avoids blank frame in some browsers).
-			$card.find( 'iframe' ).get( 0 ).srcdoc = html;
-
-			NaanoBuilder._bindCardButtons( $card );
+			var existing = NaanoBuilder._findSectionIndex( id );
+			if ( existing === -1 ) {
+				NaanoBuilder.sectionsData.push( { id: id, html: html } );
+			} else {
+				NaanoBuilder.sectionsData[ existing ].html = html;
+			}
+			NaanoBuilder._refreshLivePreview();
+			NaanoBuilder._renderSectionsList();
 		},
 
 		// =====================================================================
@@ -159,19 +161,25 @@
 		openEditPanel: function ( sectionId ) {
 			NaanoBuilder.editingSectionId = sectionId;
 
-			var displayName = sectionId
-				.replace( /[-_]/g, ' ' )
-				.replace( /\b\w/g, function ( c ) { return c.toUpperCase(); } );
-
+			var displayName = NaanoBuilder._displayName( sectionId );
 			$( '#naano-editing-section-name' ).text( displayName );
 			$( '#naano-instruction' ).val( '' );
+
+			// Enable the update button now that a section is selected.
+			$( '#naano-update-section-btn' ).prop( 'disabled', false );
+
+			// Highlight in sections list.
+			$( '#naano-sections-list .naano-sections-list__item' ).removeClass( 'naano-sections-list__item--active' );
+			$( '#naano-sl-item-' + sectionId ).addClass( 'naano-sections-list__item--active' );
 
 			// Load stored references.
 			var refs = ( data.references && data.references[ sectionId ] ) ? data.references[ sectionId ] : [];
 			NaanoBuilder._renderReferenceList( refs );
 
-			$( '#naano-edit-panel' ).slideDown( 200 );
-			$( 'html, body' ).animate( { scrollTop: $( '#naano-edit-panel' ).offset().top - 40 }, 300 );
+			// Tell the iframe to highlight the section.
+			// NOTE: postMessage target '*' is intentional — srcdoc iframes have a null origin,
+			// so a specific origin cannot be used as targetOrigin here.
+			NaanoBuilder._iframePost( { type: 'naano-highlight-section', sectionId: sectionId } );
 		},
 
 		/**
@@ -181,41 +189,57 @@
 			var sectionId   = NaanoBuilder.editingSectionId;
 			var instruction = $( '#naano-instruction' ).val().trim();
 
+			if ( ! sectionId ) {
+				NaanoBuilder._toast( data.strings.select_section, 'error' );
+				return;
+			}
 			if ( ! instruction ) {
-				NaanoBuilder._toast( 'Please enter an instruction.', 'error' );
+				NaanoBuilder._toast( data.strings.enter_instruction, 'error' );
 				return;
 			}
 
 			NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', true );
 
+			// Show loading overlay on the section inside the iframe.
+			NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: true } );
+
 			$.post( data.ajaxUrl, {
-				action:     'naano_update_section',
-				nonce:      data.nonce,
-				page_id:    NaanoBuilder.pageId,
-				section_id: sectionId,
+				action:      'naano_update_section',
+				nonce:       data.nonce,
+				page_id:     NaanoBuilder.pageId,
+				section_id:  sectionId,
 				instruction: instruction
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+
 				if ( response.success ) {
 					var id   = response.data.section_id;
 					var html = response.data.section_html;
 
-					// Update the iframe.
-					var iframe = $( '#naano-card-' + id + ' iframe' ).get( 0 );
-					if ( iframe ) {
-						iframe.srcdoc = html;
+					// Update in-memory store.
+					var idx = NaanoBuilder._findSectionIndex( id );
+					if ( idx !== -1 ) {
+						NaanoBuilder.sectionsData[ idx ].html = html;
 					}
 
-					$( '#naano-edit-panel' ).slideUp( 200 );
-					NaanoBuilder.editingSectionId = null;
+					// Real-time update: only replace this section inside the iframe.
+					NaanoBuilder._iframePost( {
+						type:      'naano-update-section',
+						sectionId: id,
+						html:      html
+					} );
+
 					NaanoBuilder._toast( 'Section updated! ✨', 'success' );
 				} else {
+					// Remove loading overlay on error.
+					NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: false } );
 					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
 				}
 			} )
 			.fail( function () {
 				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+				NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: false } );
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
 		},
@@ -252,14 +276,12 @@
 				} )
 				.done( function ( response ) {
 					if ( response.success ) {
-						// Update local cache.
 						if ( ! data.references ) { data.references = {}; }
 						data.references[ sectionId ] = response.data.references;
 
 						if ( NaanoBuilder.editingSectionId === sectionId ) {
 							NaanoBuilder._renderReferenceList( response.data.references );
 						}
-						NaanoBuilder._updateBadges( sectionId, response.data.references );
 						NaanoBuilder._toast( 'Screenshot added! 🖼️', 'success' );
 					} else {
 						NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
@@ -312,7 +334,6 @@
 					if ( NaanoBuilder.editingSectionId === sectionId ) {
 						NaanoBuilder._renderReferenceList( response.data.references );
 					}
-					NaanoBuilder._updateBadges( sectionId, response.data.references );
 					$( '#naano-add-url-form' ).hide();
 					$( '#naano-ref-url' ).val( '' );
 					$( '#naano-ref-notes' ).val( '' );
@@ -345,7 +366,6 @@
 					if ( NaanoBuilder.editingSectionId === sectionId ) {
 						NaanoBuilder._renderReferenceList( response.data.references );
 					}
-					NaanoBuilder._updateBadges( sectionId, response.data.references );
 				}
 			} );
 		},
@@ -372,20 +392,30 @@
 			} )
 			.done( function ( response ) {
 				if ( response.success ) {
-					$( '#naano-card-' + sectionId ).remove();
+					// Remove from in-memory store and rebuild preview.
+					var idx = NaanoBuilder._findSectionIndex( sectionId );
+					if ( idx !== -1 ) {
+						NaanoBuilder.sectionsData.splice( idx, 1 );
+					}
+
+					if ( NaanoBuilder.editingSectionId === sectionId ) {
+						NaanoBuilder.editingSectionId = null;
+						$( '#naano-editing-section-name' ).text( data.strings.click_section );
+						$( '#naano-update-section-btn' ).prop( 'disabled', true );
+					}
+
+					NaanoBuilder._refreshLivePreview();
+					NaanoBuilder._renderSectionsList();
 					NaanoBuilder._toast( 'Section deleted.', 'success' );
 				}
 			} );
 		},
 
 		/**
-		 * Send the reorder AJAX call.
+		 * Send the reorder AJAX call (called after reordering sectionsData).
 		 */
 		reorderSections: function () {
-			var order = [];
-			$( '#naano-section-cards .naano-section-card' ).each( function () {
-				order.push( $( this ).data( 'section-id' ) );
-			} );
+			var order = NaanoBuilder.sectionsData.map( function ( sec ) { return sec.id; } );
 
 			$.post( data.ajaxUrl, {
 				action:  'naano_reorder_sections',
@@ -486,12 +516,10 @@
 		// =====================================================================
 
 		_bindGenerationForm: function () {
-			// Generate button.
 			$( document ).on( 'click', '#naano-generate-btn', function () {
 				NaanoBuilder.generateSite();
 			} );
 
-			// Add custom section checkbox.
 			$( document ).on( 'click', '#naano-add-custom-section', function () {
 				var name = $( '#naano-custom-section-input' ).val().trim();
 				if ( ! name ) { return; }
@@ -499,7 +527,8 @@
 				var slug = name.toLowerCase().replace( /\s+/g, '-' ).replace( /[^a-z0-9-]/g, '' );
 				$( '#naano-section-checkboxes' ).append(
 					'<label class="naano-checkbox-label">' +
-					'<input type="checkbox" name="sections[]" value="' + slug + '" checked> ' + $( '<span>' ).text( name ).html() +
+					'<input type="checkbox" name="sections[]" value="' + slug + '" checked> ' +
+					$( '<span>' ).text( name ).html() +
 					'</label>'
 				);
 				$( '#naano-custom-section-input' ).val( '' );
@@ -507,114 +536,300 @@
 		},
 
 		_bindActionBar: function () {
-			$( document ).on( 'click', '#naano-preview-btn',    function () { NaanoBuilder.previewSite(); } );
-			$( document ).on( 'click', '#naano-export-btn',     function () { NaanoBuilder.exportHtml(); } );
-			$( document ).on( 'click', '#naano-copy-btn',       function () { NaanoBuilder.copyToClipboard(); } );
-			$( document ).on( 'click', '#naano-save-page-btn',  function () { NaanoBuilder.saveAsPage(); } );
+			$( document ).on( 'click', '#naano-preview-btn',   function () { NaanoBuilder.previewSite(); } );
+			$( document ).on( 'click', '#naano-export-btn',    function () { NaanoBuilder.exportHtml(); } );
+			$( document ).on( 'click', '#naano-copy-btn',      function () { NaanoBuilder.copyToClipboard(); } );
+			$( document ).on( 'click', '#naano-save-page-btn', function () { NaanoBuilder.saveAsPage(); } );
 		},
 
-		_bindEditPanel: function () {
-			// Update section.
-			$( document ).on( 'click', '#naano-update-section-btn', function () {
-				NaanoBuilder.updateSection();
-			} );
-
-			// Cancel edit.
-			$( document ).on( 'click', '#naano-cancel-edit-btn', function () {
-				$( '#naano-edit-panel' ).slideUp( 200 );
-				NaanoBuilder.editingSectionId = null;
-			} );
-
-			// Add screenshot.
-			$( document ).on( 'click', '#naano-add-screenshot-btn', function () {
-				NaanoBuilder.addScreenshot( NaanoBuilder.editingSectionId );
-			} );
-
-			// Add URL.
-			$( document ).on( 'click', '#naano-add-url-btn', function () {
-				NaanoBuilder.addUrlReference( NaanoBuilder.editingSectionId );
-			} );
-
-			// Save URL.
-			$( document ).on( 'click', '#naano-save-url-btn', function () {
-				NaanoBuilder.saveUrlReference( NaanoBuilder.editingSectionId );
-			} );
-
-			// Cancel URL form.
-			$( document ).on( 'click', '#naano-cancel-url-btn', function () {
-				$( '#naano-add-url-form' ).hide();
-			} );
-
-			// Remove reference.
-			$( document ).on( 'click', '.naano-remove-ref-btn', function () {
-				var idx = parseInt( $( this ).data( 'index' ), 10 );
-				NaanoBuilder.removeReference( NaanoBuilder.editingSectionId, idx );
+		_bindDrawer: function () {
+			$( document ).on( 'click', '#naano-drawer-toggle', function () {
+				$( '#naano-drawer' ).toggleClass( 'naano-drawer--collapsed' );
 			} );
 		},
 
-		_bindCardButtons: function ( $card ) {
-			var sectionId = $card.data( 'section-id' );
+		_bindViewportToggle: function () {
+			$( document ).on( 'click', '#naano-viewport-group .naano-viewport-btn', function () {
+				var width = $( this ).data( 'width' );
+				$( '#naano-viewport-group .naano-viewport-btn' ).removeClass( 'naano-viewport-btn--active' );
+				$( this ).addClass( 'naano-viewport-btn--active' );
 
-			$card.find( '.naano-btn-edit' ).on( 'click', function () {
-				NaanoBuilder.openEditPanel( sectionId );
-			} );
-
-			$card.find( '.naano-btn-screenshot' ).on( 'click', function () {
-				NaanoBuilder.editingSectionId = sectionId;
-				NaanoBuilder.addScreenshot( sectionId );
-			} );
-
-			$card.find( '.naano-btn-url-ref' ).on( 'click', function () {
-				NaanoBuilder.openEditPanel( sectionId );
-				setTimeout( function () {
-					NaanoBuilder.addUrlReference( sectionId );
-				}, 250 );
-			} );
-
-			$card.find( '.naano-btn-delete' ).on( 'click', function () {
-				NaanoBuilder.deleteSection( sectionId );
-			} );
-		},
-
-		_bindDragDrop: function () {
-			var $container = $( '#naano-section-cards' );
-			var dragged    = null;
-
-			$container.on( 'dragstart', '.naano-section-card', function ( e ) {
-				dragged = this;
-				$( this ).addClass( 'naano-dragging' );
-				e.originalEvent.dataTransfer.effectAllowed = 'move';
-			} );
-
-			$container.on( 'dragend', '.naano-section-card', function () {
-				$( this ).removeClass( 'naano-dragging' );
-				NaanoBuilder.reorderSections();
-			} );
-
-			$container.on( 'dragover', '.naano-section-card', function ( e ) {
-				e.preventDefault();
-				var $over = $( this );
-				if ( dragged && dragged !== this ) {
-					var midY = $over.offset().top + $over.outerHeight() / 2;
-					if ( e.originalEvent.clientY < midY ) {
-						$over.before( dragged );
-					} else {
-						$over.after( dragged );
-					}
+				var $iframe = $( '#naano-live-preview' );
+				if ( width === '100%' ) {
+					$iframe.css( { 'max-width': '100%', width: '100%' } );
+				} else {
+					$iframe.css( { 'max-width': width, width: width } );
 				}
 			} );
 		},
 
-		_rebuildCardsFromData: function ( sections ) {
-			$( '#naano-section-cards' ).empty();
-			sections.forEach( function ( sec ) {
-				NaanoBuilder.renderSectionCard( sec.id, sec.html );
+		_bindEditPanel: function () {
+			$( document ).on( 'click', '#naano-update-section-btn', function () {
+				NaanoBuilder.updateSection();
+			} );
+
+			$( document ).on( 'click', '#naano-add-screenshot-btn', function () {
+				if ( NaanoBuilder.editingSectionId ) {
+					NaanoBuilder.addScreenshot( NaanoBuilder.editingSectionId );
+				}
+			} );
+
+			$( document ).on( 'click', '#naano-add-url-btn', function () {
+				if ( NaanoBuilder.editingSectionId ) {
+					NaanoBuilder.addUrlReference( NaanoBuilder.editingSectionId );
+				}
+			} );
+
+			$( document ).on( 'click', '#naano-save-url-btn', function () {
+				NaanoBuilder.saveUrlReference( NaanoBuilder.editingSectionId );
+			} );
+
+			$( document ).on( 'click', '#naano-cancel-url-btn', function () {
+				$( '#naano-add-url-form' ).hide();
+			} );
+
+			$( document ).on( 'click', '.naano-remove-ref-btn', function () {
+				var idx = parseInt( $( this ).data( 'index' ), 10 );
+				NaanoBuilder.removeReference( NaanoBuilder.editingSectionId, idx );
+			} );
+
+			$( document ).on( 'click', '#naano-add-new-section-btn', function () {
+				/* global prompt */
+				var name = window.prompt( data.strings.new_section_name );
+				if ( ! name ) { return; }
+				NaanoBuilder._addNewSection( name );
+			} );
+		},
+
+		/**
+		 * Listen for postMessage events from the live-preview iframe.
+		 */
+		_bindIframeMessages: function () {
+			window.addEventListener( 'message', function ( e ) {
+				var msg = e.data;
+				if ( ! msg || msg.type !== 'naano-section-clicked' ) { return; }
+
+				var sectionId = msg.sectionId;
+				if ( sectionId && NaanoBuilder.pageId ) {
+					NaanoBuilder.openEditPanel( sectionId );
+				}
+			} );
+		},
+
+		/**
+		 * Build the full-page srcdoc HTML from sectionsData and set on the iframe.
+		 */
+		_refreshLivePreview: function () {
+			var iframe = document.getElementById( 'naano-live-preview' );
+			if ( ! iframe ) { return; }
+
+			iframe.srcdoc = NaanoBuilder._buildIframeSrcdoc();
+		},
+
+		/**
+		 * Assemble all sections into a full HTML document with the interaction helper script injected.
+		 *
+		 * @return {string}
+		 */
+		_buildIframeSrcdoc: function () {
+			var sectionsHtml = '';
+			NaanoBuilder.sectionsData.forEach( function ( sec ) {
+				sectionsHtml += sec.html;
+			} );
+
+			// Interaction helper script injected into the iframe.
+			// - Listens for postMessage from parent (update section, highlight, loading).
+			// - Reports section clicks back to parent via postMessage.
+			var helperScript = [
+				'(function(){',
+				'var s=document.createElement("style");',
+				's.textContent=',
+				'"[data-section]{cursor:pointer;transition:outline 0.15s;}"',
+				'+"[data-section]:hover{outline:2px dashed rgba(34,113,177,0.5);outline-offset:2px;}"',
+				'+"[data-section].naano-section-selected{outline:2px solid #2271b1;outline-offset:2px;}"',
+				'+"[data-section].naano-section-loading{position:relative;pointer-events:none;}"',
+				'+"[data-section].naano-section-loading::after{content:\'\';position:absolute;inset:0;background:rgba(255,255,255,0.65);z-index:9999;animation:naano-pulse 1s infinite;}"',
+				'+"@keyframes naano-pulse{0%,100%{opacity:0.5;}50%{opacity:1;}}"',
+				'+"@keyframes naano-flash{0%{box-shadow:inset 0 0 0 3px rgba(34,113,177,0.7);}100%{box-shadow:none;}}";',
+				'document.head.appendChild(s);',
+
+				// Listen for messages from parent.
+				'window.addEventListener("message",function(e){',
+				'  var m=e.data;if(!m||!m.type)return;',
+
+				// Update a specific section's HTML.
+				'  if(m.type==="naano-update-section"){',
+				'    var el=document.querySelector(\'[data-section="\'+m.sectionId+\'"]\');',
+				'    if(el){',
+				'      var tmp=document.createElement("div");',
+				'      tmp.innerHTML=m.html;',
+				'      var newEl=tmp.firstElementChild;',
+				'      if(newEl){',
+				'        newEl.classList.remove("naano-section-loading");',
+				'        el.parentNode.insertBefore(newEl,el);',
+				'        el.parentNode.removeChild(el);',
+				'        newEl.style.animation="naano-flash 1.5s ease forwards";',
+				'        setTimeout(function(){newEl.style.animation="";},1600);',
+				'      } else {',
+				'        el.classList.remove("naano-section-loading");',
+				'        el.style.animation="naano-flash 1.5s ease forwards";',
+				'        setTimeout(function(){el.style.animation="";},1600);',
+				'      }',
+				'    }',
+				'  }',
+
+				// Highlight a section.
+				'  if(m.type==="naano-highlight-section"){',
+				'    document.querySelectorAll(".naano-section-selected").forEach(function(n){n.classList.remove("naano-section-selected");});',
+				'    var el=document.querySelector(\'[data-section="\'+m.sectionId+\'"]\');',
+				'    if(el)el.classList.add("naano-section-selected");',
+				'  }',
+
+				// Show/hide loading overlay on a section.
+				'  if(m.type==="naano-loading-section"){',
+				'    var el=document.querySelector(\'[data-section="\'+m.sectionId+\'"]\');',
+				'    if(el){',
+				'      if(m.loading)el.classList.add("naano-section-loading");',
+				'      else el.classList.remove("naano-section-loading");',
+				'    }',
+				'  }',
+				'});',
+
+				// Report section clicks to parent.
+				'document.addEventListener("click",function(e){',
+				'  var el=e.target;',
+				'  while(el&&el!==document.body){',
+				'    if(el.hasAttribute("data-section")){',
+				'      e.preventDefault();',
+				'      document.querySelectorAll(".naano-section-selected").forEach(function(n){n.classList.remove("naano-section-selected");});',
+				'      el.classList.add("naano-section-selected");',
+				'      window.parent.postMessage({type:"naano-section-clicked",sectionId:el.getAttribute("data-section")},"*");',
+				'      break;',
+				'    }',
+				'    el=el.parentElement;',
+				'  }',
+				'});',
+				'}());'
+			].join( '' );
+
+			return '<!DOCTYPE html><html><head>' +
+				'<meta charset="utf-8">' +
+				'<meta name="viewport" content="width=device-width,initial-scale=1">' +
+				'</head><body>' +
+				sectionsHtml +
+				'<script>' + helperScript + '<\/script>' +
+				'</body></html>';
+		},
+
+		/**
+		 * Post a message to the live-preview iframe.
+		 *
+		 * NOTE: We intentionally use '*' as targetOrigin because the iframe is loaded
+		 * via srcdoc, which gives it a null (opaque) origin. A specific origin cannot
+		 * be used as targetOrigin for null-origin iframes, so '*' is required here.
+		 *
+		 * @param {Object} msg
+		 */
+		_iframePost: function ( msg ) {
+			var iframe = document.getElementById( 'naano-live-preview' );
+			if ( iframe && iframe.contentWindow ) {
+				iframe.contentWindow.postMessage( msg, '*' );
+			}
+		},
+
+		/**
+		 * Render the section quick-select list in the drawer.
+		 */
+		_renderSectionsList: function () {
+			var $list = $( '#naano-sections-list' ).empty();
+
+			NaanoBuilder.sectionsData.forEach( function ( sec ) {
+				var displayName = NaanoBuilder._displayName( sec.id );
+
+				var $item = $( '<li>', {
+					'class': 'naano-sections-list__item',
+					'id':    'naano-sl-item-' + sec.id
+				} );
+
+				$item.html(
+					'<span class="naano-sections-list__name">' + $( '<span>' ).text( displayName ).html() + '</span>' +
+					'<span class="naano-sections-list__actions">' +
+					'<button type="button" class="naano-sections-list__btn" data-action="edit" data-id="' + sec.id + '" title="Edit">✏️</button>' +
+					'<button type="button" class="naano-sections-list__btn naano-sections-list__btn--delete" data-action="delete" data-id="' + sec.id + '" title="Delete">🗑️</button>' +
+					'</span>'
+				);
+
+				// Click on the item row selects the section.
+				$item.on( 'click', function ( e ) {
+					if ( $( e.target ).closest( '[data-action]' ).length ) { return; }
+					NaanoBuilder.openEditPanel( sec.id );
+				} );
+
+				// Action buttons.
+				$item.find( '[data-action=edit]' ).on( 'click', function ( e ) {
+					e.stopPropagation();
+					NaanoBuilder.openEditPanel( sec.id );
+				} );
+
+				$item.find( '[data-action=delete]' ).on( 'click', function ( e ) {
+					e.stopPropagation();
+					NaanoBuilder.deleteSection( sec.id );
+				} );
+
+				$list.append( $item );
+			} );
+		},
+
+		/**
+		 * Add a new section by prompting the AI.
+		 *
+		 * @param {string} sectionName
+		 */
+		_addNewSection: function ( sectionName ) {
+			// Use updateSection mechanism: a new section_id and instruction.
+			var instruction = 'Create a new "' + sectionName + '" section for this website.';
+			var slug        = sectionName.toLowerCase().replace( /\s+/g, '-' ).replace( /[^a-z0-9-]/g, '' );
+
+			NaanoBuilder._setLoading( '#naano-add-new-section-btn', '#naano-update-loading', true );
+
+			$.post( data.ajaxUrl, {
+				action:      'naano_update_section',
+				nonce:       data.nonce,
+				page_id:     NaanoBuilder.pageId,
+				section_id:  slug,
+				instruction: instruction
+			} )
+			.done( function ( response ) {
+				NaanoBuilder._setLoading( '#naano-add-new-section-btn', '#naano-update-loading', false );
+				if ( response.success ) {
+					var id   = response.data.section_id;
+					var html = response.data.section_html;
+
+					var idx = NaanoBuilder._findSectionIndex( id );
+					if ( idx !== -1 ) {
+						NaanoBuilder.sectionsData[ idx ].html = html;
+					} else {
+						NaanoBuilder.sectionsData.push( { id: id, html: html } );
+					}
+
+					NaanoBuilder._refreshLivePreview();
+					NaanoBuilder._renderSectionsList();
+					NaanoBuilder._toast( 'Section "' + sectionName + '" added! ✨', 'success' );
+				} else {
+					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
+				}
+			} )
+			.fail( function () {
+				NaanoBuilder._setLoading( '#naano-add-new-section-btn', '#naano-update-loading', false );
+				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
 		},
 
 		_showBuilder: function () {
-			$( '#naano-generation-form' ).hide();
-			$( '#naano-builder-main' ).show();
+			$( '#naano-drawer-generate' ).hide();
+			$( '#naano-drawer-edit' ).show();
+			$( '#naano-canvas-placeholder' ).hide();
+			$( '#naano-live-iframe-wrap' ).show();
 		},
 
 		_renderReferenceList: function ( refs ) {
@@ -625,18 +840,14 @@
 				var $li = $( '<li class="naano-reference-item">' );
 
 				if ( ref.type === 'screenshot' ) {
-					$li.append(
-						'<img src="' + $( '<img>' ).attr( 'src', ref.url ).prop( 'outerHTML' ).match( /src="([^"]*)"/ )[1] +
-						'" class="naano-ref-thumb"> ' +
-						$( '<span>' ).text( ref.notes || ref.url ).html()
-					);
+					var thumb = $( '<img>' ).attr( 'src', ref.url ).addClass( 'naano-ref-thumb' );
+					$li.append( thumb );
+					$li.append( $( '<span>' ).text( ref.notes || ref.url ) );
 					$li.append( ' <button type="button" class="naano-remove-ref-btn" data-index="' + index + '">✕</button>' );
 					$screenshots.append( $li );
 				} else {
-					$li.append(
-						'<a href="' + $( '<a>' ).attr( 'href', ref.url ).prop( 'outerHTML' ).match( /href="([^"]*)"/ )[1] +
-						'" target="_blank">' + $( '<span>' ).text( ref.url ).html() + '</a>'
-					);
+					var $link = $( '<a>' ).attr( { href: ref.url, target: '_blank' } ).text( ref.url );
+					$li.append( $link );
 					if ( ref.notes ) {
 						$li.append( ' — ' + $( '<span>' ).text( ref.notes ).html() );
 					}
@@ -646,22 +857,22 @@
 			} );
 		},
 
-		_updateBadges: function ( sectionId, refs ) {
-			var screenshots = refs.filter( function ( r ) { return r.type === 'screenshot'; } ).length;
-			var urls        = refs.filter( function ( r ) { return r.type === 'url'; } ).length;
-			var $badges     = $( '#naano-card-' + sectionId + ' .naano-section-card__badges' ).empty();
-
-			if ( screenshots > 0 ) {
-				$badges.append( '<span class="naano-badge naano-badge--screenshots">🖼️ ' + screenshots + '</span>' );
-			}
-			if ( urls > 0 ) {
-				$badges.append( '<span class="naano-badge naano-badge--urls">🔗 ' + urls + '</span>' );
-			}
-		},
-
 		_setLoading: function ( btnSelector, loadSelector, loading ) {
 			$( btnSelector ).prop( 'disabled', loading );
 			$( loadSelector ).toggle( loading );
+		},
+
+		_findSectionIndex: function ( id ) {
+			for ( var i = 0; i < NaanoBuilder.sectionsData.length; i++ ) {
+				if ( NaanoBuilder.sectionsData[ i ].id === id ) { return i; }
+			}
+			return -1;
+		},
+
+		_displayName: function ( id ) {
+			return id
+				.replace( /[-_]/g, ' ' )
+				.replace( /\b\w/g, function ( c ) { return c.toUpperCase(); } );
 		},
 
 		_toast: function ( message, type, duration ) {
@@ -681,7 +892,7 @@
 		NaanoBuilder.init();
 	} );
 
-	// Expose globally for inline event use.
+	// Expose globally.
 	window.NaanoBuilder = NaanoBuilder;
 
 }( jQuery, naanoBuilderData ) );
