@@ -1,0 +1,543 @@
+/**
+ * Naano AI Website Builder — builder.css
+ * Admin UI styles
+ */
+
+/* ============================================================
+   RESET / BASE
+   ============================================================ */
+.naano-builder-wrap {
+	max-width: 1400px;
+}
+
+.naano-page-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 1.6rem;
+	margin-bottom: 20px;
+}
+
+.naano-page-title .dashicons {
+	font-size: 1.6rem;
+	width: 1.6rem;
+	height: 1.6rem;
+}
+
+/* ============================================================
+   CARD (generic container)
+   ============================================================ */
+.naano-card {
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 24px 28px;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+	margin-bottom: 20px;
+}
+
+.naano-card h2 {
+	margin-top: 0;
+	font-size: 1.2rem;
+	border-bottom: 1px solid #f0f0f0;
+	padding-bottom: 10px;
+}
+
+/* ============================================================
+   GENERATION FORM
+   ============================================================ */
+.naano-generation-form .naano-section-checkboxes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 20px;
+	margin-bottom: 8px;
+}
+
+.naano-checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.naano-custom-section-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.naano-form-actions {
+	margin-top: 20px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+/* ============================================================
+   ACTION BAR
+   ============================================================ */
+.naano-action-bar {
+	position: sticky;
+	top: 32px;
+	z-index: 100;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 10px 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	margin-bottom: 20px;
+}
+
+.naano-action-bar__left {
+	font-size: 13px;
+	color: #555;
+}
+
+.naano-action-bar__right {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.naano-action-bar .button {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+/* ============================================================
+   SECTION CARDS CONTAINER
+   ============================================================ */
+.naano-section-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+/* ============================================================
+   SECTION CARD
+   ============================================================ */
+.naano-section-card {
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+	overflow: hidden;
+	transition: box-shadow 0.2s ease;
+}
+
+.naano-section-card:hover {
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.naano-section-card.naano-dragging {
+	opacity: 0.5;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Card Header */
+.naano-section-card__header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 16px;
+	background: #f8f9fa;
+	border-bottom: 1px solid #e8e8e8;
+}
+
+.naano-drag-handle {
+	cursor: grab;
+	font-size: 18px;
+	color: #aaa;
+	line-height: 1;
+	user-select: none;
+}
+
+.naano-drag-handle:active {
+	cursor: grabbing;
+}
+
+.naano-section-card__name {
+	font-weight: 600;
+	font-size: 13px;
+	flex: 1;
+	text-transform: capitalize;
+}
+
+.naano-section-card__badges {
+	display: flex;
+	gap: 6px;
+}
+
+.naano-badge {
+	background: #e8f4fd;
+	color: #1a7fb4;
+	font-size: 11px;
+	padding: 2px 7px;
+	border-radius: 10px;
+	border: 1px solid #b8ddf7;
+}
+
+/* Card Actions */
+.naano-section-card__actions {
+	display: flex;
+	gap: 6px;
+}
+
+.naano-btn-icon {
+	background: none;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	padding: 3px 7px;
+	cursor: pointer;
+	font-size: 15px;
+	line-height: 1.4;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.naano-btn-icon:hover {
+	background: #f0f0f0;
+	border-color: #ddd;
+}
+
+.naano-btn-delete:hover {
+	background: #fff0f0;
+	border-color: #f5a5a5;
+}
+
+/* Card Preview */
+.naano-section-card__preview {
+	position: relative;
+	height: 240px;
+	background: #fafafa;
+	overflow: hidden;
+}
+
+.naano-section-iframe {
+	width: 100%;
+	height: 100%;
+	border: 0;
+	display: block;
+}
+
+/* ============================================================
+   EDIT PANEL
+   ============================================================ */
+.naano-edit-panel {
+	background: #fff;
+	border: 2px solid #2271b1;
+	border-radius: 8px;
+	margin: 16px 0;
+	box-shadow: 0 4px 16px rgba(34, 113, 177, 0.15);
+}
+
+.naano-edit-panel__inner {
+	padding: 24px 28px;
+}
+
+.naano-edit-panel__title {
+	margin-top: 0;
+	font-size: 1.1rem;
+	color: #1d2327;
+}
+
+.naano-edit-panel label strong {
+	display: block;
+	margin-bottom: 6px;
+}
+
+.naano-edit-panel__actions {
+	margin-top: 20px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* Reference sections */
+.naano-reference-section {
+	margin-top: 20px;
+	border-top: 1px solid #f0f0f0;
+	padding-top: 16px;
+}
+
+.naano-reference-section h4 {
+	margin: 0 0 10px;
+	font-size: 13px;
+	text-transform: uppercase;
+	color: #777;
+	letter-spacing: 0.05em;
+}
+
+.naano-reference-list {
+	list-style: none;
+	margin: 0 0 10px;
+	padding: 0;
+}
+
+.naano-reference-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	background: #f8f9fa;
+	border-radius: 4px;
+	font-size: 13px;
+	margin-bottom: 6px;
+	border: 1px solid #e8e8e8;
+}
+
+.naano-ref-thumb {
+	width: 40px;
+	height: 28px;
+	object-fit: cover;
+	border-radius: 3px;
+	border: 1px solid #ddd;
+}
+
+.naano-remove-ref-btn {
+	margin-left: auto;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #cc1818;
+	font-size: 14px;
+	padding: 2px 5px;
+	border-radius: 3px;
+}
+
+.naano-remove-ref-btn:hover {
+	background: #fff0f0;
+}
+
+.naano-add-url-form {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: 10px;
+	padding: 12px;
+	background: #f8f9fa;
+	border: 1px dashed #c3c4c7;
+	border-radius: 4px;
+}
+
+/* ============================================================
+   ADD SECTION BAR
+   ============================================================ */
+.naano-add-section-bar {
+	text-align: center;
+	margin-top: 16px;
+	padding: 10px;
+}
+
+.naano-add-section-btn {
+	font-size: 13px !important;
+	border: 2px dashed #ddd !important;
+	background: transparent !important;
+	color: #555 !important;
+	padding: 8px 24px !important;
+	transition: border-color 0.2s, color 0.2s !important;
+}
+
+.naano-add-section-btn:hover {
+	border-color: #2271b1 !important;
+	color: #2271b1 !important;
+}
+
+/* ============================================================
+   LOADING / SPINNER
+   ============================================================ */
+.naano-loading {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #555;
+}
+
+.naano-loading .spinner {
+	float: none;
+	margin: 0;
+}
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+.naano-toast {
+	position: fixed;
+	bottom: 30px;
+	right: 30px;
+	z-index: 99999;
+	background: #23282d;
+	color: #fff;
+	padding: 12px 20px;
+	border-radius: 6px;
+	font-size: 13px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	opacity: 0;
+	transform: translateY(12px);
+	transition: opacity 0.25s ease, transform 0.25s ease;
+	max-width: 400px;
+}
+
+.naano-toast a {
+	color: #7ec8e3;
+}
+
+.naano-toast--visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.naano-toast--success {
+	background: #1e7e34;
+}
+
+.naano-toast--error {
+	background: #b91c1c;
+}
+
+/* ============================================================
+   TEST CONNECTION RESULT
+   ============================================================ */
+.naano-test-connection-row {
+	margin-top: 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.naano-test-result {
+	padding: 8px 14px;
+	border-radius: 5px;
+	font-size: 13px;
+	background: #f8f9fa;
+	border: 1px solid #e8e8e8;
+}
+
+.naano-success { color: #1e7e34; font-weight: 600; }
+.naano-error   { color: #b91c1c; font-weight: 600; }
+
+/* ============================================================
+   PREVIEW MODAL
+   ============================================================ */
+.naano-preview-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 999999;
+	background: rgba(0, 0, 0, 0.88);
+	display: flex;
+	flex-direction: column;
+	opacity: 0;
+	transition: opacity 0.25s ease;
+}
+
+.naano-preview-modal--open {
+	opacity: 1;
+}
+
+.naano-preview-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 20px;
+	background: #1d2327;
+	border-bottom: 1px solid #333;
+	flex-shrink: 0;
+}
+
+.naano-preview-toolbar__viewports {
+	display: flex;
+	gap: 8px;
+}
+
+.naano-viewport-btn {
+	background: #2c3338;
+	border: 1px solid #444;
+	color: #ccc;
+	padding: 6px 14px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 13px;
+	transition: background 0.15s, color 0.15s;
+}
+
+.naano-viewport-btn:hover,
+.naano-viewport-btn--active {
+	background: #2271b1;
+	color: #fff;
+	border-color: #1a5c96;
+}
+
+.naano-preview-close {
+	background: #c0392b;
+	border: none;
+	color: #fff;
+	padding: 6px 16px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 13px;
+	transition: background 0.15s;
+}
+
+.naano-preview-close:hover {
+	background: #a93226;
+}
+
+.naano-preview-frame-wrap {
+	flex: 1;
+	overflow: auto;
+	display: flex;
+	justify-content: center;
+	padding: 20px;
+	background: #2c3338;
+}
+
+.naano-preview-iframe {
+	width: 100%;
+	height: 100%;
+	border: 0;
+	background: #fff;
+	border-radius: 4px;
+	box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+	transition: width 0.3s ease;
+}
+
+/* ============================================================
+   SETTINGS PAGE
+   ============================================================ */
+.naano-builder-wrap .form-table input[type="password"],
+.naano-builder-wrap .form-table input[type="text"] {
+	width: 100%;
+	max-width: 400px;
+}
+
+#naano-variables-tbody tr td {
+	padding: 5px 8px 5px 0;
+	vertical-align: middle;
+	border: none;
+}
+
+#naano-variables-tbody tr td input {
+	width: 100%;
+	max-width: 260px;
+}
+
+/* ============================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================ */
+@media screen and (max-width: 900px) {
+	.naano-action-bar {
+		flex-direction: column;
+		gap: 10px;
+		align-items: flex-start;
+	}
+
+	.naano-action-bar__right {
+		width: 100%;
+	}
+}
