@@ -24,6 +24,73 @@ class Naano_Admin_Page {
 		add_action( 'admin_menu', [ $this, 'register_menus' ] );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+
+		// "Build with Naano AI" in the Pages list row actions.
+		add_filter( 'page_row_actions', [ $this, 'add_page_row_action' ], 10, 2 );
+
+		// "Build with Naano AI" in the admin bar.
+		add_action( 'admin_bar_menu', [ $this, 'add_admin_bar_item' ], 100 );
+	}
+
+	/**
+	 * Add "Build with Naano AI" to the Pages list row actions.
+	 *
+	 * @param string[]  $actions Current row action links.
+	 * @param \WP_Post  $post    Current post object.
+	 * @return string[]
+	 */
+	public function add_page_row_action( array $actions, \WP_Post $post ): array {
+		if ( current_user_can( 'manage_options' ) ) {
+			$url = add_query_arg(
+				[
+					'page'    => 'naano-ai-builder',
+					'page_id' => $post->ID,
+				],
+				admin_url( 'admin.php' )
+			);
+
+			$actions['naano_build'] = sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( $url ),
+				esc_html__( 'Build with Naano AI', 'naano-ai-website-builder' )
+			);
+		}
+
+		return $actions;
+	}
+
+	/**
+	 * Add "Naano AI" quick-access node to the WordPress admin bar.
+	 *
+	 * @param \WP_Admin_Bar $wp_admin_bar
+	 * @return void
+	 */
+	public function add_admin_bar_item( \WP_Admin_Bar $wp_admin_bar ): void {
+		if ( ! current_user_can( 'manage_options' ) || ! is_admin() ) {
+			return;
+		}
+
+		$wp_admin_bar->add_node( [
+			'id'    => 'naano-ai-builder',
+			'title' => '<span class="ab-icon dashicons dashicons-admin-site-alt3"></span>'
+						. __( 'Naano AI', 'naano-ai-website-builder' ),
+			'href'  => admin_url( 'admin.php?page=naano-new-page' ),
+			'meta'  => [ 'title' => __( 'Create a new page with Naano AI', 'naano-ai-website-builder' ) ],
+		] );
+
+		$wp_admin_bar->add_node( [
+			'parent' => 'naano-ai-builder',
+			'id'     => 'naano-ai-new-page',
+			'title'  => __( 'Create New Page', 'naano-ai-website-builder' ),
+			'href'   => admin_url( 'admin.php?page=naano-new-page' ),
+		] );
+
+		$wp_admin_bar->add_node( [
+			'parent' => 'naano-ai-builder',
+			'id'     => 'naano-ai-builder-main',
+			'title'  => __( 'Builder', 'naano-ai-website-builder' ),
+			'href'   => admin_url( 'admin.php?page=naano-ai-builder' ),
+		] );
 	}
 
 	/**
@@ -204,10 +271,14 @@ class Naano_Admin_Page {
 			'sections'   => $sections,
 			'references' => $references,
 			'strings'    => [
-				'confirm_delete' => __( 'Are you sure you want to delete this section?', 'naano-ai-website-builder' ),
-				'generating'     => __( 'Generating…', 'naano-ai-website-builder' ),
-				'updating'       => __( 'Updating…', 'naano-ai-website-builder' ),
-				'error_generic'  => __( 'An error occurred. Please try again.', 'naano-ai-website-builder' ),
+				'confirm_delete'    => __( 'Are you sure you want to delete this section?', 'naano-ai-website-builder' ),
+				'generating'        => __( 'Generating…', 'naano-ai-website-builder' ),
+				'updating'          => __( 'Updating…', 'naano-ai-website-builder' ),
+				'error_generic'     => __( 'An error occurred. Please try again.', 'naano-ai-website-builder' ),
+				'select_section'    => __( 'Please select a section first.', 'naano-ai-website-builder' ),
+				'enter_instruction' => __( 'Please enter an instruction.', 'naano-ai-website-builder' ),
+				'new_section_name'  => __( 'New section name (e.g. "Team", "Gallery"):', 'naano-ai-website-builder' ),
+				'click_section'     => __( '— click a section in the preview —', 'naano-ai-website-builder' ),
 			],
 		] );
 	}

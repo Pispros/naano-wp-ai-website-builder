@@ -1,301 +1,627 @@
 /**
  * Naano AI Website Builder — builder.css
- * Admin UI styles
+ * Admin UI styles — Elementor-style Visual Builder
  */
 
 /* ============================================================
-   RESET / BASE
+   FULL-SCREEN BUILDER ACTIVATION
+   Applied via JS: body.naano-fullscreen
    ============================================================ */
-.naano-builder-wrap {
-	max-width: 1400px;
+body.naano-fullscreen #adminmenuback,
+body.naano-fullscreen #adminmenuwrap {
+	display: none !important;
 }
 
-.naano-page-title {
+body.naano-fullscreen #wpcontent {
+	margin-left: 0 !important;
+}
+
+body.naano-fullscreen #wpbody-content {
+	padding-bottom: 0 !important;
+}
+
+body.naano-fullscreen #wpbody {
+	padding-top: 0 !important;
+}
+
+/* Remove default WP page padding */
+body.naano-fullscreen #wpbody-content > .wrap {
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+/* ============================================================
+   VISUAL BUILDER CONTAINER
+   ============================================================ */
+.naano-vb {
+	display: flex;
+	flex-direction: column;
+	height: calc(100vh - 32px); /* 32px = WP admin bar */
+	background: #1d2327;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	overflow: hidden;
+}
+
+/* ============================================================
+   TOP TOOLBAR
+   ============================================================ */
+.naano-vb__toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 48px;
+	min-height: 48px;
+	background: #1d2327;
+	border-bottom: 1px solid #3d4246;
+	padding: 0 12px;
+	gap: 12px;
+	flex-shrink: 0;
+	z-index: 200;
+}
+
+/* Toolbar sections */
+.naano-vb__toolbar-left,
+.naano-vb__toolbar-right {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	font-size: 1.6rem;
-	margin-bottom: 20px;
+	flex: 1;
 }
 
-.naano-page-title .dashicons {
-	font-size: 1.6rem;
-	width: 1.6rem;
-	height: 1.6rem;
+.naano-vb__toolbar-right {
+	justify-content: flex-end;
 }
 
-/* ============================================================
-   CARD (generic container)
-   ============================================================ */
-.naano-card {
-	background: #fff;
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	padding: 24px 28px;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-	margin-bottom: 20px;
-}
-
-.naano-card h2 {
-	margin-top: 0;
-	font-size: 1.2rem;
-	border-bottom: 1px solid #f0f0f0;
-	padding-bottom: 10px;
-}
-
-/* ============================================================
-   GENERATION FORM
-   ============================================================ */
-.naano-generation-form .naano-section-checkboxes {
+.naano-vb__toolbar-center {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 8px 20px;
-	margin-bottom: 8px;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Drawer toggle */
+.naano-drawer-toggle {
+	background: none;
+	border: none;
+	color: #a7aaad;
+	cursor: pointer;
+	padding: 6px 8px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	transition: background 0.15s, color 0.15s;
+}
+
+.naano-drawer-toggle:hover {
+	background: #2c3338;
+	color: #fff;
+}
+
+.naano-drawer-toggle .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+/* Brand */
+.naano-vb__brand {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: #fff;
+	font-size: 14px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.naano-vb__brand .dashicons {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+	color: #2271b1;
+}
+
+.naano-vb__separator {
+	width: 1px;
+	height: 20px;
+	background: #3d4246;
+}
+
+.naano-vb__page-name {
+	color: #a7aaad;
+	font-size: 13px;
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Viewport buttons */
+.naano-viewport-group {
+	display: flex;
+	gap: 2px;
+	background: #2c3338;
+	border-radius: 6px;
+	padding: 3px;
+}
+
+.naano-viewport-btn {
+	background: none;
+	border: none;
+	color: #a7aaad;
+	cursor: pointer;
+	padding: 5px 10px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	transition: background 0.15s, color 0.15s;
+}
+
+.naano-viewport-btn:hover {
+	background: #3d4246;
+	color: #fff;
+}
+
+.naano-viewport-btn--active {
+	background: #2271b1 !important;
+	color: #fff !important;
+}
+
+.naano-viewport-btn .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+/* Toolbar action buttons */
+.naano-tb-btn {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	background: #2c3338;
+	border: 1px solid #3d4246;
+	color: #d0d0d0;
+	padding: 5px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+	white-space: nowrap;
+}
+
+.naano-tb-btn:hover {
+	background: #3d4246;
+	color: #fff;
+	border-color: #50575e;
+}
+
+.naano-tb-btn--primary {
+	background: #2271b1;
+	border-color: #1a5c96;
+	color: #fff;
+}
+
+.naano-tb-btn--primary:hover {
+	background: #1a5c96;
+	border-color: #155286;
+	color: #fff;
+}
+
+.naano-tb-btn .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+}
+
+/* ============================================================
+   BODY (DRAWER + CANVAS)
+   ============================================================ */
+.naano-vb__body {
+	display: flex;
+	flex: 1;
+	overflow: hidden;
+}
+
+/* ============================================================
+   LEFT DRAWER
+   ============================================================ */
+.naano-vb__drawer {
+	width: 380px;
+	min-width: 380px;
+	background: #23282d;
+	border-right: 1px solid #3d4246;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease;
+	z-index: 100;
+}
+
+.naano-vb__drawer.naano-drawer--collapsed {
+	width: 0;
+	min-width: 0;
+	opacity: 0;
+	overflow: hidden;
+}
+
+.naano-drawer__inner {
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 0;
+}
+
+/* Drawer scrollbar */
+.naano-drawer__inner::-webkit-scrollbar {
+	width: 4px;
+}
+
+.naano-drawer__inner::-webkit-scrollbar-track {
+	background: #2c3338;
+}
+
+.naano-drawer__inner::-webkit-scrollbar-thumb {
+	background: #50575e;
+	border-radius: 2px;
+}
+
+/* Drawer panels */
+.naano-drawer-panel {
+	padding: 20px;
+}
+
+/* Drawer header */
+.naano-drawer__header {
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #3d4246;
+}
+
+.naano-drawer__header h3 {
+	margin: 0 0 6px;
+	font-size: 14px;
+	font-weight: 600;
+	color: #fff;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.naano-drawer__header p {
+	margin: 0;
+	font-size: 12px;
+	color: #a7aaad;
+	line-height: 1.5;
+}
+
+/* Section editing badge */
+.naano-editing-section-badge {
+	font-size: 12px;
+	color: #7dc1e8;
+	font-style: italic;
+	margin-top: 4px;
+}
+
+/* Drawer fields */
+.naano-drawer__field {
+	margin-bottom: 18px;
+}
+
+.naano-drawer__field label {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	color: #a7aaad;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin-bottom: 6px;
+}
+
+.naano-input {
+	width: 100%;
+	background: #2c3338;
+	border: 1px solid #3d4246;
+	border-radius: 4px;
+	color: #fff;
+	padding: 7px 10px;
+	font-size: 13px;
+	box-sizing: border-box;
+	transition: border-color 0.15s;
+}
+
+.naano-input:focus {
+	border-color: #2271b1;
+	outline: none;
+	box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+}
+
+.naano-input::placeholder {
+	color: #50575e;
+}
+
+.naano-textarea {
+	width: 100%;
+	background: #2c3338;
+	border: 1px solid #3d4246;
+	border-radius: 4px;
+	color: #fff;
+	padding: 8px 10px;
+	font-size: 13px;
+	box-sizing: border-box;
+	resize: vertical;
+	min-height: 80px;
+	font-family: inherit;
+	line-height: 1.5;
+	transition: border-color 0.15s;
+}
+
+.naano-textarea:focus {
+	border-color: #2271b1;
+	outline: none;
+	box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+}
+
+.naano-textarea::placeholder {
+	color: #50575e;
+}
+
+/* Section checkboxes */
+.naano-section-checkboxes {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 10px;
 }
 
 .naano-checkbox-label {
 	display: flex;
 	align-items: center;
-	gap: 5px;
+	gap: 8px;
 	font-size: 13px;
+	color: #d0d0d0;
 	cursor: pointer;
+	padding: 4px 6px;
+	border-radius: 4px;
+	transition: background 0.1s;
+}
+
+.naano-checkbox-label:hover {
+	background: #2c3338;
+}
+
+.naano-checkbox-label input[type="checkbox"] {
+	accent-color: #2271b1;
 }
 
 .naano-custom-section-row {
 	display: flex;
 	gap: 8px;
 	align-items: center;
+	margin-top: 8px;
 }
 
-.naano-form-actions {
-	margin-top: 20px;
-	display: flex;
-	align-items: center;
-	gap: 16px;
+.naano-custom-section-row .naano-input {
+	flex: 1;
 }
 
-/* ============================================================
-   ACTION BAR
-   ============================================================ */
-.naano-action-bar {
-	position: sticky;
-	top: 32px;
-	z-index: 100;
-	background: #fff;
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	padding: 10px 20px;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-	margin-bottom: 20px;
-}
-
-.naano-action-bar__left {
-	font-size: 13px;
-	color: #555;
-}
-
-.naano-action-bar__right {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
-.naano-action-bar .button {
-	display: flex;
+/* Drawer buttons */
+.naano-btn-secondary {
+	display: inline-flex;
 	align-items: center;
 	gap: 5px;
+	background: #2c3338;
+	border: 1px solid #3d4246;
+	color: #d0d0d0;
+	padding: 6px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.15s, color 0.15s;
 }
 
-/* ============================================================
-   SECTION CARDS CONTAINER
-   ============================================================ */
-.naano-section-cards {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
+.naano-btn-secondary:hover {
+	background: #3d4246;
+	color: #fff;
+	border-color: #50575e;
 }
 
-/* ============================================================
-   SECTION CARD
-   ============================================================ */
-.naano-section-card {
-	background: #fff;
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-	overflow: hidden;
-	transition: box-shadow 0.2s ease;
+.naano-btn-secondary .dashicons {
+	font-size: 13px;
+	width: 13px;
+	height: 13px;
 }
 
-.naano-section-card:hover {
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+.naano-btn-ghost {
+	display: inline-flex;
+	align-items: center;
+	background: none;
+	border: none;
+	color: #a7aaad;
+	padding: 6px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	transition: color 0.15s;
 }
 
-.naano-section-card.naano-dragging {
-	opacity: 0.5;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+.naano-btn-ghost:hover {
+	color: #fff;
 }
 
-/* Card Header */
-.naano-section-card__header {
+.naano-btn-generate {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	justify-content: center;
+	gap: 6px;
+	width: 100%;
+	background: #2271b1;
+	border: none;
+	color: #fff;
 	padding: 10px 16px;
-	background: #f8f9fa;
-	border-bottom: 1px solid #e8e8e8;
-}
-
-.naano-drag-handle {
-	cursor: grab;
-	font-size: 18px;
-	color: #aaa;
-	line-height: 1;
-	user-select: none;
-}
-
-.naano-drag-handle:active {
-	cursor: grabbing;
-}
-
-.naano-section-card__name {
-	font-weight: 600;
+	border-radius: 6px;
+	cursor: pointer;
 	font-size: 13px;
-	flex: 1;
+	font-weight: 600;
+	transition: background 0.15s;
+}
+
+.naano-btn-generate:hover:not(:disabled) {
+	background: #1a5c96;
+}
+
+.naano-btn-generate:disabled {
+	background: #3d4246;
+	color: #50575e;
+	cursor: not-allowed;
+}
+
+.naano-btn-generate .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+/* Drawer actions */
+.naano-drawer__actions {
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid #3d4246;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.naano-mt-8 {
+	margin-top: 0;
+}
+
+/* Loading */
+.naano-loading {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: #a7aaad;
+	justify-content: center;
+}
+
+.naano-loading .spinner {
+	float: none;
+	margin: 0;
+}
+
+/* ============================================================
+   SECTIONS LIST (quick-select in edit panel)
+   ============================================================ */
+.naano-sections-list-wrap {
+	border-bottom: 1px solid #3d4246;
+	padding-bottom: 16px;
+	margin-bottom: 16px;
+}
+
+.naano-sections-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.naano-sections-list__item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 10px;
+	background: #2c3338;
+	border: 1px solid #3d4246;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.1s, border-color 0.1s;
+}
+
+.naano-sections-list__item:hover {
+	background: #3d4246;
+}
+
+.naano-sections-list__item--active {
+	background: rgba(34, 113, 177, 0.2) !important;
+	border-color: #2271b1 !important;
+}
+
+.naano-sections-list__name {
+	font-size: 12px;
+	color: #d0d0d0;
 	text-transform: capitalize;
 }
 
-.naano-section-card__badges {
+.naano-sections-list__actions {
 	display: flex;
-	gap: 6px;
+	gap: 4px;
+	opacity: 0;
+	transition: opacity 0.1s;
 }
 
-.naano-badge {
-	background: #e8f4fd;
-	color: #1a7fb4;
-	font-size: 11px;
-	padding: 2px 7px;
-	border-radius: 10px;
-	border: 1px solid #b8ddf7;
+.naano-sections-list__item:hover .naano-sections-list__actions {
+	opacity: 1;
 }
 
-/* Card Actions */
-.naano-section-card__actions {
-	display: flex;
-	gap: 6px;
-}
-
-.naano-btn-icon {
+.naano-sections-list__btn {
 	background: none;
-	border: 1px solid transparent;
-	border-radius: 4px;
-	padding: 3px 7px;
+	border: none;
+	color: #a7aaad;
 	cursor: pointer;
-	font-size: 15px;
-	line-height: 1.4;
-	transition: background 0.15s ease, border-color 0.15s ease;
+	padding: 2px 5px;
+	border-radius: 3px;
+	font-size: 12px;
+	transition: background 0.1s, color 0.1s;
 }
 
-.naano-btn-icon:hover {
-	background: #f0f0f0;
-	border-color: #ddd;
+.naano-sections-list__btn:hover {
+	background: #50575e;
+	color: #fff;
 }
 
-.naano-btn-delete:hover {
-	background: #fff0f0;
-	border-color: #f5a5a5;
-}
-
-/* Card Preview */
-.naano-section-card__preview {
-	position: relative;
-	height: 240px;
-	background: #fafafa;
-	overflow: hidden;
-}
-
-.naano-section-iframe {
-	width: 100%;
-	height: 100%;
-	border: 0;
-	display: block;
+.naano-sections-list__btn--delete:hover {
+	background: #5c1818;
+	color: #ffaaaa;
 }
 
 /* ============================================================
-   EDIT PANEL
+   REFERENCE SECTIONS (inside drawer)
    ============================================================ */
-.naano-edit-panel {
-	background: #fff;
-	border: 2px solid #2271b1;
-	border-radius: 8px;
-	margin: 16px 0;
-	box-shadow: 0 4px 16px rgba(34, 113, 177, 0.15);
-}
-
-.naano-edit-panel__inner {
-	padding: 24px 28px;
-}
-
-.naano-edit-panel__title {
-	margin-top: 0;
-	font-size: 1.1rem;
-	color: #1d2327;
-}
-
-.naano-edit-panel label strong {
-	display: block;
-	margin-bottom: 6px;
-}
-
-.naano-edit-panel__actions {
-	margin-top: 20px;
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-/* Reference sections */
 .naano-reference-section {
-	margin-top: 20px;
-	border-top: 1px solid #f0f0f0;
-	padding-top: 16px;
-}
-
-.naano-reference-section h4 {
-	margin: 0 0 10px;
-	font-size: 13px;
-	text-transform: uppercase;
-	color: #777;
-	letter-spacing: 0.05em;
+	border-top: 1px solid #3d4246;
+	padding-top: 14px;
+	margin-top: 14px;
 }
 
 .naano-reference-list {
 	list-style: none;
-	margin: 0 0 10px;
+	margin: 0 0 8px;
 	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 }
 
 .naano-reference-item {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 6px 10px;
-	background: #f8f9fa;
+	padding: 5px 8px;
+	background: #2c3338;
 	border-radius: 4px;
-	font-size: 13px;
-	margin-bottom: 6px;
-	border: 1px solid #e8e8e8;
+	font-size: 11px;
+	color: #d0d0d0;
+	border: 1px solid #3d4246;
 }
 
 .naano-ref-thumb {
-	width: 40px;
-	height: 28px;
+	width: 36px;
+	height: 26px;
 	object-fit: cover;
 	border-radius: 3px;
-	border: 1px solid #ddd;
+	border: 1px solid #50575e;
+	flex-shrink: 0;
 }
 
 .naano-remove-ref-btn {
@@ -303,64 +629,102 @@
 	background: none;
 	border: none;
 	cursor: pointer;
-	color: #cc1818;
-	font-size: 14px;
+	color: #ff6b6b;
+	font-size: 12px;
 	padding: 2px 5px;
 	border-radius: 3px;
+	flex-shrink: 0;
+	transition: background 0.1s;
 }
 
 .naano-remove-ref-btn:hover {
-	background: #fff0f0;
+	background: #5c1818;
 }
 
 .naano-add-url-form {
 	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-	margin-bottom: 10px;
-	padding: 12px;
-	background: #f8f9fa;
-	border: 1px dashed #c3c4c7;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 8px;
+	padding: 10px;
+	background: #2c3338;
+	border: 1px dashed #3d4246;
 	border-radius: 4px;
 }
 
-/* ============================================================
-   ADD SECTION BAR
-   ============================================================ */
-.naano-add-section-bar {
-	text-align: center;
-	margin-top: 16px;
-	padding: 10px;
-}
-
-.naano-add-section-btn {
-	font-size: 13px !important;
-	border: 2px dashed #ddd !important;
-	background: transparent !important;
-	color: #555 !important;
-	padding: 8px 24px !important;
-	transition: border-color 0.2s, color 0.2s !important;
-}
-
-.naano-add-section-btn:hover {
-	border-color: #2271b1 !important;
-	color: #2271b1 !important;
+.naano-add-url-form__btns {
+	display: flex;
+	gap: 6px;
 }
 
 /* ============================================================
-   LOADING / SPINNER
+   LIVE PREVIEW CANVAS
    ============================================================ */
-.naano-loading {
-	display: inline-flex;
+.naano-vb__canvas {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background: #2c3338;
+	position: relative;
+}
+
+.naano-canvas-placeholder {
+	flex: 1;
+	display: flex;
 	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	color: #555;
+	justify-content: center;
 }
 
-.naano-loading .spinner {
-	float: none;
+.naano-canvas-placeholder__inner {
+	text-align: center;
+	color: #50575e;
+	max-width: 400px;
+	padding: 40px;
+}
+
+.naano-canvas-placeholder__icon {
+	font-size: 64px !important;
+	width: 64px !important;
+	height: 64px !important;
+	display: block;
+	margin: 0 auto 16px;
+	color: #3d4246;
+}
+
+.naano-canvas-placeholder__inner h2 {
+	color: #a7aaad;
+	font-size: 18px;
+	margin: 0 0 10px;
+}
+
+.naano-canvas-placeholder__inner p {
+	font-size: 13px;
+	line-height: 1.6;
 	margin: 0;
+}
+
+/* Live iframe wrapper */
+.naano-live-iframe-wrap {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	overflow: auto;
+	padding: 20px;
+	box-sizing: border-box;
+}
+
+.naano-live-iframe {
+	background: #fff;
+	border: 0;
+	border-radius: 4px;
+	box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+	width: 100%;
+	max-width: 100%;
+	height: calc(100vh - 32px - 48px - 40px); /* vp - adminbar - toolbar - padding */
+	transition: width 0.3s ease, max-width 0.3s ease;
+	display: block;
 }
 
 /* ============================================================
@@ -376,7 +740,7 @@
 	padding: 12px 20px;
 	border-radius: 6px;
 	font-size: 13px;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 	opacity: 0;
 	transform: translateY(12px);
 	transition: opacity 0.25s ease, transform 0.25s ease;
@@ -401,7 +765,7 @@
 }
 
 /* ============================================================
-   TEST CONNECTION RESULT
+   TEST CONNECTION RESULT  (settings page)
    ============================================================ */
 .naano-test-connection-row {
 	margin-top: 16px;
@@ -455,7 +819,7 @@
 	gap: 8px;
 }
 
-.naano-viewport-btn {
+.naano-preview-toolbar .naano-viewport-btn {
 	background: #2c3338;
 	border: 1px solid #444;
 	color: #ccc;
@@ -464,10 +828,13 @@
 	cursor: pointer;
 	font-size: 13px;
 	transition: background 0.15s, color 0.15s;
+	display: flex;
+	align-items: center;
+	gap: 5px;
 }
 
-.naano-viewport-btn:hover,
-.naano-viewport-btn--active {
+.naano-preview-toolbar .naano-viewport-btn:hover,
+.naano-preview-toolbar .naano-viewport-btn--active {
 	background: #2271b1;
 	color: #fff;
 	border-color: #1a5c96;
@@ -508,7 +875,7 @@
 }
 
 /* ============================================================
-   SETTINGS PAGE
+   SETTINGS PAGE  (non-visual-builder pages, uses .wrap)
    ============================================================ */
 .naano-builder-wrap .form-table input[type="password"],
 .naano-builder-wrap .form-table input[type="text"] {
@@ -528,16 +895,25 @@
 }
 
 /* ============================================================
-   RESPONSIVE ADJUSTMENTS
+   RESPONSIVE — hide label text on smaller screens
    ============================================================ */
-@media screen and (max-width: 900px) {
-	.naano-action-bar {
-		flex-direction: column;
-		gap: 10px;
-		align-items: flex-start;
+@media screen and (max-width: 1100px) {
+	.naano-tb-btn__label {
+		display: none;
 	}
 
-	.naano-action-bar__right {
-		width: 100%;
+	.naano-vb__drawer {
+		width: 320px;
+		min-width: 320px;
+	}
+}
+
+@media screen and (max-width: 800px) {
+	.naano-vb__brand span:last-child {
+		display: none;
+	}
+
+	.naano-vb__page-name {
+		max-width: 100px;
 	}
 }
