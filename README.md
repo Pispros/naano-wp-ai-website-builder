@@ -55,6 +55,12 @@
 ### Import & Reuse
 - ♻️ **Import from existing pages** — on a new page, import the header or footer from any previously built Naano page instead of regenerating it; HTML is fetched server-side (never transported through the browser)
 
+### Translations
+- 🌐 **Configure languages** — add any number of languages (code + label) in Settings; e.g. `es → Spanish`, `fr → French`
+- 🔀 **Duplicate for translation** — in the Pages List, click **Translate** on any original page, pick a language, and click **Duplicate & Translate**; a child page is created at `/<original-slug>/<lang-code>/` with all sections pre-copied
+- 🔄 **Language switcher in builder** — when a page has translations, a `<select>` appears in the builder toolbar to jump directly between language variants
+- 🏷️ **Translation badges** — the Pages List shows language badges (e.g. **EN**, **ES**) per row, with clickable links to each translation's builder and a back-link to the original
+
 ### Back-office Management
 - 📋 **Pages list** — dedicated admin dashboard listing all Naano-built pages with status badges, section count, last-modified date, and quick actions
 - 🗑️ **Delete page** — move any Naano page to WordPress trash directly from the pages list (with confirmation and a success notice on redirect)
@@ -196,6 +202,40 @@ The built-in element inspector works like Elementor's style editor — without b
 
 ---
 
+## Translations
+
+Translations follow WordPress page hierarchy: each translated page is a **child** of the original with its language code as the page slug, giving automatic URLs:
+
+| Original | Spanish translation | French translation |
+|----------|--------------------|--------------------|  
+| `/about/` | `/about/es/` | `/about/fr/` |
+| `/` (homepage) | `/es/` | `/fr/` |
+
+### Setup
+1. Go to **Naano AI Builder → Settings → Translation Languages**.
+2. Click **+ Add Language** and enter a language code (e.g. `es`) and label (e.g. `Spanish`).
+3. Click **Save Settings**.
+
+### Creating a translation
+1. Go to **Naano AI Builder → AI Pages**.
+2. Find your original page and click **Translate** in the Language column.
+3. Select the target language from the dropdown and click **Duplicate & Translate**.
+4. The plugin creates a child page with all sections copied, then redirects you to its builder.
+5. Translate the content section-by-section using the AI — give the AI an instruction like _"Translate all text to Spanish, keeping the same HTML structure"_.
+6. Click **Save** to publish the translated page.
+
+### Language switcher in the builder
+Once a page has at least one translation, a language `<select>` appears in the builder toolbar. Switching languages navigates immediately to that variant's builder.
+
+### Meta keys
+
+| Meta key | Set on | Value |
+|----------|--------|-------|
+| `_naano_lang` | Original + translations | Language code (e.g. `es`); `default` for root pages tagged at first translation |
+| `_naano_translation_of` | Translations only | Post ID of the root (original) page |
+
+---
+
 ## Import from Existing Pages
 
 When creating a new page, you can skip AI generation for the header and/or footer and reuse them from an existing Naano page instead:
@@ -318,6 +358,7 @@ All endpoints require a valid `naano_builder_nonce` nonce in the `nonce` POST fi
 | `naano_export_html` | POST | `page_id` | `{html}` |
 | `naano_save_as_page` | POST | `page_id`, `title`, `html` | `{page_id, edit_url, view_url, title}` |
 | `naano_set_homepage` | POST | `page_id` | `{}` |
+| `naano_duplicate_for_translation` | POST (admin-post.php) | `page_id`, `lang` | Redirect to new page's builder |
 
 ---
 

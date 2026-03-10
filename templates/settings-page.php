@@ -9,13 +9,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$provider  = get_option( 'naano_provider', 'claude' );
-$api_key   = get_option( 'naano_api_key', '' );
-$model     = get_option( 'naano_model', '' );
-$variables = get_option( 'naano_variables', [] );
+$provider   = get_option( 'naano_provider', 'claude' );
+$api_key    = get_option( 'naano_api_key', '' );
+$model      = get_option( 'naano_model', '' );
+$variables  = get_option( 'naano_variables', [] );
 if ( ! is_array( $variables ) ) {
 	$variables = [];
 }
+$languages            = get_option( 'naano_languages', [] );
+if ( ! is_array( $languages ) ) {
+	$languages = [];
+}
+$default_lang_label   = get_option( 'naano_default_lang_label', '' );
 ?>
 <div class="wrap naano-builder-wrap">
 	<h1 class="naano-page-title">
@@ -25,12 +30,19 @@ if ( ! is_array( $variables ) ) {
 
 	<?php settings_errors(); ?>
 
+	<nav class="nav-tab-wrapper naano-settings-tab-nav" style="margin-bottom:0;border-bottom:1px solid #c3c4c7;">
+		<button type="button" class="nav-tab nav-tab-active" data-naano-tab="llm"><?php esc_html_e( 'LLM Provider', 'naano-ai-website-builder' ); ?></button>
+		<button type="button" class="nav-tab" data-naano-tab="variables"><?php esc_html_e( 'Design Variables', 'naano-ai-website-builder' ); ?></button>
+		<button type="button" class="nav-tab" data-naano-tab="translation"><?php esc_html_e( 'Translation', 'naano-ai-website-builder' ); ?></button>
+	</nav>
+
 	<form method="post" action="options.php">
 		<?php settings_fields( 'naano_settings_group' ); ?>
 
 		<!-- ============================================================
 		     LLM PROVIDER
 		     ============================================================ -->
+		<div class="naano-settings-panel" id="naano-panel-llm">
 		<div class="naano-card">
 			<h2><?php esc_html_e( 'LLM Provider', 'naano-ai-website-builder' ); ?></h2>
 
@@ -90,11 +102,13 @@ if ( ! is_array( $variables ) ) {
 				</span>
 				<div id="naano-test-result" class="naano-test-result" style="display:none;"></div>
 			</div>
-		</div>
+		</div><!-- /.naano-card -->
+		</div><!-- /.naano-settings-panel#llm -->
 
 		<!-- ============================================================
 		     DESIGN VARIABLES
 		     ============================================================ -->
+		<div class="naano-settings-panel" id="naano-panel-variables" style="display:none;">
 		<div class="naano-card" style="margin-top:20px;">
 			<h2><?php esc_html_e( 'Custom Design Variables', 'naano-ai-website-builder' ); ?></h2>
 			<p class="description">
@@ -157,14 +171,113 @@ if ( ! is_array( $variables ) ) {
 			<button type="button" class="button" id="naano-add-variable-btn">
 				+ <?php esc_html_e( 'Add Variable', 'naano-ai-website-builder' ); ?>
 			</button>
-		</div>
+		</div><!-- /.naano-card -->
+		</div><!-- /.naano-settings-panel#variables -->
+
+		<!-- ============================================================
+		     LANGUAGES (for translation feature)
+		     ============================================================ -->
+		<div class="naano-settings-panel" id="naano-panel-translation" style="display:none;">
+		<div class="naano-card" style="margin-top:20px;">
+			<h2><?php esc_html_e( 'Translation Languages', 'naano-ai-website-builder' ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'Define the languages you want to translate your pages into. Each language gets its own URL variant (e.g. /my-page/es/).', 'naano-ai-website-builder' ); ?>
+			</p>
+
+			<table class="form-table" style="margin-bottom:16px;">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Default Language Label', 'naano-ai-website-builder' ); ?></th>
+					<td>
+						<input type="text"
+							   name="naano_default_lang_label"
+							   id="naano_default_lang_label"
+							   class="regular-text"
+							   value="<?php echo esc_attr( $default_lang_label ); ?>"
+							   placeholder="<?php esc_attr_e( 'e.g. English', 'naano-ai-website-builder' ); ?>">
+						<p class="description"><?php esc_html_e( 'Label shown for the original (default) language in language switchers. Leave blank to show &ldquo;Default&rdquo;.', 'naano-ai-website-builder' ); ?></p>
+					</td>
+				</tr>
+			</table>
+
+			<table class="form-table">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Language Code', 'naano-ai-website-builder' ); ?></th>
+						<th><?php esc_html_e( 'Language Label', 'naano-ai-website-builder' ); ?></th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody id="naano-languages-tbody">
+					<?php foreach ( $languages as $lang ) : ?>
+					<tr class="naano-language-row">
+						<td>
+							<input type="text"
+								   name="naano_lang_codes[]"
+								   class="regular-text"
+								   value="<?php echo esc_attr( $lang['code'] ?? '' ); ?>"
+								   placeholder="<?php esc_attr_e( 'e.g. es', 'naano-ai-website-builder' ); ?>"
+								   style="max-width:100px;">
+						</td>
+						<td>
+							<input type="text"
+								   name="naano_lang_labels[]"
+								   class="regular-text"
+								   value="<?php echo esc_attr( $lang['label'] ?? '' ); ?>"
+								   placeholder="<?php esc_attr_e( 'e.g. Spanish', 'naano-ai-website-builder' ); ?>">
+						</td>
+						<td>
+							<button type="button" class="button naano-remove-language">
+								<?php esc_html_e( 'Remove', 'naano-ai-website-builder' ); ?>
+							</button>
+						</td>
+					</tr>
+					<?php endforeach; ?>
+					<?php if ( empty( $languages ) ) : ?>
+					<tr class="naano-language-row">
+						<td>
+							<input type="text" name="naano_lang_codes[]" class="regular-text"
+								   placeholder="<?php esc_attr_e( 'e.g. es', 'naano-ai-website-builder' ); ?>" style="max-width:100px;">
+						</td>
+						<td>
+							<input type="text" name="naano_lang_labels[]" class="regular-text"
+								   placeholder="<?php esc_attr_e( 'e.g. Spanish', 'naano-ai-website-builder' ); ?>">
+						</td>
+						<td>
+							<button type="button" class="button naano-remove-language">
+								<?php esc_html_e( 'Remove', 'naano-ai-website-builder' ); ?>
+							</button>
+						</td>
+					</tr>
+					<?php endif; ?>
+				</tbody>
+			</table>
+
+			<button type="button" class="button" id="naano-add-language-btn">
+				+ <?php esc_html_e( 'Add Language', 'naano-ai-website-builder' ); ?>
+			</button>
+		</div><!-- /.naano-card -->
+		</div><!-- /.naano-settings-panel#translation -->
 
 		<?php submit_button( __( 'Save Settings', 'naano-ai-website-builder' ) ); ?>
 	</form>
 </div>
 
 <script>
-jQuery(function($){
+jQuery(function($){	// Settings tab switching.
+	var $tabs   = $('.naano-settings-tab-nav .nav-tab');
+	var $panels = $('.naano-settings-panel');
+	function switchTab(tab) {
+		$tabs.removeClass('nav-tab-active');
+		$tabs.filter('[data-naano-tab="' + tab + '"]').addClass('nav-tab-active');
+		$panels.hide();
+		$('#naano-panel-' + tab).show();
+		try { localStorage.setItem('naano_settings_tab', tab); } catch(e) {}
+	}
+	$tabs.on('click', function(){ switchTab($(this).data('naano-tab')); });
+	try {
+		var savedTab = localStorage.getItem('naano_settings_tab');
+		if (savedTab && $('#naano-panel-' + savedTab).length) { switchTab(savedTab); }
+	} catch(e) {}
 	// Add variable row.
 	$('#naano-add-variable-btn').on('click', function(){
 		var row = '<tr class="naano-variable-row">' +
@@ -177,6 +290,21 @@ jQuery(function($){
 
 	// Remove variable row.
 	$(document).on('click', '.naano-remove-variable', function(){
+		$(this).closest('tr').remove();
+	});
+
+	// Add language row.
+	$('#naano-add-language-btn').on('click', function(){
+		var row = '<tr class="naano-language-row">' +
+			'<td><input type="text" name="naano_lang_codes[]" class="regular-text" placeholder="<?php echo esc_js( __( 'e.g. es', 'naano-ai-website-builder' ) ); ?>" style="max-width:100px;"></td>' +
+			'<td><input type="text" name="naano_lang_labels[]" class="regular-text" placeholder="<?php echo esc_js( __( 'e.g. Spanish', 'naano-ai-website-builder' ) ); ?>"></td>' +
+			'<td><button type="button" class="button naano-remove-language"><?php echo esc_js( __( 'Remove', 'naano-ai-website-builder' ) ); ?></button></td>' +
+			'</tr>';
+		$('#naano-languages-tbody').append(row);
+	});
+
+	// Remove language row.
+	$(document).on('click', '.naano-remove-language', function(){
 		$(this).closest('tr').remove();
 	});
 

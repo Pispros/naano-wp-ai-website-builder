@@ -118,19 +118,90 @@ class Naano_Reference_Manager {
 
 	/**
 	 * Get URL-type references ready for prompt injection.
+	 * Each URL's page content is fetched server-side so the LLM
+	 * actually receives useful context instead of a bare URL string.
 	 *
 	 * @param int    $page_id    WordPress post/page ID.
 	 * @param string $section_id Section identifier.
-	 * @return array Array of url reference arrays.
+	 * @return array Array of url reference arrays, each optionally containing 'content'.
 	 */
 	public function prepare_url_references( int $page_id, string $section_id ): array {
 		$refs = $this->get_references( $page_id, $section_id );
-		return array_values(
+		$url_refs = array_values(
 			array_filter(
 				$refs,
 				static fn( $r ) => ( $r['type'] ?? '' ) === 'url'
 			)
 		);
+
+		// Fetch each URL's content server-side so the LLM can use it.
+		foreach ( $url_refs as &$ref ) {
+			if ( ! empty( $ref['url'] ) ) {
+				$ref['content'] = self::fetch_url_text( $ref['url'] );
+			}
+		}
+		unset( $ref );
+
+		return $url_refs;
+	}
+
+	/**
+	 * Fetch the text content of a URL via cURL for LLM context injection.
+	 *
+	 * Strips scripts, styles, and HTML tags; normalises whitespace; truncates
+	 * to $max_chars to stay within token budgets.
+	 *
+	 * @param string $url       A valid http(s) URL.
+	 * @param int    $max_chars Maximum characters to return.
+	 * @return string Plain-text excerpt, or empty string on failure.
+	 */
+	public static function fetch_url_text( string $url, int $max_chars = 3500 ): string {
+		// Only fetch http/https URLs.
+		if ( ! preg_match( '/^https?:\/\//i', $url ) ) {
+			return '';
+		}
+
+		if ( ! function_exists( 'curl_init' ) ) {
+			return '';
+		}
+
+		$ch = curl_init();
+		curl_setopt_array( $ch, [
+			CURLOPT_URL            => $url,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_MAXREDIRS      => 3,
+			CURLOPT_TIMEOUT        => 12,
+			CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; NaanoBot/1.0; +https://naanocorp.tech)',
+			CURLOPT_SSL_VERIFYPEER => true,
+			CURLOPT_HTTPHEADER     => [
+				'Accept: text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+				'Accept-Language: en-US,en;q=0.5',
+			],
+		] );
+
+		$html = curl_exec( $ch );
+		$err  = curl_errno( $ch );
+		curl_close( $ch );
+
+		if ( $err || ! $html || ! is_string( $html ) ) {
+			return '';
+		}
+
+		// Remove scripts, styles, and their content.
+		$text = preg_replace( '/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/i', ' ', $html ) ?? $html;
+
+		// Keep alt attributes of images — useful visual context.
+		$text = preg_replace_callback( '/<img\b[^>]*alt=["\']([^"\']*)["\'][^>]*>/i', static function ( $m ) {
+			return $m[1] ? '[IMG: ' . $m[1] . ']' : '';
+		}, $text ) ?? $text;
+
+		$text = strip_tags( $text );
+		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$text = preg_replace( '/\s+/', ' ', $text ) ?? $text;
+		$text = trim( $text );
+
+		return mb_substr( $text, 0, $max_chars );
 	}
 
 	// -------------------------------------------------------------------------

@@ -113,6 +113,7 @@
 			NaanoBuilder._bindRedirectsPanel();
 			NaanoBuilder._bindElementInspector();
 			NaanoBuilder._bindIframeMessages();
+			NaanoBuilder._bindLangSwitcher();
 
 			// If we already have sections (page reload), render them.
 			if ( data.sections && data.sections.length > 0 ) {
@@ -739,6 +740,18 @@
 		// =====================================================================
 		// Private helpers
 		// =====================================================================
+
+		/**
+		 * Language switcher — navigate to a translation variant's builder URL.
+		 */
+		_bindLangSwitcher: function () {
+			$( document ).on( 'change', '#naano-lang-switcher', function () {
+				var url = $( this ).val();
+				if ( url ) {
+					window.location.href = url;
+				}
+			} );
+		},
 
 		_bindImportComponents: function () {
 			// Toggle visibility of the import list.

@@ -132,6 +132,23 @@ class Naano_Ajax_Handler {
 			$vars    = get_option( 'naano_variables', [] );
 			$builder->set_variables( is_array( $vars ) ? $vars : [] );
 
+			// Extract any URLs mentioned in the description and fetch their content
+			// server-side, so the LLM can actually replicate the referenced websites.
+			preg_match_all( '/https?:\/\/[^\s,"\'<>]+/i', $description, $url_matches );
+			$desc_refs = [];
+			foreach ( array_unique( $url_matches[0] ?? [] ) as $desc_url ) {
+				$desc_url = rtrim( $desc_url, '.,;)\'"' ); // strip trailing punctuation
+				$content  = Naano_Reference_Manager::fetch_url_text( $desc_url );
+				$desc_refs[] = [
+					'url'     => $desc_url,
+					'notes'   => 'mentioned in site description',
+					'content' => $content,
+				];
+			}
+			if ( ! empty( $desc_refs ) ) {
+				$builder->set_references( $desc_refs );
+			}
+
 			// Collect all published Naano pages so the LLM can use correct
 			// navigation links between pages.
 			$naano_pages = get_posts( [

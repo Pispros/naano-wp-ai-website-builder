@@ -30,6 +30,11 @@ $section_types = [
 
 // Back-to-admin URL.
 $admin_pages_url = admin_url( 'admin.php?page=naano-ai-builder' );
+
+// Translation data is injected by maybe_render_frontend_builder() via
+// variable scope; fall back to empty arrays when accessed directly.
+$current_lang = $current_lang ?? '';
+$translations = $translations ?? [];
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -79,6 +84,23 @@ $admin_pages_url = admin_url( 'admin.php?page=naano-ai-builder' );
 			<span class="naano-vb__page-name" id="naano-current-page-name">
 				<?php echo $has_page ? esc_html( get_the_title( $page_id ) ) : esc_html__( 'New Page', 'naano-ai-website-builder' ); ?>
 			</span>
+			<?php if ( count( $translations ) > 1 ) : ?>
+			<span class="naano-vb__separator"></span>
+			<div class="naano-lang-switcher-wrap">
+				<span class="dashicons dashicons-translation naano-lang-icon" title="<?php esc_attr_e( 'Language', 'naano-ai-website-builder' ); ?>"></span>
+				<select id="naano-lang-switcher" class="naano-lang-select">
+					<?php foreach ( $translations as $tr ) : ?>
+					<option value="<?php echo esc_attr( $tr['builderUrl'] ); ?>"
+						<?php selected( $tr['current'] ); ?>>
+						<?php echo esc_html( strtoupper( $tr['lang'] ) ); ?>
+						<?php if ( ! empty( $tr['label'] ) && $tr['label'] !== strtoupper( $tr['lang'] ) ) :
+							echo ' — ' . esc_html( $tr['label'] );
+						endif; ?>
+					</option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			<?php endif; ?>
 		</div>
 
 		<div class="naano-vb__toolbar-center">

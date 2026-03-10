@@ -163,7 +163,10 @@ MSG;
 	public function build_section_message( string $section_id, string $instruction, string $compressed_context ): string {
 		$assets_block    = $this->build_assets_block();
 		$redirects_block = $this->build_redirects_block();
-		$context_extras  = trim( $assets_block . ( $assets_block && $redirects_block ? "\n\n" : '' ) . $redirects_block );
+		$refs_block      = $this->build_references_block();
+
+		$extra_parts = array_filter( [ $assets_block, $redirects_block, $refs_block ] );
+		$context_extras = implode( "\n\n", $extra_parts );
 
 		$extras_section = $context_extras ? "\n\n" . $context_extras : '';
 
@@ -249,6 +252,9 @@ MSG;
 	/**
 	 * Build the references block for the system prompt.
 	 *
+	 * Each URL reference now includes a server-fetched page content excerpt
+	 * so the LLM can actually replicate layout, wording and structure.
+	 *
 	 * @return string Formatted references block, or empty string.
 	 */
 	private function build_references_block(): string {
@@ -256,15 +262,22 @@ MSG;
 			return '';
 		}
 
-		$lines = [ 'REFERENCE WEBSITES (study these for inspiration and style):' ];
+		$lines = [ 'REFERENCE WEBSITES (use these for design, layout, content and style inspiration — replicate them closely):' ];
 		foreach ( $this->reference_links as $ref ) {
-			$url   = $ref['url'] ?? '';
-			$notes = $ref['notes'] ?? '';
-			$line  = "- {$url}";
+			$url     = $ref['url']     ?? '';
+			$notes   = $ref['notes']   ?? '';
+			$content = $ref['content'] ?? '';
+
+			$line = "- {$url}";
 			if ( $notes ) {
 				$line .= " ({$notes})";
 			}
 			$lines[] = $line;
+
+			if ( $content ) {
+				$lines[] = '  PAGE TEXT EXCERPT (use this to guide content, wording and structure):';
+				$lines[] = '  ' . str_replace( "\n", "\n  ", $content );
+			}
 		}
 
 		return implode( "\n", $lines );

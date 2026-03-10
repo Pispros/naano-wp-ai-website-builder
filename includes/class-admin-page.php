@@ -32,6 +32,9 @@ class Naano_Admin_Page {
 		// Delete page from the Naano pages list.
 		add_action( 'admin_post_naano_delete_page', [ $this, 'handle_delete_page' ] );
 
+		// Duplicate a page for a new language translation.
+		add_action( 'admin_post_naano_duplicate_for_translation', [ $this, 'handle_duplicate_for_translation' ] );
+
 		// Frontend builder: intercept ?naano_builder=1 on frontend pages.
 		add_action( 'template_redirect', [ $this, 'maybe_render_frontend_builder' ] );
 
@@ -223,6 +226,24 @@ class Naano_Admin_Page {
 				'default'           => [],
 			]
 		);
+
+		register_setting(
+			'naano_settings_group',
+			'naano_languages',
+			[
+				'sanitize_callback' => [ $this, 'sanitize_languages' ],
+				'default'           => [],
+			]
+		);
+
+		register_setting(
+			'naano_settings_group',
+			'naano_default_lang_label',
+			[
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => '',
+			]
+		);
 	}
 
 	/**
@@ -246,6 +267,120 @@ class Naano_Admin_Page {
 			}
 		}
 		return $result;
+	}
+
+	/**
+	 * Sanitize language list from multi-field form input.
+	 *
+	 * Combines naano_lang_codes[] and naano_lang_labels[] POST arrays into
+	 * an indexed array of {code, label} objects.
+	 *
+	 * @param mixed $input Ignored (uses $_POST directly for multi-field).
+	 * @return array
+	 */
+	public function sanitize_languages( $input ): array {
+		$codes  = array_map( 'sanitize_key',        (array) ( $_POST['naano_lang_codes']  ?? [] ) );
+		$labels = array_map( 'sanitize_text_field', (array) ( $_POST['naano_lang_labels'] ?? [] ) );
+
+		$result = [];
+		foreach ( $codes as $i => $code ) {
+			$code = trim( $code );
+			if ( $code !== '' ) {
+				$result[] = [
+					'code'  => $code,
+					'label' => trim( $labels[ $i ] ?? '' ) ?: strtoupper( $code ),
+				];
+			}
+		}
+		return $result;
+	}
+
+	/**
+	 * Duplicate a Naano page as a translation into a new language.
+	 *
+	 * Creates a child page with slug = language code and copies all sections
+	 * and HTML from the root page. On success, redirects to the new page's
+	 * builder. Accessible via admin-post.php.
+	 *
+	 * @return void
+	 */
+	public function handle_duplicate_for_translation(): void {
+		$page_id = (int) ( $_POST['page_id'] ?? 0 );
+		$lang    = sanitize_key( $_POST['lang'] ?? '' );
+
+		check_admin_referer( 'naano_duplicate_translation_' . $page_id );
+
+		if ( ! $page_id || ! $lang ) {
+			wp_die( esc_html__( 'Missing parameters.', 'naano-ai-website-builder' ) );
+		}
+
+		if ( ! current_user_can( 'edit_pages' ) ) {
+			wp_die( esc_html__( 'You do not have permission to create pages.', 'naano-ai-website-builder' ) );
+		}
+
+		// Resolve the root (non-translated) page.
+		$root_id = (int) get_post_meta( $page_id, '_naano_translation_of', true ) ?: $page_id;
+		$root    = get_post( $root_id );
+
+		if ( ! $root ) {
+			wp_die( esc_html__( 'Original page not found.', 'naano-ai-website-builder' ) );
+		}
+
+		// If a translation for this language already exists, open it instead of creating a duplicate.
+		$existing = get_posts( [
+			'post_type'      => 'page',
+			'post_status'    => 'any',
+			'posts_per_page' => 1,
+			'meta_query'     => [
+				[ 'key' => '_naano_translation_of', 'value' => $root_id ],
+				[ 'key' => '_naano_lang',            'value' => $lang   ],
+			],
+		] );
+
+		if ( ! empty( $existing ) ) {
+			wp_safe_redirect( add_query_arg( 'naano_builder', '1', get_permalink( $existing[0]->ID ) ) );
+			exit;
+		}
+
+		// Create a child page whose slug equals the language code.
+		// WordPress will resolve the URL as /{root-slug}/{lang}/ automatically.
+		$new_id = wp_insert_post( [
+			'post_title'   => $root->post_title . ' (' . strtoupper( $lang ) . ')',
+			'post_name'    => $lang,
+			'post_parent'  => $root_id,
+			'post_status'  => 'draft',
+			'post_type'    => 'page',
+			'post_content' => '',
+		] );
+
+		if ( is_wp_error( $new_id ) ) {
+			wp_die( esc_html( $new_id->get_error_message() ) );
+		}
+
+		// Copy sections from root.
+		$sections = get_post_meta( $root_id, '_naano_sections', true );
+		if ( $sections ) {
+			update_post_meta( $new_id, '_naano_sections', $sections );
+		}
+
+		// Copy standalone HTML.
+		$html = get_post_meta( $root_id, '_naano_page_html', true );
+		if ( $html ) {
+			update_post_meta( $new_id, '_naano_page_html', $html );
+			update_post_meta( $new_id, '_naano_standalone', '1' );
+		}
+
+		// Store translation relationship.
+		update_post_meta( $new_id, '_naano_translation_of', $root_id );
+		update_post_meta( $new_id, '_naano_lang',            $lang );
+
+		// Ensure the root page is tagged with its own language.
+		if ( ! get_post_meta( $root_id, '_naano_lang', true ) ) {
+			update_post_meta( $root_id, '_naano_lang', 'default' );
+		}
+
+		wp_safe_redirect( add_query_arg( 'naano_builder', '1', get_permalink( $new_id ) ) );
+		exit;
 	}
 
 	/**
@@ -323,10 +458,143 @@ class Naano_Admin_Page {
 			return; // Nothing to render; let WP fall through normally.
 		}
 
+		// Inject a floating language switcher when this page has translation variants.
+		$switcher = $this->build_frontend_lang_switcher( $page_id );
+		if ( $switcher ) {
+			// Insert just before the closing </body> tag; fall back to appending.
+			if ( stripos( $html, '</body>' ) !== false ) {
+				$html = str_ireplace( '</body>', $switcher . '</body>', $html );
+			} else {
+				$html .= $switcher;
+			}
+		}
+
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $html;
 		exit;
+	}
+
+	/**
+	 * Build a self-contained floating language switcher widget for the frontend.
+	 *
+	 * Returns a fully-styled HTML/CSS/JS snippet that can be injected straight
+	 * into a standalone page's raw HTML, or an empty string when there are no
+	 * translation variants to show.
+	 *
+	 * @param int $page_id Current page ID being served.
+	 * @return string HTML snippet, or empty string.
+	 */
+	private function build_frontend_lang_switcher( int $page_id ): string {
+		// Resolve root page and current language.
+		$root_id      = (int) get_post_meta( $page_id, '_naano_translation_of', true ) ?: $page_id;
+		$current_lang = get_post_meta( $page_id, '_naano_lang', true ) ?: '';
+
+		// Build the language map from saved settings.
+		$all_languages = get_option( 'naano_languages', [] );
+		$default_label = get_option( 'naano_default_lang_label', '' );
+		$lang_map      = [ 'default' => $default_label !== '' ? $default_label : __( 'Default', 'naano-ai-website-builder' ) ];
+		foreach ( (array) $all_languages as $lentry ) {
+			if ( ! empty( $lentry['code'] ) ) {
+				$lang_map[ $lentry['code'] ] = $lentry['label'] ?? strtoupper( $lentry['code'] );
+			}
+		}
+
+		// Gather all variants: original + every translation.
+		$variants = [];
+
+		// Original page.
+		$orig_lang  = get_post_meta( $root_id, '_naano_lang', true ) ?: '';
+		$orig_status = get_post_status( $root_id );
+		if ( $orig_lang && $orig_status === 'publish' ) {
+			$variants[] = [
+				'lang'    => $orig_lang,
+				'label'   => $lang_map[ $orig_lang ] ?? strtoupper( $orig_lang ),
+				'url'     => get_permalink( $root_id ),
+				'current' => ( $page_id === $root_id ),
+			];
+		}
+
+		// Translation children.
+		$trans_pages = get_posts( [
+			'post_type'      => 'page',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'meta_key'       => '_naano_translation_of',
+			'meta_value'     => $root_id,
+		] );
+		foreach ( $trans_pages as $tp ) {
+			$tl = get_post_meta( $tp->ID, '_naano_lang', true );
+			if ( ! $tl ) {
+				continue;
+			}
+			$variants[] = [
+				'lang'    => $tl,
+				'label'   => $lang_map[ $tl ] ?? strtoupper( $tl ),
+				'url'     => get_permalink( $tp->ID ),
+				'current' => ( $page_id === $tp->ID ),
+			];
+		}
+
+		// Only render when there are at least two published variants.
+		if ( count( $variants ) < 2 ) {
+			return '';
+		}
+
+		// Build the <li> items.
+		$items_html = '';
+		foreach ( $variants as $v ) {
+			$code    = esc_attr( $v['lang'] );
+			$label   = esc_html( $v['label'] );
+			$url     = esc_url( $v['url'] );
+			$active  = $v['current'] ? ' naano-ls__item--active' : '';
+			$aria    = $v['current'] ? ' aria-current="page"' : '';
+			$items_html .= "<li><a href=\"{$url}\" class=\"naano-ls__item{$active}\" hreflang=\"{$code}\"{$aria}>{$label}</a></li>";
+		}
+
+		$current_label = esc_html( $lang_map[ $current_lang ] ?? strtoupper( $current_lang ) );
+
+		// phpcs:disable
+		return <<<HTML
+<style id="naano-ls-css">
+#naano-ls{position:fixed;bottom:24px;right:24px;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px}
+#naano-ls *{box-sizing:border-box}
+.naano-ls__trigger{display:flex;align-items:center;gap:6px;background:#1e293b;color:#f1f5f9;border:1px solid #334155;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35);transition:background .15s}
+.naano-ls__trigger:hover{background:#334155}
+.naano-ls__globe{width:16px;height:16px;fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.naano-ls__caret{width:10px;height:10px;fill:none;stroke:#94a3b8;stroke-width:2;transition:transform .2s;flex-shrink:0}
+.naano-ls__caret--open{transform:rotate(180deg)}
+.naano-ls__menu{display:none;position:absolute;bottom:calc(100% + 6px);right:0;background:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.naano-ls__menu--open{display:block}
+.naano-ls__menu ul{list-style:none;margin:0;padding:4px 0}
+.naano-ls__item{display:block;padding:8px 14px;color:#cbd5e1;text-decoration:none;white-space:nowrap;transition:background .12s,color .12s}
+.naano-ls__item:hover{background:#334155;color:#f1f5f9}
+.naano-ls__item--active{color:#60a5fa;font-weight:600;pointer-events:none;background:#1e3a5a}
+</style>
+<div id="naano-ls" role="navigation" aria-label="Language">
+  <div class="naano-ls__trigger" id="naano-ls-trigger" aria-haspopup="true" aria-expanded="false" tabindex="0">
+    <svg class="naano-ls__globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    <span id="naano-ls-label">{$current_label}</span>
+    <svg class="naano-ls__caret" id="naano-ls-caret" viewBox="0 0 10 10" aria-hidden="true"><polyline points="1,3 5,7 9,3"/></svg>
+  </div>
+  <div class="naano-ls__menu" id="naano-ls-menu" role="menu">
+    <ul>{$items_html}</ul>
+  </div>
+</div>
+<script id="naano-ls-js">
+(function(){
+  var t=document.getElementById('naano-ls-trigger'),
+      m=document.getElementById('naano-ls-menu'),
+      c=document.getElementById('naano-ls-caret');
+  function open(){m.classList.add('naano-ls__menu--open');c.classList.add('naano-ls__caret--open');t.setAttribute('aria-expanded','true');}
+  function close(){m.classList.remove('naano-ls__menu--open');c.classList.remove('naano-ls__caret--open');t.setAttribute('aria-expanded','false');}
+  t.addEventListener('click',function(){m.classList.contains('naano-ls__menu--open')?close():open();});
+  t.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();m.classList.contains('naano-ls__menu--open')?close():open();}if(e.key==='Escape'){close();}});
+  document.addEventListener('click',function(e){if(!document.getElementById('naano-ls').contains(e.target)){close();}});
+})();
+</script>
+HTML;
+		// phpcs:enable
 	}
 
 	/**
@@ -433,6 +701,55 @@ class Naano_Admin_Page {
 		$_mld        = [ 'claude' => 'claude-sonnet-4-20250514', 'gemini' => 'gemini-2.5-flash', 'kimi' => 'kimi-k2-0711-preview' ];
 		$model_label = $_mlm ?: ( $_mld[ $_mlp ] ?? $_mlp );
 
+		// Collect translation variants so the toolbar language switcher can be rendered.
+		$current_lang  = '';
+		$translations  = [];
+		$all_languages = get_option( 'naano_languages', [] );
+		if ( $page_id ) {
+			$default_label = get_option( 'naano_default_lang_label', '' );
+			$lang_map      = [ 'default' => $default_label !== '' ? $default_label : __( 'Default', 'naano-ai-website-builder' ) ];
+			foreach ( (array) $all_languages as $lentry ) {
+				if ( ! empty( $lentry['code'] ) ) {
+					$lang_map[ $lentry['code'] ] = $lentry['label'] ?? strtoupper( $lentry['code'] );
+				}
+			}
+
+			$root_id      = (int) get_post_meta( $page_id, '_naano_translation_of', true ) ?: $page_id;
+			$current_lang = get_post_meta( $page_id, '_naano_lang', true ) ?: '';
+
+			// Original page entry.
+			$orig_lang = get_post_meta( $root_id, '_naano_lang', true ) ?: '';
+			if ( $orig_lang ) {
+				$translations[] = [
+					'lang'       => $orig_lang,
+					'label'      => $lang_map[ $orig_lang ] ?? strtoupper( $orig_lang ),
+					'pageId'     => $root_id,
+					'builderUrl' => add_query_arg( 'naano_builder', '1', get_permalink( $root_id ) ),
+					'current'    => ( $page_id === $root_id ),
+				];
+			}
+
+			// All translated variants.
+			$trans_pages = get_posts( [
+				'post_type'      => 'page',
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'meta_key'       => '_naano_translation_of',
+				'meta_value'     => $root_id,
+			] );
+			foreach ( $trans_pages as $tp ) {
+				$tl = get_post_meta( $tp->ID, '_naano_lang', true );
+				if ( ! $tl ) { continue; }
+				$translations[] = [
+					'lang'       => $tl,
+					'label'      => $lang_map[ $tl ] ?? strtoupper( $tl ),
+					'pageId'     => $tp->ID,
+					'builderUrl' => add_query_arg( 'naano_builder', '1', get_permalink( $tp->ID ) ),
+					'current'    => ( $page_id === $tp->ID ),
+				];
+			}
+		}
+
 		wp_localize_script( 'naano-builder', 'naanoBuilderData', [
 			'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
 			'nonce'              => wp_create_nonce( 'naano_builder_nonce' ),
@@ -441,6 +758,8 @@ class Naano_Admin_Page {
 			'references'         => $references,
 			'modelLabel'         => $model_label,
 			'existingComponents' => $existing_components,
+			'currentLang'        => $current_lang,
+			'translations'       => $translations,
 			'strings'    => [
 				'confirm_delete'    => __( 'Are you sure you want to delete this section?', 'naano-ai-website-builder' ),
 				'generating'        => __( 'Generating…', 'naano-ai-website-builder' ),
