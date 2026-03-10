@@ -155,6 +155,13 @@ class Naano_Ajax_Handler {
 		$section_id = sanitize_text_field( wp_unslash( $_POST['section_id'] ?? '' ) );
 		$instruction = sanitize_textarea_field( wp_unslash( $_POST['instruction'] ?? '' ) );
 
+		$assets_raw    = sanitize_text_field( wp_unslash( $_POST['assets'] ?? '[]' ) );
+		$redirects_raw = sanitize_text_field( wp_unslash( $_POST['redirects'] ?? '[]' ) );
+		$assets        = json_decode( $assets_raw, true );
+		$redirects     = json_decode( $redirects_raw, true );
+		$assets        = is_array( $assets ) ? $assets : [];
+		$redirects     = is_array( $redirects ) ? $redirects : [];
+
 		if ( ! $page_id || ! $section_id || ! $instruction ) {
 			wp_send_json_error( [ 'message' => __( 'Missing required fields.', 'naano-ai-website-builder' ) ] );
 		}
@@ -175,6 +182,8 @@ class Naano_Ajax_Handler {
 			$vars    = get_option( 'naano_variables', [] );
 			$builder->set_variables( is_array( $vars ) ? $vars : [] );
 			$builder->set_references( $url_refs );
+			$builder->set_assets( $assets );
+			$builder->set_redirects( $redirects );
 
 			$system  = $builder->build_system_prompt();
 			$history = $conversation->get_trimmed( $page_id );

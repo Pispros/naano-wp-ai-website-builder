@@ -16,6 +16,12 @@
 		/** @type {Array<{id: string, html: string}>} In-memory sections store. */
 		sectionsData: [],
 
+		/** @type {Array<{url: string, desc: string}>} Page-level asset URLs. */
+		pageAssets: [],
+
+		/** @type {Array<{label: string, url: string}>} Page-level URL redirections. */
+		pageRedirects: [],
+
 		/**
 		 * Initialise the builder.
 		 */
@@ -25,23 +31,22 @@
 			// Activate full-screen layout.
 			$( 'body' ).addClass( 'naano-fullscreen' );
 
-			// Inject skeleton bars into the canvas placeholder for the generation animation.
-			$( '#naano-canvas-placeholder' ).append(
-				'<div class="naano-canvas-placeholder__skeleton" aria-hidden="true">' +
-				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--full"></div>' +
-				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--lg"></div>' +
-				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--md"></div>' +
-				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--full"></div>' +
-				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--sm"></div>' +
-				'<div class="naano-canvas-skeleton-bar naano-canvas-skeleton-bar--lg"></div>' +
-				'</div>'
-			);
+			// Inject the shared canvas loading video overlay (hidden by default).
+			if ( data.videoUrl ) {
+				$( '#naano-vb-canvas' ).append(
+					'<div class="naano-canvas-loading-overlay" id="naano-canvas-loading-overlay">' +
+					'<video class="naano-canvas-loading-overlay__video" src="' + $( '<div>' ).text( data.videoUrl ).html() + '" autoplay loop muted playsinline></video>' +
+					'</div>'
+				);
+			}
 
 			NaanoBuilder._bindGenerationForm();
 			NaanoBuilder._bindActionBar();
 			NaanoBuilder._bindDrawer();
 			NaanoBuilder._bindViewportToggle();
 			NaanoBuilder._bindEditPanel();
+			NaanoBuilder._bindAssetsPanel();
+			NaanoBuilder._bindRedirectsPanel();
 			NaanoBuilder._bindIframeMessages();
 
 			// If we already have sections (page reload), render them.
@@ -91,10 +96,8 @@
 
 			NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', true );
 
-			// Show animated skeleton in the canvas while the LLM is generating.
-			$( '#naano-canvas-placeholder' )
-				.show()
-				.addClass( 'naano-canvas-placeholder--loading' );
+			// Show the video loading overlay on the canvas.
+			NaanoBuilder._showCanvasLoading();
 
 			$.post( data.ajaxUrl, {
 				action:      'naano_generate_site',
@@ -106,7 +109,7 @@
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
-				$( '#naano-canvas-placeholder' ).removeClass( 'naano-canvas-placeholder--loading' );
+				NaanoBuilder._hideCanvasLoading();
 				if ( response.success ) {
 					NaanoBuilder.pageId = response.data.page_id || NaanoBuilder.pageId;
 
@@ -135,7 +138,7 @@
 			} )
 			.fail( function () {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
-				$( '#naano-canvas-placeholder' ).removeClass( 'naano-canvas-placeholder--loading' );
+				NaanoBuilder._hideCanvasLoading();
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
 		},
@@ -229,6 +232,7 @@
 			}
 
 			NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', true );
+			NaanoBuilder._showCanvasLoading();
 
 			// Show loading overlay on the section and dim the canvas.
 			NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: true } );
@@ -239,10 +243,13 @@
 				nonce:       data.nonce,
 				page_id:     NaanoBuilder.pageId,
 				section_id:  sectionId,
-				instruction: instruction
+				instruction: instruction,
+				assets:      JSON.stringify( NaanoBuilder.pageAssets ),
+				redirects:   JSON.stringify( NaanoBuilder.pageRedirects )
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+				NaanoBuilder._hideCanvasLoading();
 				$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
 
 				if ( response.success ) {
@@ -278,6 +285,7 @@
 			} )
 			.fail( function () {
 				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+				NaanoBuilder._hideCanvasLoading();
 				$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
 				NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: false } );
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
@@ -704,15 +712,19 @@
 			} );
 
 			$( document ).on( 'click', '#naano-add-screenshot-btn', function () {
-				if ( NaanoBuilder.editingSectionId ) {
-					NaanoBuilder.addScreenshot( NaanoBuilder.editingSectionId );
+				if ( ! NaanoBuilder.editingSectionId ) {
+					NaanoBuilder._toast( data.strings.select_section, 'error' );
+					return;
 				}
+				NaanoBuilder.addScreenshot( NaanoBuilder.editingSectionId );
 			} );
 
 			$( document ).on( 'click', '#naano-add-url-btn', function () {
-				if ( NaanoBuilder.editingSectionId ) {
-					NaanoBuilder.addUrlReference( NaanoBuilder.editingSectionId );
+				if ( ! NaanoBuilder.editingSectionId ) {
+					NaanoBuilder._toast( data.strings.select_section, 'error' );
+					return;
 				}
+				NaanoBuilder.addUrlReference( NaanoBuilder.editingSectionId );
 			} );
 
 			$( document ).on( 'click', '#naano-save-url-btn', function () {
@@ -997,6 +1009,7 @@
 			var slug        = sectionName.toLowerCase().replace( /\s+/g, '-' ).replace( /[^a-z0-9-]/g, '' );
 
 			NaanoBuilder._setLoading( '#naano-add-new-section-btn', '#naano-update-loading', true );
+			NaanoBuilder._showCanvasLoading();
 
 			$.post( data.ajaxUrl, {
 				action:      'naano_update_section',
@@ -1007,6 +1020,7 @@
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-add-new-section-btn', '#naano-update-loading', false );
+				NaanoBuilder._hideCanvasLoading();
 				if ( response.success ) {
 					var id   = response.data.section_id;
 					var html = response.data.section_html;
@@ -1027,6 +1041,7 @@
 			} )
 			.fail( function () {
 				NaanoBuilder._setLoading( '#naano-add-new-section-btn', '#naano-update-loading', false );
+				NaanoBuilder._hideCanvasLoading();
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
 		},
@@ -1036,6 +1051,151 @@
 			$( '#naano-drawer-edit' ).show();
 			$( '#naano-canvas-placeholder' ).hide();
 			$( '#naano-live-iframe-wrap' ).show();
+		},
+
+		_showCanvasLoading: function () {
+			var $overlay = $( '#naano-canvas-loading-overlay' );
+			$overlay.addClass( 'naano-canvas-loading-overlay--visible' );
+			var vid = $overlay.find( 'video' ).get( 0 );
+			if ( vid ) { vid.currentTime = 0; vid.play(); }
+		},
+
+		_hideCanvasLoading: function () {
+			var $overlay = $( '#naano-canvas-loading-overlay' );
+			$overlay.removeClass( 'naano-canvas-loading-overlay--visible' );
+			var vid = $overlay.find( 'video' ).get( 0 );
+			if ( vid ) { vid.pause(); }
+		},
+
+		_bindAssetsPanel: function () {
+			// "From URL" button — show the URL form.
+			$( document ).on( 'click', '#naano-add-asset-btn', function () {
+				if ( ! NaanoBuilder.editingSectionId ) {
+					NaanoBuilder._toast( data.strings.select_section, 'error' );
+					return;
+				}
+				$( '#naano-add-asset-form' ).show();
+				$( '#naano-asset-picker' ).hide();
+				$( '#naano-asset-url' ).focus();
+			} );
+
+			// "From Media Library" button.
+			$( document ).on( 'click', '#naano-add-asset-media-btn', function () {
+				if ( ! NaanoBuilder.editingSectionId ) {
+					NaanoBuilder._toast( data.strings.select_section, 'error' );
+					return;
+				}
+				NaanoBuilder.addAssetFromMedia();
+			} );
+
+			$( document ).on( 'click', '#naano-cancel-asset-btn', function () {
+				$( '#naano-add-asset-form' ).hide().find( 'input' ).val( '' );
+				$( '#naano-asset-picker' ).show();
+			} );
+
+			$( document ).on( 'click', '#naano-save-asset-btn', function () {
+				var url  = $( '#naano-asset-url' ).val().trim();
+				var desc = $( '#naano-asset-desc' ).val().trim();
+				if ( ! url ) { $( '#naano-asset-url' ).focus(); return; }
+				NaanoBuilder.pageAssets.push( { url: url, desc: desc } );
+				NaanoBuilder._renderAssetList();
+				$( '#naano-add-asset-form' ).hide().find( 'input' ).val( '' );
+				$( '#naano-asset-picker' ).show();
+			} );
+
+			$( document ).on( 'click', '.naano-remove-asset-btn', function () {
+				var idx = parseInt( $( this ).data( 'index' ), 10 );
+				NaanoBuilder.pageAssets.splice( idx, 1 );
+				NaanoBuilder._renderAssetList();
+			} );
+
+			$( document ).on( 'keydown', '#naano-asset-url, #naano-asset-desc', function ( e ) {
+				if ( e.key === 'Enter' ) { e.preventDefault(); $( '#naano-save-asset-btn' ).trigger( 'click' ); }
+			} );
+		},
+
+		_renderAssetList: function () {
+			var $list = $( '#naano-asset-list' ).empty();
+			NaanoBuilder.pageAssets.forEach( function ( asset, i ) {
+				var label = '#' + ( i + 1 ) + ': ' + asset.url + ( asset.desc ? ' — ' + asset.desc : '' );
+				$list.append(
+					$( '<li class="naano-reference-item">' )
+						.append( $( '<span>' ).text( label ) )
+						.append( ' <button type="button" class="naano-remove-ref-btn naano-remove-asset-btn" data-index="' + i + '">✕</button>' )
+				);
+			} );
+		},
+
+		/**
+		 * Open the WP media library to pick an asset URL.
+		 */
+		addAssetFromMedia: function () {
+			var frame = wp.media( {
+				title:    'Select Asset',
+				button:   { text: 'Use this file' },
+				multiple: false
+			} );
+
+			frame.on( 'select', function () {
+				var attachment = frame.state().get( 'selection' ).first().toJSON();
+				NaanoBuilder.pageAssets.push( { url: attachment.url, desc: attachment.title || '' } );
+				NaanoBuilder._renderAssetList();
+				NaanoBuilder._toast( 'Asset added!', 'success' );
+			} );
+
+			frame.open();
+		},
+
+		_bindRedirectsPanel: function () {
+			$( document ).on( 'click', '#naano-add-redirect-btn', function () {
+				if ( ! NaanoBuilder.editingSectionId ) {
+					NaanoBuilder._toast( data.strings.select_section, 'error' );
+					return;
+				}
+				$( '#naano-add-redirect-form' ).show();
+				$( '#naano-add-redirect-btn' ).hide();
+				$( '#naano-redirect-label' ).focus();
+			} );
+
+			$( document ).on( 'click', '#naano-cancel-redirect-btn', function () {
+				$( '#naano-add-redirect-form' ).hide().find( 'input' ).val( '' );
+				$( '#naano-add-redirect-btn' ).show();
+			} );
+
+			$( document ).on( 'click', '#naano-save-redirect-btn', function () {
+				var label = $( '#naano-redirect-label' ).val().trim();
+				var url   = $( '#naano-redirect-url' ).val().trim();
+				if ( ! label || ! url ) {
+					$( ! label ? '#naano-redirect-label' : '#naano-redirect-url' ).focus();
+					return;
+				}
+				NaanoBuilder.pageRedirects.push( { label: label, url: url } );
+				NaanoBuilder._renderRedirectList();
+				$( '#naano-add-redirect-form' ).hide().find( 'input' ).val( '' );
+				$( '#naano-add-redirect-btn' ).show();
+			} );
+
+			$( document ).on( 'click', '.naano-remove-redirect-btn', function () {
+				var idx = parseInt( $( this ).data( 'index' ), 10 );
+				NaanoBuilder.pageRedirects.splice( idx, 1 );
+				NaanoBuilder._renderRedirectList();
+			} );
+
+			$( document ).on( 'keydown', '#naano-redirect-label, #naano-redirect-url', function ( e ) {
+				if ( e.key === 'Enter' ) { e.preventDefault(); $( '#naano-save-redirect-btn' ).trigger( 'click' ); }
+			} );
+		},
+
+		_renderRedirectList: function () {
+			var $list = $( '#naano-redirect-list' ).empty();
+			NaanoBuilder.pageRedirects.forEach( function ( redirect, i ) {
+				var label = redirect.label + ' → ' + redirect.url;
+				$list.append(
+					$( '<li class="naano-reference-item">' )
+						.append( $( '<span>' ).text( label ) )
+						.append( ' <button type="button" class="naano-remove-ref-btn naano-remove-redirect-btn" data-index="' + i + '">✕</button>' )
+				);
+			} );
 		},
 
 		_renderReferenceList: function ( refs ) {

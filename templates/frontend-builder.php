@@ -225,7 +225,61 @@ $admin_pages_url = admin_url( 'admin.php?page=naano-ai-builder' );
 						<textarea id="naano-instruction" class="naano-textarea" rows="5"
 								  placeholder="<?php esc_attr_e( 'Describe what you want to change…', 'naano-ai-website-builder' ); ?>"></textarea>
 					</div>
+					<!-- Page Assets -->
+					<div class="naano-drawer__field naano-assets-section">
+						<label><?php esc_html_e( 'Page Assets', 'naano-ai-website-builder' ); ?></label>
+						<p class="naano-field-hint"><?php esc_html_e( 'Add numbered assets to reference in your instructions (e.g. "use asset #1 as hero image").', 'naano-ai-website-builder' ); ?></p>
+						<ul class="naano-reference-list" id="naano-asset-list"></ul>
+						<div class="naano-add-url-form" id="naano-add-asset-form" style="display:none;">
+							<input type="url" id="naano-asset-url" class="naano-input"
+								   placeholder="https://example.com/image.jpg">
+							<input type="text" id="naano-asset-desc" class="naano-input"
+								   placeholder="<?php esc_attr_e( 'Description (optional)', 'naano-ai-website-builder' ); ?>">
+							<div class="naano-add-url-form__btns">
+								<button type="button" class="naano-btn-secondary" id="naano-save-asset-btn">
+									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
+								</button>
+								<button type="button" class="naano-btn-ghost" id="naano-cancel-asset-btn">
+									<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+								</button>
+							</div>
+						</div>
+						<div class="naano-asset-picker" id="naano-asset-picker">
+							<button type="button" class="naano-btn-secondary" id="naano-add-asset-media-btn">
+								<span class="dashicons dashicons-admin-media"></span>
+								<?php esc_html_e( 'Media Library', 'naano-ai-website-builder' ); ?>
+							</button>
+							<button type="button" class="naano-btn-secondary" id="naano-add-asset-btn">
+								<span class="dashicons dashicons-admin-links"></span>
+								<?php esc_html_e( 'From URL', 'naano-ai-website-builder' ); ?>
+							</button>
+						</div>
+					</div>
 
+					<!-- URL Redirections -->
+					<div class="naano-drawer__field naano-redirects-section">
+						<label><?php esc_html_e( 'URL Redirections', 'naano-ai-website-builder' ); ?></label>
+						<p class="naano-field-hint"><?php esc_html_e( 'Define named links to use in your instructions (e.g. "CTA should link to Contact").', 'naano-ai-website-builder' ); ?></p>
+						<ul class="naano-reference-list" id="naano-redirect-list"></ul>
+						<div class="naano-add-url-form" id="naano-add-redirect-form" style="display:none;">
+							<input type="text" id="naano-redirect-label" class="naano-input"
+								   placeholder="<?php esc_attr_e( 'Label (e.g. Contact)', 'naano-ai-website-builder' ); ?>">
+							<input type="url" id="naano-redirect-url" class="naano-input"
+								   placeholder="https://example.com/contact">
+							<div class="naano-add-url-form__btns">
+								<button type="button" class="naano-btn-secondary" id="naano-save-redirect-btn">
+									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
+								</button>
+								<button type="button" class="naano-btn-ghost" id="naano-cancel-redirect-btn">
+									<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+								</button>
+							</div>
+						</div>
+						<button type="button" class="naano-btn-secondary" id="naano-add-redirect-btn">
+							<span class="dashicons dashicons-admin-links"></span>
+							<?php esc_html_e( 'Add Redirect', 'naano-ai-website-builder' ); ?>
+						</button>
+					</div>
 					<!-- Screenshot References -->
 					<div class="naano-drawer__field naano-reference-section">
 						<label><?php esc_html_e( 'Screenshot References', 'naano-ai-website-builder' ); ?></label>

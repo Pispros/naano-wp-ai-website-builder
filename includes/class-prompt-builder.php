@@ -20,6 +20,12 @@ class Naano_Prompt_Builder {
 	/** @var array URL references. */
 	private array $reference_links = [];
 
+	/** @var array<array{url:string,desc:string}> Page-level assets. */
+	private array $assets = [];
+
+	/** @var array<array{label:string,url:string}> Page-level URL redirections. */
+	private array $redirects = [];
+
 	/** @var array<array{title:string,url:string}> Other pages in this site. */
 	private array $site_pages = [];
 
@@ -81,6 +87,28 @@ PROMPT;
 	}
 
 	/**
+	 * Set page-level assets for the prompt.
+	 *
+	 * @param array<array{url:string,desc:string}> $assets
+	 * @return static
+	 */
+	public function set_assets( array $assets ): static {
+		$this->assets = $assets;
+		return $this;
+	}
+
+	/**
+	 * Set page-level URL redirections for the prompt.
+	 *
+	 * @param array<array{label:string,url:string}> $redirects
+	 * @return static
+	 */
+	public function set_redirects( array $redirects ): static {
+		$this->redirects = $redirects;
+		return $this;
+	}
+
+	/**
 	 * Set other site pages so the LLM can generate correct nav links.
 	 *
 	 * @param array<array{title:string,url:string}> $pages
@@ -133,9 +161,15 @@ MSG;
 	 * @return string User message content.
 	 */
 	public function build_section_message( string $section_id, string $instruction, string $compressed_context ): string {
+		$assets_block    = $this->build_assets_block();
+		$redirects_block = $this->build_redirects_block();
+		$context_extras  = trim( $assets_block . ( $assets_block && $redirects_block ? "\n\n" : '' ) . $redirects_block );
+
+		$extras_section = $context_extras ? "\n\n" . $context_extras : '';
+
 		return <<<MSG
 CURRENT SITE CONTEXT (compressed — other sections shown as placeholders):
-{$compressed_context}
+{$compressed_context}{$extras_section}
 
 TASK:
 Update the section with ID "{$section_id}" according to the following instruction:
@@ -167,6 +201,46 @@ MSG;
 		$lines = [ 'DESIGN VARIABLES (use these consistently throughout the site):' ];
 		foreach ( $this->variables as $key => $value ) {
 			$lines[] = "- {$key}: {$value}";
+		}
+
+		return implode( "\n", $lines );
+	}
+
+	/**
+	 * Build the assets block for the prompt.
+	 *
+	 * @return string Formatted assets block, or empty string.
+	 */
+	private function build_assets_block(): string {
+		if ( empty( $this->assets ) ) {
+			return '';
+		}
+
+		$lines = [ 'PAGE ASSETS (use these URLs when instructed — reference by number):' ];
+		foreach ( $this->assets as $i => $asset ) {
+			$line = '- Asset #' . ( $i + 1 ) . ': ' . $asset['url'];
+			if ( ! empty( $asset['desc'] ) ) {
+				$line .= ' (' . $asset['desc'] . ')';
+			}
+			$lines[] = $line;
+		}
+
+		return implode( "\n", $lines );
+	}
+
+	/**
+	 * Build the URL redirections block for the prompt.
+	 *
+	 * @return string Formatted redirections block, or empty string.
+	 */
+	private function build_redirects_block(): string {
+		if ( empty( $this->redirects ) ) {
+			return '';
+		}
+
+		$lines = [ 'URL REDIRECTIONS (use these exact URLs for the named links):' ];
+		foreach ( $this->redirects as $redirect ) {
+			$lines[] = '- ' . $redirect['label'] . ': ' . $redirect['url'];
 		}
 
 		return implode( "\n", $lines );

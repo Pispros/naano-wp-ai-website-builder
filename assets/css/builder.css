@@ -335,7 +335,7 @@ body.naano-fullscreen #wpbody-content > .wrap {
 }
 
 .naano-input::placeholder {
-	color: #50575e;
+	color: rgba(255,255,255,0.45);
 }
 
 .naano-textarea {
@@ -361,7 +361,22 @@ body.naano-fullscreen #wpbody-content > .wrap {
 }
 
 .naano-textarea::placeholder {
-	color: #50575e;
+	color: rgba(255,255,255,0.45);
+}
+
+/* Field hint text */
+.naano-field-hint {
+	margin: 2px 0 8px;
+	font-size: 11px;
+	color: rgba(255,255,255,0.45);
+	line-height: 1.4;
+}
+
+/* Asset picker two-button row */
+.naano-asset-picker {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
 }
 
 /* Section checkboxes */
@@ -1013,44 +1028,23 @@ body.naano-fullscreen #wpbody-content > .wrap {
    CANVAS LOADING ANIMATIONS
    ============================================================ */
 
-/* Skeleton shimmer bars — shown while the LLM generates the site */
-.naano-canvas-placeholder__skeleton {
+/* Full-canvas video loading overlay */
+.naano-canvas-loading-overlay {
 	display: none;
-	flex-direction: column;
-	gap: 14px;
-	width: 60%;
-	max-width: 480px;
+	position: absolute;
+	inset: 0;
+	z-index: 50;
 }
 
-.naano-canvas-placeholder--loading .naano-canvas-placeholder__inner {
-	display: none;
+.naano-canvas-loading-overlay--visible {
+	display: block;
 }
 
-.naano-canvas-placeholder--loading .naano-canvas-placeholder__skeleton {
-	display: flex;
-}
-
-.naano-canvas-skeleton-bar {
-	height: 18px;
-	border-radius: 4px;
-	background: linear-gradient(
-		90deg,
-		#3d4246 0%,
-		#50575e 40%,
-		#3d4246 80%
-	);
-	background-size: 300% 100%;
-	animation: naano-shimmer 1.6s ease-in-out infinite;
-}
-
-.naano-canvas-skeleton-bar--sm   { width: 35%; height: 14px; }
-.naano-canvas-skeleton-bar--md   { width: 65%; }
-.naano-canvas-skeleton-bar--lg   { width: 85%; }
-.naano-canvas-skeleton-bar--full { width: 100%; }
-
-@keyframes naano-shimmer {
-	0%   { background-position: 100% 0; }
-	100% { background-position: -100% 0; }
+.naano-canvas-loading-overlay__video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
 }
 
 /* Iframe canvas dimming overlay — shown while a section update is in progress */

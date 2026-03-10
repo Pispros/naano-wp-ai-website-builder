@@ -321,6 +321,7 @@ class Naano_Admin_Page {
 			'pageId'     => $page_id,
 			'sections'   => $sections,
 			'references' => $references,
+			'videoUrl'   => NAANO_PLUGIN_URL . 'assets/video/loading.mp4',
 			'strings'    => [
 				'confirm_delete'    => __( 'Are you sure you want to delete this section?', 'naano-ai-website-builder' ),
 				'generating'        => __( 'Generating…', 'naano-ai-website-builder' ),
