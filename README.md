@@ -390,12 +390,6 @@ Pull requests are welcome! Please open an issue first for significant changes.
 
 ---
 
-## Creator
-
-**Pispros** — [pispros@naanocorp.tech](mailto:pispros@naanocorp.tech)
-
----
-
 ## License
 
 GPL-2.0-or-later © Naano
