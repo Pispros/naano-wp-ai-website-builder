@@ -336,6 +336,23 @@
 				return;
 			}
 
+			// Auto-save any URL reference that is typed in the form but not yet added.
+			var $urlForm = $( '#naano-add-url-form' );
+			var pendingUrl = $( '#naano-ref-url' ).val().trim();
+			if ( $urlForm.is( ':visible' ) && pendingUrl && NaanoBuilder.editingSectionId ) {
+				NaanoBuilder.saveUrlReference( NaanoBuilder.editingSectionId );
+				// saveUrlReference is async; delay dispatch until it completes.
+				var _ids = ids, _instruction = instruction;
+				$( document ).one( 'naano:url-ref-saved naano:url-ref-failed', function () {
+					NaanoBuilder._dispatchUpdate( _ids, _instruction );
+				} );
+				return;
+			}
+
+			NaanoBuilder._dispatchUpdate( ids, instruction );
+		},
+
+		_dispatchUpdate: function ( ids, instruction ) {
 			var fileLabel = ids.length === 1
 				? NaanoBuilder._displayName( ids[ 0 ] ).toLowerCase().replace( /\s+/g, '-' ) + '.html'
 				: ids.length + '-sections.html';
@@ -381,7 +398,8 @@
 				section_id:  sectionId,
 				instruction: instruction,
 				assets:      JSON.stringify( NaanoBuilder.pageAssets ),
-				redirects:   JSON.stringify( NaanoBuilder.pageRedirects )
+				redirects:   JSON.stringify( NaanoBuilder.pageRedirects ),
+				references:  JSON.stringify( ( data.references && data.references[ sectionId ] ) ? data.references[ sectionId ] : [] )
 			} )
 			.done( function ( response ) {
 				if ( response.success ) {
@@ -514,9 +532,14 @@
 					$( '#naano-ref-url' ).val( '' );
 					$( '#naano-ref-notes' ).val( '' );
 					NaanoBuilder._toast( 'URL reference added! 🔗', 'success' );
+					$( document ).trigger( 'naano:url-ref-saved' );
 				} else {
 					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
+					$( document ).trigger( 'naano:url-ref-failed' );
 				}
+			} )
+			.fail( function () {
+				$( document ).trigger( 'naano:url-ref-failed' );
 			} );
 		},
 

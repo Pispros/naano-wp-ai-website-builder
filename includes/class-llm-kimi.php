@@ -16,7 +16,8 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface {
 
 	private const API_ENDPOINT    = 'https://api.moonshot.cn/v1/chat/completions';
 	private const DEFAULT_MODEL   = 'kimi-k2-0711-preview';
-	private const TIMEOUT_SECONDS = 120;
+	private const MAX_TOKENS      = 16000;
+	private const TIMEOUT_SECONDS = 180;
 
 	private string $api_key;
 	private string $model;
@@ -42,8 +43,10 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface {
 		);
 
 		$payload = [
-			'model'    => $this->model,
-			'messages' => $all_messages,
+			'model'       => $this->model,
+			'max_tokens'  => self::MAX_TOKENS,
+			'temperature' => 1.0,
+			'messages'    => $all_messages,
 		];
 
 		$response = $this->request( $payload );

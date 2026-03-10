@@ -289,7 +289,7 @@ $section_types = [
 									  placeholder="/* Scoped to this element */&#10;color: red;"></textarea>
 						</div>
 						<div class="naano-esp-actions">
-							<button type="button" class="naano-btn-secondary" id="naano-esp-apply-btn"><?php esc_html_e( 'Apply Styles', 'naano-ai-website-builder' ); ?></button>
+							<button type="button" class="naano-btn-primary" id="naano-esp-apply-btn"><?php esc_html_e( 'Apply Styles', 'naano-ai-website-builder' ); ?></button>
 							<button type="button" class="naano-btn-ghost" id="naano-esp-deselect-btn">✕ <?php esc_html_e( 'Clear', 'naano-ai-website-builder' ); ?></button>
 						</div>
 					</div><!-- #naano-element-style-panel -->
@@ -305,20 +305,20 @@ $section_types = [
 							<input type="text" id="naano-asset-desc" class="naano-input"
 								   placeholder="<?php esc_attr_e( 'Description (optional)', 'naano-ai-website-builder' ); ?>">
 							<div class="naano-add-url-form__btns">
-								<button type="button" class="naano-btn-secondary" id="naano-save-asset-btn">
-									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
-								</button>
-								<button type="button" class="naano-btn-ghost" id="naano-cancel-asset-btn">
-									<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
-								</button>
-							</div>
-						</div>
-						<div class="naano-asset-picker" id="naano-asset-picker">
-							<button type="button" class="naano-btn-secondary" id="naano-add-asset-media-btn">
-								<span class="dashicons dashicons-admin-media"></span>
-								<?php esc_html_e( 'Media Library', 'naano-ai-website-builder' ); ?>
+							<button type="button" class="naano-btn-primary" id="naano-save-asset-btn">
+								<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
 							</button>
-							<button type="button" class="naano-btn-secondary" id="naano-add-asset-btn">
+							<button type="button" class="naano-btn-ghost" id="naano-cancel-asset-btn">
+								<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+							</button>
+						</div>
+					</div>
+					<div class="naano-asset-picker" id="naano-asset-picker">
+						<button type="button" class="naano-btn-primary" id="naano-add-asset-media-btn">
+							<span class="dashicons dashicons-admin-media"></span>
+							<?php esc_html_e( 'Media Library', 'naano-ai-website-builder' ); ?>
+						</button>
+						<button type="button" class="naano-btn-primary" id="naano-add-asset-btn">
 								<span class="dashicons dashicons-admin-links"></span>
 								<?php esc_html_e( 'From URL', 'naano-ai-website-builder' ); ?>
 							</button>
@@ -336,15 +336,15 @@ $section_types = [
 							<input type="url" id="naano-redirect-url" class="naano-input"
 								   placeholder="https://example.com/contact">
 							<div class="naano-add-url-form__btns">
-								<button type="button" class="naano-btn-secondary" id="naano-save-redirect-btn">
-									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
-								</button>
-								<button type="button" class="naano-btn-ghost" id="naano-cancel-redirect-btn">
-									<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
-								</button>
-							</div>
+							<button type="button" class="naano-btn-primary" id="naano-save-redirect-btn">
+								<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
+							</button>
+							<button type="button" class="naano-btn-ghost" id="naano-cancel-redirect-btn">
+								<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+							</button>
 						</div>
-						<button type="button" class="naano-btn-secondary" id="naano-add-redirect-btn">
+					</div>
+					<button type="button" class="naano-btn-primary" id="naano-add-redirect-btn">
 							<span class="dashicons dashicons-admin-links"></span>
 							<?php esc_html_e( 'Add Redirect', 'naano-ai-website-builder' ); ?>
 						</button>
@@ -353,7 +353,7 @@ $section_types = [
 					<div class="naano-drawer__field naano-reference-section">
 						<label><?php esc_html_e( 'Screenshot References', 'naano-ai-website-builder' ); ?></label>
 						<ul class="naano-reference-list" id="naano-screenshot-list"></ul>
-						<button type="button" class="naano-btn-secondary" id="naano-add-screenshot-btn">
+					<button type="button" class="naano-btn-primary" id="naano-add-screenshot-btn">
 							<span class="dashicons dashicons-format-image"></span>
 							<?php esc_html_e( 'Add Screenshot', 'naano-ai-website-builder' ); ?>
 						</button>
@@ -369,15 +369,15 @@ $section_types = [
 							<input type="text" id="naano-ref-notes" class="naano-input"
 								   placeholder="<?php esc_attr_e( 'Notes (optional)', 'naano-ai-website-builder' ); ?>">
 							<div class="naano-add-url-form__btns">
-								<button type="button" class="naano-btn-secondary" id="naano-save-url-btn">
-									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
-								</button>
-								<button type="button" class="naano-btn-ghost" id="naano-cancel-url-btn">
-									<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
-								</button>
-							</div>
+							<button type="button" class="naano-btn-primary" id="naano-save-url-btn">
+								<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
+							</button>
+							<button type="button" class="naano-btn-ghost" id="naano-cancel-url-btn">
+								<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+							</button>
 						</div>
-						<button type="button" class="naano-btn-secondary" id="naano-add-url-btn">
+					</div>
+					<button type="button" class="naano-btn-primary" id="naano-add-url-btn">
 							<span class="dashicons dashicons-admin-links"></span>
 							<?php esc_html_e( 'Add URL', 'naano-ai-website-builder' ); ?>
 						</button>
@@ -404,7 +404,7 @@ $section_types = [
 								   placeholder="<?php esc_attr_e( 'Section name, e.g. Team', 'naano-ai-website-builder' ); ?>">
 							<p id="naano-new-section-error" style="display:none;color:#f87171;font-size:12px;margin:4px 0 0;"></p>
 							<div class="naano-add-url-form__btns" style="margin-top:6px;">
-								<button type="button" class="naano-btn-secondary" id="naano-confirm-new-section-btn">
+							<button type="button" class="naano-btn-primary" id="naano-confirm-new-section-btn">
 									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
 								</button>
 								<button type="button" class="naano-btn-ghost" id="naano-cancel-new-section-btn">

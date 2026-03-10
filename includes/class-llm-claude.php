@@ -17,8 +17,8 @@ class Naano_LLM_Claude implements Naano_LLM_Provider_Interface {
 	private const API_ENDPOINT    = 'https://api.anthropic.com/v1/messages';
 	private const API_VERSION     = '2023-06-01';
 	private const DEFAULT_MODEL   = 'claude-sonnet-4-20250514';
-	private const MAX_TOKENS      = 8192;
-	private const TIMEOUT_SECONDS = 120;
+	private const MAX_TOKENS      = 16000;
+	private const TIMEOUT_SECONDS = 180;
 
 	private string $api_key;
 	private string $model;
@@ -42,10 +42,11 @@ class Naano_LLM_Claude implements Naano_LLM_Provider_Interface {
 		$built_messages = $this->build_messages( $messages, $images );
 
 		$payload = [
-			'model'      => $this->model,
-			'max_tokens' => self::MAX_TOKENS,
-			'system'     => $system_prompt,
-			'messages'   => $built_messages,
+			'model'       => $this->model,
+			'max_tokens'  => self::MAX_TOKENS,
+			'temperature' => 1,
+			'system'      => $system_prompt,
+			'messages'    => $built_messages,
 		];
 
 		$response = $this->request( $payload );

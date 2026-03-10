@@ -489,6 +489,31 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	height: 13px;
 }
 
+.naano-btn-primary {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	background: #2271b1;
+	border: 1px solid #1a5c96;
+	color: #fff;
+	padding: 6px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 500;
+	transition: background 0.15s;
+}
+
+.naano-btn-primary:hover {
+	background: #1a5c96;
+}
+
+.naano-btn-primary .dashicons {
+	font-size: 13px;
+	width: 13px;
+	height: 13px;
+}
+
 .naano-btn-ghost {
 	display: inline-flex;
 	align-items: center;

@@ -16,7 +16,8 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface {
 
 	private const API_BASE        = 'https://generativelanguage.googleapis.com/v1beta/models/';
 	private const DEFAULT_MODEL   = 'gemini-2.5-flash';
-	private const TIMEOUT_SECONDS = 120;
+	private const MAX_TOKENS      = 16000;
+	private const TIMEOUT_SECONDS = 180;
 
 	private string $api_key;
 	private string $model;
@@ -46,6 +47,11 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface {
 				'parts' => [ [ 'text' => $system_prompt ] ],
 			],
 			'contents'           => $contents,
+			'generationConfig'   => [
+				'maxOutputTokens' => self::MAX_TOKENS,
+				'temperature'     => 1.0,
+				'responseMimeType'=> 'text/plain',
+			],
 		];
 
 		$response = $this->request( $endpoint, $payload );

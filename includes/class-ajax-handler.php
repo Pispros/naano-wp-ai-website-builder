@@ -222,10 +222,13 @@ class Naano_Ajax_Handler {
 
 		$assets_raw    = sanitize_text_field( wp_unslash( $_POST['assets'] ?? '[]' ) );
 		$redirects_raw = sanitize_text_field( wp_unslash( $_POST['redirects'] ?? '[]' ) );
+		$refs_raw      = sanitize_text_field( wp_unslash( $_POST['references'] ?? '[]' ) );
 		$assets        = json_decode( $assets_raw, true );
 		$redirects     = json_decode( $redirects_raw, true );
-		$assets        = is_array( $assets ) ? $assets : [];
-		$redirects     = is_array( $redirects ) ? $redirects : [];
+		$client_refs   = json_decode( $refs_raw, true );
+		$assets        = is_array( $assets )      ? $assets      : [];
+		$redirects     = is_array( $redirects )   ? $redirects   : [];
+		$client_refs   = is_array( $client_refs ) ? $client_refs : [];
 
 		if ( ! $page_id || ! $section_id || ! $instruction ) {
 			wp_send_json_error( [ 'message' => __( 'Missing required fields.', 'naano-ai-website-builder' ) ] );
@@ -241,7 +244,21 @@ class Naano_Ajax_Handler {
 			$context      = Naano_Payload_Compressor::compress_context( $all_sections, $section_id );
 
 			$images  = $ref_manager->prepare_images_for_llm( $page_id, $section_id );
-			$url_refs = $ref_manager->prepare_url_references( $page_id, $section_id );
+
+			// Use URL refs sent from the client (live UI state). Fall back to DB if empty.
+			if ( ! empty( $client_refs ) ) {
+				$url_refs = array_values( array_filter(
+					$client_refs,
+					static fn( $r ) => ( $r['type'] ?? '' ) === 'url' && ! empty( $r['url'] )
+				) );
+				foreach ( $url_refs as &$ref ) {
+					$ref['url']     = esc_url_raw( $ref['url'] );
+					$ref['content'] = Naano_Reference_Manager::fetch_url_text( $ref['url'] );
+				}
+				unset( $ref );
+			} else {
+				$url_refs = $ref_manager->prepare_url_references( $page_id, $section_id );
+			}
 
 			$builder = new Naano_Prompt_Builder();
 			$vars    = get_option( 'naano_variables', [] );
