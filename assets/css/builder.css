@@ -834,6 +834,50 @@ body.naano-fullscreen #wpbody-content > .wrap {
 .naano-error   { color: #b91c1c; font-weight: 600; }
 
 /* ============================================================
+   GENERIC MODAL (publish page, etc.)
+   ============================================================ */
+.naano-modal-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 999990;
+	background: rgba(0, 0, 0, 0.72);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.naano-modal {
+	background: #23282d;
+	border: 1px solid #3d4246;
+	border-radius: 8px;
+	padding: 28px;
+	width: 420px;
+	max-width: calc(100vw - 40px);
+	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.naano-modal__title {
+	margin: 0 0 8px;
+	font-size: 15px;
+	font-weight: 600;
+	color: #fff;
+}
+
+.naano-modal__desc {
+	margin: 0 0 20px;
+	font-size: 12px;
+	color: #a7aaad;
+	line-height: 1.6;
+}
+
+.naano-modal__actions {
+	display: flex;
+	gap: 10px;
+	justify-content: flex-end;
+	margin-top: 20px;
+}
+
+/* ============================================================
    PREVIEW MODAL
    ============================================================ */
 .naano-preview-modal {

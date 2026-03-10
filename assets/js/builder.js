@@ -529,25 +529,75 @@
 		 * Save assembled HTML as a WordPress page.
 		 */
 		saveAsPage: function () {
-			var title = window.prompt( 'Page title:', $( '#naano-current-page-name' ).text() );
-			if ( title === null ) { return; }
+			$( '#naano-save-page-title' ).val( $( '#naano-current-page-name' ).text() );
+			$( '#naano-save-page-error' ).hide();
+			$( '#naano-save-page-modal' ).show();
+			setTimeout( function () { $( '#naano-save-page-title' ).select(); }, 60 );
+		},
+
+		_doPublishPage: function () {
+			var title = $( '#naano-save-page-title' ).val().trim();
+			if ( ! title ) {
+				$( '#naano-save-page-error' ).text( 'Please enter a page title.' ).show();
+				$( '#naano-save-page-title' ).focus();
+				return;
+			}
+
+			// Build clean HTML from client-side sectionsData — this is reliable
+			// regardless of what may or may not be stored in the DB on the server.
+			var sectionsHtml = '';
+			NaanoBuilder.sectionsData.forEach( function ( sec ) {
+				sectionsHtml += sec.html;
+			} );
+			var escapedTitle = $( '<div>' ).text( title ).html();
+			var fullHtml =
+				'<!DOCTYPE html><html lang="en"><head>' +
+				'<meta charset="UTF-8">' +
+				'<meta name="viewport" content="width=device-width,initial-scale=1">' +
+				'<title>' + escapedTitle + '</title>' +
+				'</head><body>' + sectionsHtml + '</body></html>';
+
+			$( '#naano-save-page-modal' ).hide();
+			$( '#naano-save-page-btn' ).prop( 'disabled', true );
 
 			$.post( data.ajaxUrl, {
 				action:  'naano_save_as_page',
 				nonce:   data.nonce,
 				page_id: NaanoBuilder.pageId,
-				title:   title
+				title:   title,
+				html:    fullHtml
 			} )
 			.done( function ( response ) {
+				$( '#naano-save-page-btn' ).prop( 'disabled', false );
 				if ( response.success ) {
+					// Update displayed page name in builder header.
+					$( '#naano-current-page-name' ).text( response.data.title || title );
+
 					NaanoBuilder._toast(
-						'Page saved as draft! <a href="' + response.data.edit_url + '" target="_blank">Edit it</a>',
+						'Page published! <a href="' + response.data.view_url + '" target="_blank">View it</a> · <a href="' + response.data.edit_url + '" target="_blank">Edit in WP</a>',
 						'success',
-						5000
+						6000
 					);
+
+					// Set as homepage if checkbox was checked.
+					if ( $( '#naano-set-homepage-chk' ).is( ':checked' ) ) {
+						$.post( data.ajaxUrl, {
+							action:  'naano_set_homepage',
+							nonce:   data.nonce,
+							page_id: NaanoBuilder.pageId
+						} ).done( function ( res ) {
+							if ( res.success ) {
+								NaanoBuilder._toast( 'Set as homepage!', 'success', 3500 );
+							}
+						} );
+					}
 				} else {
 					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
 				}
+			} )
+			.fail( function () {
+				$( '#naano-save-page-btn' ).prop( 'disabled', false );
+				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
 		},
 
@@ -607,6 +657,24 @@
 			$( document ).on( 'click', '#naano-export-btn',    function () { NaanoBuilder.exportHtml(); } );
 			$( document ).on( 'click', '#naano-copy-btn',      function () { NaanoBuilder.copyToClipboard(); } );
 			$( document ).on( 'click', '#naano-save-page-btn', function () { NaanoBuilder.saveAsPage(); } );
+
+			// Publish page modal handlers.
+			$( document ).on( 'click', '#naano-save-page-confirm-btn', function () {
+				NaanoBuilder._doPublishPage();
+			} );
+			$( document ).on( 'click', '#naano-save-page-cancel-btn', function () {
+				$( '#naano-save-page-modal' ).hide();
+			} );
+			// Close on backdrop click.
+			$( document ).on( 'click', '#naano-save-page-modal', function ( e ) {
+				if ( $( e.target ).is( '#naano-save-page-modal' ) ) {
+					$( '#naano-save-page-modal' ).hide();
+				}
+			} );
+			$( document ).on( 'keydown', '#naano-save-page-title', function ( e ) {
+				if ( e.key === 'Enter' )  { NaanoBuilder._doPublishPage(); }
+				if ( e.key === 'Escape' ) { $( '#naano-save-page-modal' ).hide(); }
+			} );
 		},
 
 		_bindDrawer: function () {

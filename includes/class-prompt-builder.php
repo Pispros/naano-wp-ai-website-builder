@@ -20,6 +20,9 @@ class Naano_Prompt_Builder {
 	/** @var array URL references. */
 	private array $reference_links = [];
 
+	/** @var array<array{title:string,url:string}> Other pages in this site. */
+	private array $site_pages = [];
+
 	/** @var string Base system prompt template. */
 	private string $base_system_prompt = <<<'PROMPT'
 You are an expert web designer and front-end developer.
@@ -78,6 +81,17 @@ PROMPT;
 	}
 
 	/**
+	 * Set other site pages so the LLM can generate correct nav links.
+	 *
+	 * @param array<array{title:string,url:string}> $pages
+	 * @return static
+	 */
+	public function set_site_pages( array $pages ): static {
+		$this->site_pages = $pages;
+		return $this;
+	}
+
+	/**
 	 * Build the user message for generating a complete new site.
 	 *
 	 * @param string   $description   Site description from user.
@@ -87,12 +101,21 @@ PROMPT;
 	public function build_initial_message( string $description, array $section_types ): string {
 		$section_list = implode( ', ', $section_types );
 
+		$pages_block = '';
+		if ( ! empty( $this->site_pages ) ) {
+			$lines = [ "\nSITE PAGES (use these exact URLs for navigation links):" ];
+			foreach ( $this->site_pages as $p ) {
+				$lines[] = '- ' . $p['title'] . ': ' . $p['url'];
+			}
+			$pages_block = implode( "\n", $lines ) . "\n";
+		}
+
 		return <<<MSG
 Create a complete, professional website based on the following description:
 
 DESCRIPTION:
 {$description}
-
+{$pages_block}
 SECTIONS (create each in order, wrap each in BEGIN/END markers):
 {$section_list}
 

@@ -33,6 +33,9 @@ class Naano_Admin_Page {
 
 		// Hide the WordPress admin bar when the frontend builder is active.
 		add_filter( 'show_admin_bar', [ $this, 'maybe_hide_admin_bar' ] );
+
+		// Serve standalone Naano pages as raw HTML (no theme wrapping).
+		add_action( 'template_redirect', [ $this, 'maybe_render_standalone_page' ] );
 	}
 
 	/**
@@ -226,6 +229,36 @@ class Naano_Admin_Page {
 	// -------------------------------------------------------------------------
 	// Frontend builder
 	// -------------------------------------------------------------------------
+
+	/**
+	 * Intercept standalone Naano pages (tagged with _naano_standalone meta)
+	 * and output the assembled HTML directly, bypassing the WordPress theme.
+	 *
+	 * @return void
+	 */
+	public function maybe_render_standalone_page(): void {
+		if ( ! is_singular( 'page' ) ) {
+			return;
+		}
+
+		$page_id = get_queried_object_id();
+		if ( ! $page_id || ! get_post_meta( $page_id, '_naano_standalone', true ) ) {
+			return;
+		}
+
+		// The raw HTML is stored in _naano_page_html meta to avoid being
+		// mangled by WordPress content filters on post_content.
+		$html = get_post_meta( $page_id, '_naano_page_html', true );
+
+		if ( ! $html ) {
+			return; // Nothing to render; let WP fall through normally.
+		}
+
+		header( 'Content-Type: text/html; charset=UTF-8' );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $html;
+		exit;
+	}
 
 	/**
 	 * Intercept frontend requests with ?naano_builder=1 and render the

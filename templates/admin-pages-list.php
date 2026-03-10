@@ -65,7 +65,7 @@ $ai_pages = get_posts( [
 					<tr>
 						<td class="column-title column-primary">
 							<strong>
-								<a href="<?php echo esc_url( get_edit_post_link( $page->ID ) ); ?>">
+							<a href="<?php echo esc_url( $builder_url ); ?>" target="_blank">
 									<?php echo esc_html( $page->post_title ?: __( '(no title)', 'naano-ai-website-builder' ) ); ?>
 								</a>
 							</strong>
@@ -83,10 +83,20 @@ $ai_pages = get_posts( [
 								<span class="dashicons dashicons-superhero-alt" style="vertical-align:middle;margin-top:-2px;font-size:14px;width:14px;height:14px;"></span>
 								<?php esc_html_e( 'Open Builder', 'naano-ai-website-builder' ); ?>
 							</a>
-							<a href="<?php echo esc_url( get_permalink( $page->ID ) ); ?>"
-							   class="button button-small" target="_blank" style="margin-left:4px;">
-								<?php esc_html_e( 'View', 'naano-ai-website-builder' ); ?>
-							</a>
+						<?php if ( $page->post_status === 'publish' ) : ?>
+						<a href="<?php echo esc_url( get_permalink( $page->ID ) ); ?>"
+						   class="button button-small" target="_blank" style="margin-left:4px;">
+							<?php esc_html_e( 'View', 'naano-ai-website-builder' ); ?>
+						</a>
+						<?php
+						$home_page_id = (int) get_option( 'page_on_front' );
+						if ( get_option( 'show_on_front' ) === 'page' && $home_page_id === $page->ID ) :
+						?>
+							<span class="naano-status-badge naano-status-homepage" style="margin-left:6px;">
+								<?php esc_html_e( 'Homepage', 'naano-ai-website-builder' ); ?>
+							</span>
+						<?php endif; ?>
+						<?php endif; ?>
 						</td>
 					</tr>
 					<?php endforeach; ?>
@@ -116,5 +126,6 @@ $ai_pages = get_posts( [
 .naano-status-draft    { background: #fef3c7; color: #92400e; }
 .naano-status-pending  { background: #dbeafe; color: #1e40af; }
 .naano-status-private  { background: #ede9fe; color: #5b21b6; }
+.naano-status-homepage { background: #fce7f3; color: #9d174d; }
 .naano-row-actions     { white-space: nowrap; }
 </style>

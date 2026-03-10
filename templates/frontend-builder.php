@@ -324,6 +324,27 @@ $admin_pages_url = admin_url( 'admin.php?page=naano-ai-builder' );
 
 </div><!-- .naano-vb -->
 
+<!-- ===== Publish Page Modal ===== -->
+<div class="naano-modal-backdrop" id="naano-save-page-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="naano-save-page-modal-title">
+	<div class="naano-modal">
+		<h3 class="naano-modal__title" id="naano-save-page-modal-title"><?php esc_html_e( 'Publish Page', 'naano-ai-website-builder' ); ?></h3>
+		<p class="naano-modal__desc"><?php esc_html_e( 'Your page will be published as a standalone WordPress page with no theme wrapping.', 'naano-ai-website-builder' ); ?></p>
+		<div class="naano-drawer__field">
+			<label for="naano-save-page-title"><?php esc_html_e( 'Page Title', 'naano-ai-website-builder' ); ?></label>
+			<input type="text" id="naano-save-page-title" class="naano-input" placeholder="<?php esc_attr_e( 'Enter a page title&hellip;', 'naano-ai-website-builder' ); ?>" />
+			<p class="naano-error-msg" id="naano-save-page-error" style="display:none;"></p>
+		</div>
+		<label class="naano-checkbox-label" style="margin-bottom:16px;">
+			<input type="checkbox" id="naano-set-homepage-chk" />
+			<?php esc_html_e( 'Set as WordPress homepage', 'naano-ai-website-builder' ); ?>
+		</label>
+		<div class="naano-modal__actions">
+			<button type="button" class="naano-btn-secondary" id="naano-save-page-cancel-btn"><?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?></button>
+			<button type="button" class="naano-btn-generate" id="naano-save-page-confirm-btn" style="width:auto;padding:8px 20px;"><?php esc_html_e( 'Publish →', 'naano-ai-website-builder' ); ?></button>
+		</div>
+	</div>
+</div>
+
 <?php wp_footer(); ?>
 </body>
 </html>
