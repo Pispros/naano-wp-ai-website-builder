@@ -24,6 +24,7 @@ class Naano_Admin_Page {
 		add_action( 'admin_menu', [ $this, 'register_menus' ] );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_action( 'admin_head', [ $this, 'admin_icon_styles' ] );
 
 		// "Build with Naano AI" in the Pages list row actions.
 		add_filter( 'page_row_actions', [ $this, 'add_page_row_action' ], 10, 2 );
@@ -39,6 +40,45 @@ class Naano_Admin_Page {
 
 		// Serve standalone Naano pages as raw HTML (no theme wrapping).
 		add_action( 'template_redirect', [ $this, 'maybe_render_standalone_page' ] );
+	}
+
+	/**
+	 * Inject admin CSS: fix the SVG menu icon opacity and align page headings.
+	 *
+	 * @return void
+	 */
+	public function admin_icon_styles(): void {
+		?>
+		<style>
+			/* Size and align the custom SVG menu icon exactly like WP dashicons. */
+			#adminmenu .toplevel_page_naano-ai-builder .wp-menu-image img {
+				width: 20px !important;
+				height: 20px !important;
+				padding: 0 !important;
+				margin: 0 !important;
+				opacity: 1 !important;
+				filter: none !important;
+				display: block;
+			}
+			#adminmenu .toplevel_page_naano-ai-builder .wp-menu-image {
+				display: flex !important;
+				align-items: center;
+				justify-content: center;
+			}
+			/* Vertically centre icon + text in page headings. */
+			.naano-page-title {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				line-height: 1;
+			}
+			.naano-page-title svg {
+				width: 28px;
+				height: 28px;
+				flex-shrink: 0;
+			}
+		</style>
+		<?php
 	}
 
 	/**
@@ -61,7 +101,7 @@ class Naano_Admin_Page {
 		wp_trash_post( $page_id );
 
 		wp_safe_redirect( add_query_arg(
-			[ 'page' => 'naano-pages', 'deleted' => '1' ],
+			[ 'page' => 'naano-ai-builder', 'deleted' => '1' ],
 			admin_url( 'admin.php' )
 		) );
 		exit;
@@ -117,7 +157,7 @@ class Naano_Admin_Page {
 			'manage_options',
 			'naano-ai-builder',
 			[ $this, 'render_pages_list' ],
-			'dashicons-admin-site-alt3',
+			NAANO_PLUGIN_URL . 'assets/images/naano-icon.svg',
 			30
 		);
 

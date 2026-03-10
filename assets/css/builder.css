@@ -1452,6 +1452,13 @@ body.naano-fullscreen #wpbody-content > .wrap {
         justify-content: center;
 }
 
+/* Scroll style panel into view when it becomes visible */
+.naano-element-style-panel.naano-drawer__field {
+        margin-top: 8px;
+        overflow-y: auto;
+        max-height: 60vh;
+}
+
 #naano-inspect-toggle-btn.naano-inspect-mode-active {
         background: #f59e0b;
         border-color: #d97706;
@@ -1662,7 +1669,7 @@ body.naano-fullscreen #wpbody-content > .wrap {
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.07em;
-        color: #c9d1d9;
+        color: #ffffff;
         margin-bottom: 6px;
 }
 
