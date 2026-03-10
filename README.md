@@ -1,4 +1,4 @@
-# 🤖 Naano AI Website Builder
+# Naano AI Website Builder
 
 > An AI-powered, section-by-section WordPress website builder using Claude, Gemini, or Kimi — pure PHP, no external backend needed.
 
@@ -10,7 +10,7 @@
 
 ## Overview
 
-**Naano AI Website Builder** lets you generate complete, production-ready websites directly inside your WordPress dashboard using the AI model of your choice. You bring your own API key (Claude, Gemini, or Kimi) — there is no external service, no subscription, and no data leaves your server except the prompts you send to the LLM provider.
+**Naano AI Website Builder** lets you generate, edit, and visually inspect complete, production-ready websites directly inside your WordPress dashboard using the AI model of your choice. You bring your own API key (Claude, Gemini, or Kimi) — there is no external service, no subscription, and no data leaves your server except the prompts you send to the LLM provider.
 
 ### Core philosophy
 
@@ -26,18 +26,55 @@
 
 ## Features
 
-- 🧩 **Section-based generation and editing** — generate a full site in one shot, then refine each section independently
-- 🤖 **Multi-LLM support** — Claude (Anthropic), Gemini (Google), Kimi (Moonshot)
-- �� **Bring your own API key** — no middleman, no subscription
-- 📦 **Token-optimized compressed payloads** — placeholder hashes for unchanged sections
-- 🖼️ **Screenshot reference support** — upload images as visual inspiration; they are resized and base64-encoded automatically
-- 🔗 **URL reference support** — attach website URLs with notes to any section
-- 🎨 **Custom design variables** — inject brand colors, fonts, tone, industry etc. into every prompt
-- 🧹 **Automatic HTML sanitization** — every LLM response is cleaned before storage
-- 📱 **Responsive preview** — desktop (1200 px), tablet (768 px), mobile (375 px) in a full-screen overlay
-- 📥 **Export options** — download as HTML file, copy to clipboard, or save as a WordPress draft page
-- 🔒 **Pure PHP** — no external backend, no Node.js required
-- 💬 **Conversation history** — the last 3 exchanges are included for context; older messages are automatically trimmed
+### AI Generation
+- 🧩 **Section-based generation** — describe your site, pick sections, and generate a complete page in one shot
+- ✏️ **Per-section refinement** — refine any section independently with natural-language instructions
+- ➕ **Add new sections** — generate additional sections on an existing page at any time
+- 🔄 **Drag-and-drop reordering** — reorder sections visually; order is persisted via AJAX
+- 🗑️ **Delete sections** — remove any section from the page
+
+### Visual Builder
+- 🖥️ **Live preview iframe** — see your changes instantly in a sandboxed preview panel
+- 📱 **Responsive viewports** — toggle between Desktop (100%), Tablet (768 px) and Mobile (375 px) inside the builder
+- 🔍 **Element inspector** — Elementor-style inspect mode: click any element in the live preview to select it
+- 🎨 **Visual style panel** — edit Typography (color, size, weight, align), Background (color, image, size), Size (width, height, max-width), Padding, Margin, Border, and Border Radius through a dedicated panel without writing a line of code
+- 💅 **Custom CSS tab** — inject freeform CSS scoped to the selected element directly from the style panel
+- ⚡ **Live apply** — style changes are applied to the iframe in real time without regenerating the section
+
+### Multi-LLM Support
+- 🤖 **Claude** (Anthropic) — supports inline base64 image vision
+- 🤖 **Gemini** (Google) — supports inline base64 image vision, generous free tier
+- 🤖 **Kimi** (Moonshot) — text-based, good for copy-heavy pages
+
+### References & Assets
+- 🖼️ **Screenshot references** — attach images from the WordPress media library as visual inspiration; images are auto-resized to 1024 px JPEG/75% and base64-encoded
+- 🔗 **URL references** — attach website URLs with notes; injected into the system prompt as a structured reference block
+- 📎 **Page assets** — number-referenced assets (images, URLs) you can cite in instructions (e.g. "use asset #1 as hero image")
+- 🔀 **URL redirections** — define named links (e.g. "Contact → /contact") so the AI uses your real site URLs
+
+### Import & Reuse
+- ♻️ **Import from existing pages** — on a new page, import the header or footer from any previously built Naano page instead of regenerating it; HTML is fetched server-side (never transported through the browser)
+
+### Back-office Management
+- 📋 **Pages list** — dedicated admin dashboard listing all Naano-built pages with status badges, section count, last-modified date, and quick actions
+- 🗑️ **Delete page** — move any Naano page to WordPress trash directly from the pages list (with confirmation and a success notice on redirect)
+- ⚙️ **Settings page** — configure LLM provider, API key, model override, and custom design variables from a single page
+- 🔌 **Test connection** — validate your API key and model with a live ping before generating
+
+### Design Variables
+- 🎨 **Custom variables** — inject `primary_color`, `brand_name`, `font_family`, `tone`, `industry`, `target_audience`, and any custom key/value pairs into every prompt for consistent brand output
+
+### Export & Publishing
+- 📥 **Export HTML** — download the assembled full-page HTML document
+- 📋 **Copy HTML** — copy the assembled HTML to the clipboard in one click
+- 💾 **Save as WP Page** — publish the page as a standalone WordPress page served as raw HTML (no theme wrapping, no `wpautop`)
+- 🏠 **Set as Homepage** — mark any Naano page as the WordPress static front page from within the builder
+
+### Security & Performance
+- 🔒 **HTML sanitization** — every LLM response is cleaned of `<script>`, `on*` events, and `javascript:` URIs
+- 🔑 **Nonce-protected AJAX** — all endpoints verify `naano_builder_nonce`
+- 📦 **Token-optimized payloads** — section placeholder hashes, HTML/CSS minification, context trimming
+- 💬 **Conversation history** — the last 3 exchanges are kept for context; older messages are automatically trimmed
 
 ---
 
@@ -56,7 +93,7 @@ PHP AJAX Handler (class-ajax-handler.php)
     │       Minifies HTML & CSS, replaces unchanged sections with hash placeholders
     │
     ├─► Prompt Builder (class-prompt-builder.php)
-    │       Injects design variables and URL references into system/user prompts
+    │       Injects design variables, URL references, assets and redirects into prompts
     │
     ▼
 LLM Router (class-llm-router.php)
@@ -74,10 +111,18 @@ HTML Sanitizer (class-html-sanitizer.php)
     │
     ▼
 Section Manager (class-section-manager.php)
-    Stores / updates section HTML in wp_postmeta
+    Stores / updates / reorders section HTML in wp_postmeta
     │
     ▼
 JSON Response → UI Update (builder.js)
+    │
+    ├─► Live-preview iframe refresh (srcdoc)
+    └─► Element inspector (postMessage bridge)
+            ▲
+            │  naano-element-selected / naano-apply-element-style
+            ▼
+        Iframe helper script (injected)
+            Hover highlight · click selection · inline style apply
 ```
 
 ---
@@ -120,16 +165,44 @@ JSON Response → UI Update (builder.js)
 1. **Activate** the plugin (see Installation above).
 2. Go to **Naano AI Builder → Settings**.
 3. Select your LLM **Provider** (Claude, Gemini, or Kimi).
-4. Paste your **API Key**.
-5. Optionally set a **Model Override** (leave blank for the default model).
-6. Click **Test Connection** to verify the key works.
-7. Add **Custom Design Variables** (e.g. `primary_color → #3B82F6`, `brand_name → Acme Corp`).
-8. Click **Save Settings**.
-9. Go to **Naano AI Builder → New Page**.
-10. Enter a page name and description, check the sections you want, and click **Generate Full Website**.
-11. Once generated, click the **✏️ edit icon** on any section card to refine it.
-12. Optionally attach **screenshot references** (🖼️) or **URL references** (🔗) to guide the AI.
-13. Click **Preview** to see the full site, **Export HTML** to download, or **Save as WP Page** to create a draft.
+4. Paste your **API Key** and click **Test Connection**.
+5. Add **Custom Design Variables** (e.g. `primary_color → #3B82F6`, `brand_name → Acme Corp`).
+6. Click **Save Settings**.
+7. Go to **Naano AI Builder → AI Pages** and click **Create New Page with AI**.
+8. Enter a page name and description, optionally import an existing header/footer, check the sections you want, and click **Generate Full Website**.
+9. Click any section in the live preview to open its edit panel.
+10. Attach **screenshot references** or **URL references** to guide the AI on the next update.
+11. Click **Inspect Elements** to enter visual edit mode — click any element to open the style panel and tweak typography, spacing, colors, or inject custom CSS without re-running the AI.
+12. Click **Preview** to see the full site at different breakpoints, **Export HTML** to download, or **Save** to publish as a standalone WordPress page.
+
+---
+
+## Element Inspector (Visual Editing)
+
+The built-in element inspector works like Elementor's style editor — without blocks or a different page format.
+
+| Step | Action |
+|------|--------|
+| 1 | Open the builder on any page that has sections |
+| 2 | Click **Inspect Elements** in the left panel (cursor turns to crosshair) |
+| 3 | Hover over any element in the live preview — it is highlighted with an orange dashed outline |
+| 4 | Click the element — the **Element Style Panel** opens in the sidebar |
+| 5 | Edit Typography, Background, Size, Padding, Margin or Border controls |
+| 6 | Switch to the **Custom CSS** tab for freeform CSS scoped to that element |
+| 7 | Click **Apply** — the change is applied live in the iframe |
+| 8 | The updated section HTML is saved in memory; **Save** will persist it to the database |
+
+> Styles applied through the inspector are stored as inline `style` attributes or scoped `<style>` blocks on `[data-naano-el]` elements — fully compatible with any subsequent AI regeneration of that section.
+
+---
+
+## Import from Existing Pages
+
+When creating a new page, you can skip AI generation for the header and/or footer and reuse them from an existing Naano page instead:
+
+1. On the **Create New Page** panel, expand **Import from Existing Pages**.
+2. Click **Header** or **Footer** next to any listed page to toggle it on (a checkmark appears).
+3. Click **Generate Full Website** — imported sections are copied server-side from the source page's stored HTML (the HTML is never sent through the browser), then AI-generated sections are added alongside them.
 
 ---
 
@@ -177,8 +250,8 @@ Custom variables are injected into every system prompt as a structured list. The
 | Provider | Endpoint | Auth | Image Support | Default Model |
 |----------|----------|------|---------------|---------------|
 | Claude | `api.anthropic.com/v1/messages` | `x-api-key` header | Base64 inline | `claude-sonnet-4-20250514` |
-| Gemini | `generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | URL query param `?key=` | `inlineData` base64 | `gemini-2.0-flash` |
-| Kimi | `api.moonshot.cn/v1/chat/completions` | `Authorization: Bearer` | Via text note | `moonshot-v1-8k` |
+| Gemini | `generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | URL query param `?key=` | `inlineData` base64 | `gemini-2.5-flash` |
+| Kimi | `api.moonshot.cn/v1/chat/completions` | `Authorization: Bearer` | Via text note | `kimi-k2-0711-preview` |
 
 All adapters implement `Naano_LLM_Provider_Interface` — adding a new provider is straightforward.
 
@@ -191,7 +264,7 @@ All adapters implement `Naano_LLM_Provider_Interface` — adding a new provider 
 - The WordPress media library opens; select or upload any image.
 - The image is stored as a media attachment, then when a section update is triggered, the plugin:
   1. Fetches the file from disk.
-  2. Resizes it to a maximum of 1024 x 1024 pixels using PHP GD (`imagecopyresampled`).
+  2. Resizes it to a maximum of 1024 × 1024 pixels using PHP GD (`imagecopyresampled`).
   3. Re-encodes it as JPEG at 75% quality.
   4. Base64-encodes the result.
   5. Injects it into the LLM message as an image content block (Claude / Gemini) or a text note (Kimi).
@@ -207,16 +280,25 @@ All adapters implement `Naano_LLM_Provider_Interface` — adding a new provider 
 
 | Option | How | Result |
 |--------|-----|--------|
-| **Preview** | Click "Preview" in the action bar | Full-screen overlay with desktop/tablet/mobile viewport buttons |
-| **Export HTML** | Click "Export HTML" | Downloads `website.html` (complete HTML5 document) |
-| **Copy HTML** | Click "Copy HTML" | Copies the full HTML to your clipboard |
-| **Save as WP Page** | Click "Save as WP Page" | Creates a WordPress page as a **draft** with the assembled HTML as content |
+| **Preview** | Click "Preview" in the toolbar | Full-screen overlay with desktop/tablet/mobile viewport buttons |
+| **Export HTML** | Click "Export" in the toolbar | Downloads `website.html` (complete HTML5 document) |
+| **Copy HTML** | Click "Copy" in the toolbar | Copies the full HTML to your clipboard |
+| **Save** | Click "Save" in the toolbar | Publishes the page as a standalone WordPress page (raw HTML, no theme wrapping) |
+| **Set as Homepage** | Tick the checkbox in the Save modal | Sets `show_on_front=page` and `page_on_front` in WordPress options |
 
 ---
 
-## How to Rename the Plugin
+## Back-office Pages List
 
-See [RENAMING.md](RENAMING.md) for a full step-by-step guide including automated `sed` / PowerShell commands and a database migration snippet.
+Go to **Naano AI Builder → AI Pages** to see a table of all pages built with Naano AI. Each row shows:
+
+| Column | Description |
+|--------|-------------|
+| Page | Page title, linked to the builder |
+| Status | Publish / Draft / Pending / Private badge |
+| Sections | Number of stored sections |
+| Last Modified | Date and time of the last edit |
+| Actions | Open Builder · View (published only) · Homepage badge · **Delete** (moves to trash) |
 
 ---
 
@@ -226,15 +308,16 @@ All endpoints require a valid `naano_builder_nonce` nonce in the `nonce` POST fi
 
 | Action | Method | Key Parameters | Success Response |
 |--------|--------|---------------|-----------------|
-| `naano_generate_site` | POST | `page_id`, `description`, `sections[]` | `{sections, html}` |
-| `naano_update_section` | POST | `page_id`, `section_id`, `instruction` | `{section_id, section_html}` |
+| `naano_generate_site` | POST | `page_id`, `page_name`, `description`, `sections[]`, `imported_sections` (JSON) | `{page_id, sections, html}` |
+| `naano_update_section` | POST | `page_id`, `section_id`, `instruction`, `assets` (JSON), `redirects` (JSON) | `{section_id, section_html}` |
 | `naano_test_connection` | POST | `provider`, `api_key`, `model` | `{success, model, latency_ms}` |
 | `naano_add_reference` | POST | `page_id`, `section_id`, `type`, `url`, `attachment_id`, `notes` | `{references}` |
 | `naano_remove_reference` | POST | `page_id`, `section_id`, `index` | `{references}` |
 | `naano_delete_section` | POST | `page_id`, `section_id` | `{}` |
 | `naano_reorder_sections` | POST | `page_id`, `order[]` | `{}` |
 | `naano_export_html` | POST | `page_id` | `{html}` |
-| `naano_save_as_page` | POST | `page_id`, `title` | `{page_id, edit_url, view_url}` |
+| `naano_save_as_page` | POST | `page_id`, `title`, `html` | `{page_id, edit_url, view_url, title}` |
+| `naano_set_homepage` | POST | `page_id` | `{}` |
 
 ---
 
@@ -243,6 +326,14 @@ All endpoints require a valid `naano_builder_nonce` nonce in the `nonce` POST fi
 ```
 naano-ai-website-builder/
 ├── naano-ai-website-builder.php          # Main plugin entry point, constants, hooks
+├── assets/
+│   ├── css/
+│   │   └── builder.css                   # Full builder + admin styles
+│   ├── images/
+│   │   └── naano-icon.svg                # Custom white SVG sidebar icon
+│   └── js/
+│       ├── builder.js                    # Builder UI, AJAX, inspector, drag-drop
+│       └── preview.js                    # Preview modal with responsive toggles
 ├── includes/
 │   ├── interface-llm-provider.php        # LLM provider interface
 │   ├── class-llm-claude.php              # Claude (Anthropic) adapter
@@ -256,17 +347,11 @@ naano-ai-website-builder/
 │   ├── class-section-manager.php         # Section CRUD + HTML assembly
 │   ├── class-conversation.php            # Conversation history per page
 │   ├── class-ajax-handler.php            # All wp_ajax_* endpoints
-│   └── class-admin-page.php              # Admin menus, settings, asset enqueue
-├── assets/
-│   ├── js/
-│   │   ├── builder.js                    # Builder UI, AJAX, drag-drop
-│   │   └── preview.js                    # Preview modal with responsive toggles
-│   └── css/
-│       └── builder.css                   # Admin builder styles
+│   └── class-admin-page.php              # Admin menus, settings, asset enqueue, inspector styles
 ├── templates/
-│   ├── builder-page.php                  # Main builder admin page template
-│   ├── section-card.php                  # Section card partial
-│   └── settings-page.php                 # Settings form template
+│   ├── admin-pages-list.php              # Back-office pages list (table + delete button)
+│   ├── frontend-builder.php              # Full visual builder UI (toolbar, drawer, iframe, inspector)
+│   └── settings-page.php                # Settings form template
 ├── README.md                             # This file
 ├── RENAMING.md                           # How to rename / rebrand the plugin
 └── readme.txt                            # WordPress.org readme
@@ -288,6 +373,12 @@ naano-ai-website-builder/
 
 ---
 
+## How to Rename the Plugin
+
+See [RENAMING.md](RENAMING.md) for a full step-by-step guide including automated `sed` / PowerShell commands and a database migration snippet.
+
+---
+
 ## Contributing
 
 Pull requests are welcome! Please open an issue first for significant changes.
@@ -302,3 +393,4 @@ Pull requests are welcome! Please open an issue first for significant changes.
 ## License
 
 GPL-2.0-or-later © Naano
+
