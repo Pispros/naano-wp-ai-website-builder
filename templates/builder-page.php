@@ -177,9 +177,16 @@ $section_types = [
 						</div>
 					</div>
 
-					<!-- Sections list (quick-select) -->
+					<!-- Sections list (quick-select, multi-select) -->
 					<div class="naano-drawer__field naano-sections-list-wrap" id="naano-sections-list-wrap">
-						<label><?php esc_html_e( 'Page Sections', 'naano-ai-website-builder' ); ?></label>
+						<label class="naano-sections-list-label">
+							<?php esc_html_e( 'Page Sections', 'naano-ai-website-builder' ); ?>
+							<span class="naano-sections-list-meta">
+								<button type="button" class="naano-link-btn" id="naano-sl-select-all"><?php esc_html_e( 'All', 'naano-ai-website-builder' ); ?></button>
+								<span class="naano-sections-list-sep">·</span>
+								<button type="button" class="naano-link-btn" id="naano-sl-select-none"><?php esc_html_e( 'None', 'naano-ai-website-builder' ); ?></button>
+							</span>
+						</label>
 						<ul class="naano-sections-list" id="naano-sections-list"></ul>
 					</div>
 
@@ -282,7 +289,7 @@ $section_types = [
 					<div class="naano-drawer__actions">
 						<button type="button" class="naano-btn-generate" id="naano-update-section-btn" disabled>
 							<span class="dashicons dashicons-superhero-alt"></span>
-							<?php esc_html_e( 'Update Section', 'naano-ai-website-builder' ); ?>
+							<span class="naano-update-btn-label"><?php esc_html_e( 'Update Section', 'naano-ai-website-builder' ); ?></span>
 						</button>
 						<div class="naano-loading" id="naano-update-loading" style="display:none;">
 							<span class="spinner is-active"></span>

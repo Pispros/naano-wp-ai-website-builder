@@ -13,6 +13,9 @@
 		pageId: 0,
 		editingSectionId: null,
 
+		/** @type {string[]} All currently selected section IDs (multi-select). */
+		editingSectionIds: [],
+
 		/** @type {Array<{id: string, html: string}>} In-memory sections store. */
 		sectionsData: [],
 
@@ -233,42 +236,78 @@
 		// =====================================================================
 
 		/**
-		 * Open the edit panel for a section.
+		 * Open / toggle-select the edit panel for a section.
 		 *
-		 * @param {string} sectionId
+		 * @param {string}  sectionId  Section to select/toggle.
+		 * @param {boolean} [forceOnly] If true, replace entire selection with just this section (used from iframe clicks).
 		 */
-		openEditPanel: function ( sectionId ) {
-			NaanoBuilder.editingSectionId = sectionId;
-
-			var displayName = NaanoBuilder._displayName( sectionId );
-			$( '#naano-editing-section-name' ).text( displayName );
-			$( '#naano-instruction' ).val( '' );
-
-			// Enable the update button now that a section is selected.
-			$( '#naano-update-section-btn' ).prop( 'disabled', false );
-
-			// Highlight in sections list.
-			$( '#naano-sections-list .naano-sections-list__item' ).removeClass( 'naano-sections-list__item--active' );
-			$( '#naano-sl-item-' + sectionId ).addClass( 'naano-sections-list__item--active' );
-
-			// Load stored references.
-			var refs = ( data.references && data.references[ sectionId ] ) ? data.references[ sectionId ] : [];
-			NaanoBuilder._renderReferenceList( refs );
-
-			// Tell the iframe to highlight the section.
-			// NOTE: postMessage target '*' is intentional — srcdoc iframes have a null origin,
-			// so a specific origin cannot be used as targetOrigin here.
-			NaanoBuilder._iframePost( { type: 'naano-highlight-section', sectionId: sectionId } );
+		openEditPanel: function ( sectionId, forceOnly ) {
+			if ( forceOnly ) {
+				NaanoBuilder.editingSectionIds = [ sectionId ];
+				NaanoBuilder.editingSectionId  = sectionId;
+			} else {
+				var idx = NaanoBuilder.editingSectionIds.indexOf( sectionId );
+				if ( idx === -1 ) {
+					NaanoBuilder.editingSectionIds.push( sectionId );
+					NaanoBuilder.editingSectionId = sectionId;
+				} else {
+					NaanoBuilder.editingSectionIds.splice( idx, 1 );
+					NaanoBuilder.editingSectionId =
+						NaanoBuilder.editingSectionIds[ NaanoBuilder.editingSectionIds.length - 1 ] || null;
+				}
+			}
+			NaanoBuilder._updateEditPanelState();
 		},
 
 		/**
-		 * Submit the update-section request.
+		 * Sync the edit-panel UI to the current editingSectionIds state.
+		 */
+		_updateEditPanelState: function () {
+			var ids   = NaanoBuilder.editingSectionIds;
+			var count = ids.length;
+
+			// Badge.
+			if ( count === 0 ) {
+				$( '#naano-editing-section-name' ).text( data.strings.click_section );
+			} else if ( count === 1 ) {
+				$( '#naano-editing-section-name' ).text( NaanoBuilder._displayName( ids[ 0 ] ) );
+			} else {
+				$( '#naano-editing-section-name' ).text( count + ' sections selected' );
+			}
+
+			// Update button label & state.
+			var btnLabel = count > 1 ? 'Update ' + count + ' Sections' : 'Update Section';
+			$( '#naano-update-section-btn' ).find( '.naano-update-btn-label' ).text( btnLabel );
+			$( '#naano-update-section-btn' ).prop( 'disabled', count === 0 );
+
+			// Active highlights in sections list.
+			$( '#naano-sections-list .naano-sections-list__item' )
+				.removeClass( 'naano-sections-list__item--active' );
+			ids.forEach( function ( id ) {
+				$( '#naano-sl-item-' + id ).addClass( 'naano-sections-list__item--active' );
+			} );
+
+			// References — show for last-focused section.
+			if ( NaanoBuilder.editingSectionId ) {
+				var refs = ( data.references && data.references[ NaanoBuilder.editingSectionId ] )
+					? data.references[ NaanoBuilder.editingSectionId ] : [];
+				NaanoBuilder._renderReferenceList( refs );
+			} else {
+				NaanoBuilder._renderReferenceList( [] );
+			}
+
+			// Highlight all selected sections in the iframe.
+			NaanoBuilder._iframePost( { type: 'naano-highlight-sections', sectionIds: ids } );
+		},
+
+		/**
+		 * Submit the update-section request (loops through all selected sections sequentially).
 		 */
 		updateSection: function () {
-			var sectionId   = NaanoBuilder.editingSectionId;
+			var ids         = NaanoBuilder.editingSectionIds.slice();
 			var instruction = $( '#naano-instruction' ).val().trim();
 
-			if ( ! sectionId ) {
+			if ( ! ids.length ) {
 				NaanoBuilder._toast( data.strings.select_section, 'error' );
 				return;
 			}
@@ -277,12 +316,43 @@
 				return;
 			}
 
-			NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', true );
-			NaanoBuilder._showCanvasLoading( { filename: NaanoBuilder._displayName( sectionId ).toLowerCase().replace( /\s+/g, '-' ) + '.html' } );
+			var fileLabel = ids.length === 1
+				? NaanoBuilder._displayName( ids[ 0 ] ).toLowerCase().replace( /\s+/g, '-' ) + '.html'
+				: ids.length + '-sections.html';
 
-			// Show loading overlay on the section and dim the canvas.
-			NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: true } );
+			NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', true );
+			NaanoBuilder._showCanvasLoading( { filename: fileLabel } );
+
+			ids.forEach( function ( id ) {
+				NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: id, loading: true } );
+			} );
 			$( '#naano-live-iframe-wrap' ).addClass( 'naano-live-iframe-wrap--loading' );
+
+			NaanoBuilder._updateSectionsSequential( ids, instruction, 0 );
+		},
+
+		/**
+		 * Recursively update each section ID in sequence.
+		 *
+		 * @param {string[]} ids         Full list of section IDs to update.
+		 * @param {string}   instruction The instruction text.
+		 * @param {number}   index       Current position in the list.
+		 */
+		_updateSectionsSequential: function ( ids, instruction, index ) {
+			if ( index >= ids.length ) {
+				// All done.
+				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+				NaanoBuilder._hideCanvasLoading();
+				$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
+				$( '#naano-instruction' ).val( '' );
+				$( '#naano-add-url-form' ).hide();
+				NaanoBuilder._renderReferenceList( [] );
+				var msg = ids.length === 1 ? 'Section updated! ✨' : ids.length + ' sections updated! ✨';
+				NaanoBuilder._toast( msg, 'success' );
+				return;
+			}
+
+			var sectionId = ids[ index ];
 
 			$.post( data.ajaxUrl, {
 				action:      'naano_update_section',
@@ -294,38 +364,28 @@
 				redirects:   JSON.stringify( NaanoBuilder.pageRedirects )
 			} )
 			.done( function ( response ) {
-				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
-				NaanoBuilder._hideCanvasLoading();
-				$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
-
 				if ( response.success ) {
 					var id   = response.data.section_id;
 					var html = response.data.section_html;
 
-					// Update in-memory store.
 					var idx = NaanoBuilder._findSectionIndex( id );
 					if ( idx !== -1 ) {
 						NaanoBuilder.sectionsData[ idx ].html = html;
 					}
 
-					// Live-update the section inside the iframe via postMessage.
-					// The [data-section] wrapper is always present (see _buildIframeSrcdoc),
-					// so the innerHTML swap is reliable without a full reload.
-					NaanoBuilder._iframePost( {
-						type:      'naano-update-section',
-						sectionId: id,
-						html:      html
-					} );
+					NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: id, loading: false } );
+					NaanoBuilder._iframePost( { type: 'naano-update-section',  sectionId: id, html: html } );
 
-					// Reset the edit panel so the user can start a fresh instruction.
-					$( '#naano-instruction' ).val( '' );
-					$( '#naano-add-url-form' ).hide();
-					NaanoBuilder._renderReferenceList( [] );
-
-					NaanoBuilder._toast( 'Section updated! ✨', 'success' );
+					// Continue to next section.
+					NaanoBuilder._updateSectionsSequential( ids, instruction, index + 1 );
 				} else {
-					// Remove loading overlay on error.
-					NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: false } );
+					// Abort on error.
+					NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
+					NaanoBuilder._hideCanvasLoading();
+					$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
+					ids.slice( index ).forEach( function ( id ) {
+						NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: id, loading: false } );
+					} );
 					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
 				}
 			} )
@@ -333,7 +393,9 @@
 				NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', false );
 				NaanoBuilder._hideCanvasLoading();
 				$( '#naano-live-iframe-wrap' ).removeClass( 'naano-live-iframe-wrap--loading' );
-				NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: false } );
+				ids.slice( index ).forEach( function ( id ) {
+					NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: id, loading: false } );
+				} );
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
 			} );
 		},
@@ -757,6 +819,18 @@
 				NaanoBuilder.updateSection();
 			} );
 
+			// Select-all / deselect-all.
+			$( document ).on( 'click', '#naano-sl-select-all', function () {
+				NaanoBuilder.editingSectionIds = NaanoBuilder.sectionsData.map( function ( s ) { return s.id; } );
+				NaanoBuilder.editingSectionId  = NaanoBuilder.editingSectionIds[ NaanoBuilder.editingSectionIds.length - 1 ] || null;
+				NaanoBuilder._updateEditPanelState();
+			} );
+			$( document ).on( 'click', '#naano-sl-select-none', function () {
+				NaanoBuilder.editingSectionIds = [];
+				NaanoBuilder.editingSectionId  = null;
+				NaanoBuilder._updateEditPanelState();
+			} );
+
 			$( document ).on( 'click', '#naano-add-screenshot-btn', function () {
 				if ( ! NaanoBuilder.editingSectionId ) {
 					NaanoBuilder._toast( data.strings.select_section, 'error' );
@@ -830,7 +904,7 @@
 
 				var sectionId = msg.sectionId;
 				if ( sectionId && NaanoBuilder.pageId ) {
-					NaanoBuilder.openEditPanel( sectionId );
+					NaanoBuilder.openEditPanel( sectionId, true );
 				}
 			} );
 		},
@@ -889,11 +963,20 @@
 				'    }',
 				'  }',
 
-				// Highlight a section.
+				// Highlight a section (keep for backward compat).
 				'  if(m.type==="naano-highlight-section"){',
 				'    document.querySelectorAll(".naano-section-selected").forEach(function(n){n.classList.remove("naano-section-selected");});',
 				'    var el=document.querySelector(\'[data-section="\'+m.sectionId+\'"]\');',
 				'    if(el)el.classList.add("naano-section-selected");',
+				'  }',
+
+				// Highlight multiple sections at once.
+				'  if(m.type==="naano-highlight-sections"){',
+				'    document.querySelectorAll(".naano-section-selected").forEach(function(n){n.classList.remove("naano-section-selected");});',
+				'    (m.sectionIds||[]).forEach(function(id){',
+				'      var el=document.querySelector(\'[data-section="\'+id+\'"]\');',
+				'      if(el)el.classList.add("naano-section-selected");',
+				'    });',
 				'  }',
 
 				// Show/hide loading overlay on a section.
@@ -906,14 +989,12 @@
 				'  }',
 				'});',
 
-				// Report section clicks to parent.
+				// Report section clicks to parent (toggle).
 				'document.addEventListener("click",function(e){',
 				'  var el=e.target;',
 				'  while(el&&el!==document.body){',
 				'    if(el.hasAttribute("data-section")){',
 				'      e.preventDefault();',
-				'      document.querySelectorAll(".naano-section-selected").forEach(function(n){n.classList.remove("naano-section-selected");});',
-				'      el.classList.add("naano-section-selected");',
 				'      window.parent.postMessage({type:"naano-section-clicked",sectionId:el.getAttribute("data-section")},"*");',
 				'      break;',
 				'    }',
@@ -973,7 +1054,7 @@
 					'</span>'
 				);
 
-				// Click on the item row selects the section.
+				// Click on the item row toggles section selection.
 				$item.on( 'click', function ( e ) {
 					if ( $( e.target ).closest( '[data-action], .naano-sections-list__handle' ).length ) { return; }
 					NaanoBuilder.openEditPanel( sec.id );
