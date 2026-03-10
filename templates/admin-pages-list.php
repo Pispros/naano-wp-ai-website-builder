@@ -25,8 +25,14 @@ $ai_pages = get_posts( [
 		<?php esc_html_e( 'Naano AI Builder — Pages', 'naano-ai-website-builder' ); ?>
 	</h1>
 
+	<?php if ( isset( $_GET['deleted'] ) ) : ?>
+		<div class="notice notice-success is-dismissible">
+			<p><?php esc_html_e( 'Page moved to trash.', 'naano-ai-website-builder' ); ?></p>
+		</div>
+	<?php endif; ?>
+
 	<div class="naano-admin-actions" style="margin-bottom:20px;">
-		<a href="<?php echo esc_url( add_query_arg( 'naano_builder', '1', home_url( '/' ) ) ); ?>"
+		<a href="<?php echo esc_url( add_query_arg( [ 'naano_builder' => '1', 'naano_new' => '1' ], home_url( '/' ) ) ); ?>"
 		   class="button button-primary" target="_blank">
 			<span class="dashicons dashicons-plus-alt2" style="vertical-align:middle;margin-top:-2px;"></span>
 			<?php esc_html_e( 'Create New Page with AI', 'naano-ai-website-builder' ); ?>
@@ -39,7 +45,7 @@ $ai_pages = get_posts( [
 			<p style="font-size:15px;color:#50575e;">
 				<?php esc_html_e( 'No pages built with Naano AI yet.', 'naano-ai-website-builder' ); ?>
 			</p>
-			<a href="<?php echo esc_url( add_query_arg( 'naano_builder', '1', home_url( '/' ) ) ); ?>"
+		<a href="<?php echo esc_url( add_query_arg( [ 'naano_builder' => '1', 'naano_new' => '1' ], home_url( '/' ) ) ); ?>"
 			   class="button button-primary" target="_blank" style="margin-top:10px;">
 				<?php esc_html_e( 'Build Your First Page', 'naano-ai-website-builder' ); ?>
 			</a>
@@ -97,6 +103,19 @@ $ai_pages = get_posts( [
 							</span>
 						<?php endif; ?>
 						<?php endif; ?>
+						<form method="post"
+						      action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+						      style="display:inline;margin-left:4px;"
+						      onsubmit="return confirm('<?php echo esc_js( __( 'Move this page to trash?', 'naano-ai-website-builder' ) ); ?>')"
+						>
+							<input type="hidden" name="action"  value="naano_delete_page">
+							<input type="hidden" name="page_id" value="<?php echo esc_attr( $page->ID ); ?>">
+							<?php wp_nonce_field( 'naano_delete_page_' . $page->ID ); ?>
+							<button type="submit" class="button button-small button-link-delete" style="height:26px;line-height:24px;padding:0 8px;">
+								<span class="dashicons dashicons-trash" style="vertical-align:middle;margin-top:-2px;font-size:14px;width:14px;height:14px;"></span>
+								<?php esc_html_e( 'Delete', 'naano-ai-website-builder' ); ?>
+							</button>
+						</form>
 						</td>
 					</tr>
 					<?php endforeach; ?>

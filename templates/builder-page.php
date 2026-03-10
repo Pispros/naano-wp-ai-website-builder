@@ -197,6 +197,103 @@ $section_types = [
 						<textarea id="naano-instruction" class="naano-textarea" rows="5"
 								  placeholder="<?php esc_attr_e( 'Describe what you want to change…', 'naano-ai-website-builder' ); ?>"></textarea>
 					</div>
+					<!-- Element Style Editor -->
+					<div class="naano-drawer__field naano-element-style-panel" id="naano-element-style-panel" style="display:none;">
+						<label class="naano-esp-label">
+							<?php esc_html_e( 'Element Style', 'naano-ai-website-builder' ); ?>
+							<span class="naano-esp-breadcrumb" id="naano-esp-breadcrumb"></span>
+						</label>
+						<!-- Tabs -->
+						<div class="naano-esp-tabs">
+							<button type="button" class="naano-esp-tab naano-esp-tab--active" data-tab="style"><?php esc_html_e( 'Style', 'naano-ai-website-builder' ); ?></button>
+							<button type="button" class="naano-esp-tab" data-tab="custom"><?php esc_html_e( 'Custom CSS', 'naano-ai-website-builder' ); ?></button>
+						</div>
+						<!-- Style tab -->
+						<div class="naano-esp-tab-pane" id="naano-esp-pane-style">
+							<div class="naano-esp-grid">
+								<div class="naano-esp-group">
+									<span class="naano-esp-group-label"><?php esc_html_e( 'Typography', 'naano-ai-website-builder' ); ?></span>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Color', 'naano-ai-website-builder' ); ?></label><input type="color" class="naano-esp-color-input" data-prop="color"></div>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Font Size', 'naano-ai-website-builder' ); ?></label><input type="text" class="naano-esp-text-input" data-prop="fontSize" placeholder="16px"></div>
+									<div class="naano-esp-row">
+										<label><?php esc_html_e( 'Weight', 'naano-ai-website-builder' ); ?></label>
+										<select class="naano-esp-select" data-prop="fontWeight">
+											<option value="">—</option>
+											<option value="300"><?php esc_html_e( 'Light 300', 'naano-ai-website-builder' ); ?></option>
+											<option value="400"><?php esc_html_e( 'Regular 400', 'naano-ai-website-builder' ); ?></option>
+											<option value="500"><?php esc_html_e( 'Medium 500', 'naano-ai-website-builder' ); ?></option>
+											<option value="600"><?php esc_html_e( 'Semibold 600', 'naano-ai-website-builder' ); ?></option>
+											<option value="700"><?php esc_html_e( 'Bold 700', 'naano-ai-website-builder' ); ?></option>
+											<option value="800"><?php esc_html_e( 'ExtraBold 800', 'naano-ai-website-builder' ); ?></option>
+										</select>
+									</div>
+									<div class="naano-esp-row">
+										<label><?php esc_html_e( 'Align', 'naano-ai-website-builder' ); ?></label>
+										<select class="naano-esp-select" data-prop="textAlign">
+											<option value="">—</option>
+											<option value="left"><?php esc_html_e( 'Left', 'naano-ai-website-builder' ); ?></option>
+											<option value="center"><?php esc_html_e( 'Center', 'naano-ai-website-builder' ); ?></option>
+											<option value="right"><?php esc_html_e( 'Right', 'naano-ai-website-builder' ); ?></option>
+											<option value="justify"><?php esc_html_e( 'Justify', 'naano-ai-website-builder' ); ?></option>
+										</select>
+									</div>
+								</div>
+								<div class="naano-esp-group">
+									<span class="naano-esp-group-label"><?php esc_html_e( 'Background', 'naano-ai-website-builder' ); ?></span>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Color', 'naano-ai-website-builder' ); ?></label><input type="color" class="naano-esp-color-input" data-prop="backgroundColor"></div>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Image URL', 'naano-ai-website-builder' ); ?></label><input type="text" class="naano-esp-text-input" data-prop="backgroundImage" placeholder="url(…)"></div>
+									<div class="naano-esp-row">
+										<label><?php esc_html_e( 'Size', 'naano-ai-website-builder' ); ?></label>
+										<select class="naano-esp-select" data-prop="backgroundSize">
+											<option value="">—</option>
+											<option value="cover"><?php esc_html_e( 'Cover', 'naano-ai-website-builder' ); ?></option>
+											<option value="contain"><?php esc_html_e( 'Contain', 'naano-ai-website-builder' ); ?></option>
+											<option value="auto"><?php esc_html_e( 'Auto', 'naano-ai-website-builder' ); ?></option>
+										</select>
+									</div>
+								</div>
+								<div class="naano-esp-group">
+									<span class="naano-esp-group-label"><?php esc_html_e( 'Size', 'naano-ai-website-builder' ); ?></span>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Width', 'naano-ai-website-builder' ); ?></label><input type="text" class="naano-esp-text-input" data-prop="width" placeholder="100%"></div>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Height', 'naano-ai-website-builder' ); ?></label><input type="text" class="naano-esp-text-input" data-prop="height" placeholder="200px"></div>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Max Width', 'naano-ai-website-builder' ); ?></label><input type="text" class="naano-esp-text-input" data-prop="maxWidth" placeholder="960px"></div>
+								</div>
+								<div class="naano-esp-group">
+									<span class="naano-esp-group-label"><?php esc_html_e( 'Padding', 'naano-ai-website-builder' ); ?></span>
+									<div class="naano-esp-4col">
+										<input type="text" class="naano-esp-text-input" data-prop="paddingTop" placeholder="<?php esc_attr_e( 'Top', 'naano-ai-website-builder' ); ?>">
+										<input type="text" class="naano-esp-text-input" data-prop="paddingRight" placeholder="<?php esc_attr_e( 'Right', 'naano-ai-website-builder' ); ?>">
+										<input type="text" class="naano-esp-text-input" data-prop="paddingBottom" placeholder="<?php esc_attr_e( 'Bottom', 'naano-ai-website-builder' ); ?>">
+										<input type="text" class="naano-esp-text-input" data-prop="paddingLeft" placeholder="<?php esc_attr_e( 'Left', 'naano-ai-website-builder' ); ?>">
+									</div>
+								</div>
+								<div class="naano-esp-group">
+									<span class="naano-esp-group-label"><?php esc_html_e( 'Margin', 'naano-ai-website-builder' ); ?></span>
+									<div class="naano-esp-4col">
+										<input type="text" class="naano-esp-text-input" data-prop="marginTop" placeholder="<?php esc_attr_e( 'Top', 'naano-ai-website-builder' ); ?>">
+										<input type="text" class="naano-esp-text-input" data-prop="marginRight" placeholder="<?php esc_attr_e( 'Right', 'naano-ai-website-builder' ); ?>">
+										<input type="text" class="naano-esp-text-input" data-prop="marginBottom" placeholder="<?php esc_attr_e( 'Bottom', 'naano-ai-website-builder' ); ?>">
+										<input type="text" class="naano-esp-text-input" data-prop="marginLeft" placeholder="<?php esc_attr_e( 'Left', 'naano-ai-website-builder' ); ?>">
+									</div>
+								</div>
+								<div class="naano-esp-group">
+									<span class="naano-esp-group-label"><?php esc_html_e( 'Border', 'naano-ai-website-builder' ); ?></span>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Border', 'naano-ai-website-builder' ); ?></label><input type="text" class="naano-esp-text-input" data-prop="border" placeholder="1px solid #ccc"></div>
+									<div class="naano-esp-row"><label><?php esc_html_e( 'Radius', 'naano-ai-website-builder' ); ?></label><input type="text" class="naano-esp-text-input" data-prop="borderRadius" placeholder="8px"></div>
+								</div>
+							</div>
+						</div>
+						<!-- Custom CSS tab -->
+						<div class="naano-esp-tab-pane" id="naano-esp-pane-custom" style="display:none;">
+							<textarea id="naano-esp-custom-css" class="naano-textarea" rows="6"
+									  placeholder="/* Scoped to this element */&#10;color: red;"></textarea>
+						</div>
+						<div class="naano-esp-actions">
+							<button type="button" class="naano-btn-secondary" id="naano-esp-apply-btn"><?php esc_html_e( 'Apply Styles', 'naano-ai-website-builder' ); ?></button>
+							<button type="button" class="naano-btn-ghost" id="naano-esp-deselect-btn">✕ <?php esc_html_e( 'Clear', 'naano-ai-website-builder' ); ?></button>
+						</div>
+					</div><!-- #naano-element-style-panel -->
+
 					<!-- Page Assets -->
 					<div class="naano-drawer__field naano-assets-section">
 						<label><?php esc_html_e( 'Page Assets', 'naano-ai-website-builder' ); ?></label>
@@ -295,6 +392,10 @@ $section_types = [
 							<span class="spinner is-active"></span>
 							<?php esc_html_e( 'Updating…', 'naano-ai-website-builder' ); ?>
 						</div>
+						<button type="button" class="naano-btn-secondary naano-mt-8" id="naano-inspect-toggle-btn">
+							<span class="dashicons dashicons-search"></span>
+							<?php esc_html_e( 'Select Element', 'naano-ai-website-builder' ); ?>
+						</button>
 						<button type="button" class="naano-btn-secondary naano-mt-8" id="naano-add-new-section-btn">
 							+ <?php esc_html_e( 'Add New Section', 'naano-ai-website-builder' ); ?>
 						</button>

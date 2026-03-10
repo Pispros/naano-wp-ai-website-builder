@@ -28,6 +28,18 @@
 		/** @type {Object|null} Active code-animation state (timers, counters). */
 		_claState: null,
 
+		/** @type {Array<{id: string, type: string, html: string}>} Sections imported from other pages (pre-seeded, no LLM generation). */
+		importedSections: [],
+
+		/** @type {boolean} Whether element-inspect mode is active. */
+		inspectModeActive: false,
+
+		/** @type {string|null} data-naano-el ID of the currently selected element. */
+		selectedElId: null,
+
+		/** @type {string|null} Section ID that contains the selected element. */
+		selectedElSectionId: null,
+
 		/**
 		 * Initialise the builder.
 		 */
@@ -92,12 +104,14 @@
 			}() );
 
 			NaanoBuilder._bindGenerationForm();
+			NaanoBuilder._bindImportComponents();
 			NaanoBuilder._bindActionBar();
 			NaanoBuilder._bindDrawer();
 			NaanoBuilder._bindViewportToggle();
 			NaanoBuilder._bindEditPanel();
 			NaanoBuilder._bindAssetsPanel();
 			NaanoBuilder._bindRedirectsPanel();
+			NaanoBuilder._bindElementInspector();
 			NaanoBuilder._bindIframeMessages();
 
 			// If we already have sections (page reload), render them.
@@ -135,7 +149,7 @@
 				$( '#naano-description-error' ).hide();
 			}
 
-			if ( sections.length === 0 ) {
+			if ( sections.length === 0 && NaanoBuilder.importedSections.length === 0 ) {
 				$( '#naano-sections-error' ).show();
 				if ( valid ) { $( '#naano-section-checkboxes' ).find( 'input' ).first().focus(); }
 				valid = false;
@@ -149,12 +163,13 @@
 			NaanoBuilder._showCanvasLoading( { filename: ( pageName || 'output' ) + '.html' } );
 
 			$.post( data.ajaxUrl, {
-				action:      'naano_generate_site',
-				nonce:       data.nonce,
-				page_id:     NaanoBuilder.pageId,
-				page_name:   pageName,
-				description: description,
-				sections:    sections
+				action:            'naano_generate_site',
+				nonce:             data.nonce,
+				page_id:           NaanoBuilder.pageId,
+				page_name:         pageName,
+				description:       description,
+				sections:          sections,
+				imported_sections: JSON.stringify( NaanoBuilder.importedSections )
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
@@ -181,6 +196,10 @@
 					NaanoBuilder._refreshLivePreview();
 					NaanoBuilder._renderSectionsList();
 					NaanoBuilder._toast( 'Website generated successfully! 🎉', 'success' );
+					NaanoBuilder.importedSections = [];
+					$( '.naano-import-section-btn' )
+						.removeClass( 'naano-import-section-btn--selected' )
+						.find( '.naano-import-check' ).hide();
 				} else {
 					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
 				}
@@ -721,6 +740,69 @@
 		// Private helpers
 		// =====================================================================
 
+		_bindImportComponents: function () {
+			// Toggle visibility of the import list.
+			$( document ).on( 'click', '#naano-import-toggle', function () {
+				var $list = $( '#naano-import-list' );
+				if ( $list.is( ':visible' ) ) {
+					$list.slideUp( 150 );
+					$( this ).text( 'Show' );
+				} else {
+					$list.slideDown( 150 );
+					$( this ).text( 'Hide' );
+				}
+			} );
+
+			// Select / deselect an imported section.
+			$( document ).on( 'click', '.naano-import-section-btn', function () {
+				var $btn    = $( this );
+				var secId   = String( $btn.data( 'section-id' ) );
+				var secType = String( $btn.data( 'section-type' ) );
+
+				// Find sourcePageId from the localized component data.
+				var sourcePageId = 0;
+				( data.existingComponents || [] ).forEach( function ( page ) {
+					( page.sections || [] ).forEach( function ( sec ) {
+						if ( String( sec.id ) === secId ) { sourcePageId = sec.sourcePageId || 0; }
+					} );
+				} );
+
+				// Is it already selected?
+				var existingIdx = -1;
+				NaanoBuilder.importedSections.forEach( function ( s, i ) {
+					if ( s.id === secId ) { existingIdx = i; }
+				} );
+
+				if ( existingIdx > -1 ) {
+					// Deselect.
+					NaanoBuilder.importedSections.splice( existingIdx, 1 );
+					$btn.removeClass( 'naano-import-section-btn--selected' );
+					$btn.find( '.naano-import-check' ).hide();
+					// Re-enable the matching generation checkbox.
+					$( '#naano-section-checkboxes input[value="' + secType + '"]' ).prop( 'checked', true );
+				} else {
+					// Deselect any other btn of the same type (only one per type allowed).
+					NaanoBuilder.importedSections = NaanoBuilder.importedSections.filter( function ( s ) {
+						return s.type !== secType;
+					} );
+					$( '.naano-import-section-btn[data-section-type="' + secType + '"]' )
+						.removeClass( 'naano-import-section-btn--selected' )
+						.find( '.naano-import-check' ).hide();
+					// Select — store only reference; server fetches HTML from DB.
+					NaanoBuilder.importedSections.push( { id: secId, type: secType, sourcePageId: sourcePageId } );
+					$btn.addClass( 'naano-import-section-btn--selected' );
+					$btn.find( '.naano-import-check' ).show();
+					// Uncheck the generation checkbox for this type.
+					$( '#naano-section-checkboxes input[value="' + secType + '"]' ).prop( 'checked', false );
+				}
+
+				// Clear sections error if we now have something selected.
+				if ( $( '#naano-section-checkboxes input:checked' ).length > 0 || NaanoBuilder.importedSections.length > 0 ) {
+					$( '#naano-sections-error' ).hide();
+				}
+			} );
+		},
+
 		_bindGenerationForm: function () {
 			$( document ).on( 'click', '#naano-generate-btn', function () {
 				NaanoBuilder.generateSite();
@@ -894,17 +976,148 @@
 			} );
 		},
 
+		// =====================================================================
+		// Element Inspector
+		// =====================================================================
+
+		/**
+		 * Bind all element-inspector UI events (inspect toggle, style apply, tabs).
+		 */
+		_bindElementInspector: function () {
+			$( document ).on( 'click', '#naano-inspect-toggle-btn', function () {
+				NaanoBuilder._toggleInspectMode( ! NaanoBuilder.inspectModeActive );
+			} );
+
+			$( document ).on( 'click', '#naano-esp-apply-btn', function () {
+				NaanoBuilder._applyElementStyle();
+			} );
+
+			$( document ).on( 'click', '#naano-esp-deselect-btn', function () {
+				NaanoBuilder._clearElementSelection();
+			} );
+
+			$( document ).on( 'click', '.naano-esp-tab', function () {
+				var tab = $( this ).data( 'tab' );
+				$( '.naano-esp-tab' ).removeClass( 'naano-esp-tab--active' );
+				$( this ).addClass( 'naano-esp-tab--active' );
+				$( '.naano-esp-tab-pane' ).hide();
+				$( '#naano-esp-pane-' + tab ).show();
+			} );
+		},
+
+		/**
+		 * Enable or disable element-inspect mode in the iframe.
+		 *
+		 * @param {boolean} on
+		 */
+		_toggleInspectMode: function ( on ) {
+			NaanoBuilder.inspectModeActive = !!on;
+			$( '#naano-inspect-toggle-btn' ).toggleClass( 'naano-inspect-mode-active', !!on );
+			NaanoBuilder._iframePost( { type: 'naano-inspect-mode', active: !!on } );
+			if ( ! on ) {
+				NaanoBuilder._clearElementSelection();
+			}
+		},
+
+		/**
+		 * Deselect the current element and hide the style panel.
+		 */
+		_clearElementSelection: function () {
+			NaanoBuilder.selectedElId        = null;
+			NaanoBuilder.selectedElSectionId = null;
+			$( '#naano-element-style-panel' ).hide();
+		},
+
+		/**
+		 * Populate and show the style panel from element data returned by the iframe.
+		 *
+		 * @param {Object} elData  { breadcrumb, tagName, computed: { propName: val, … } }
+		 */
+		_renderStylePanel: function ( elData ) {
+			$( '#naano-esp-breadcrumb' ).text( elData.breadcrumb || elData.tagName || '' );
+			// Reset tabs to Style pane.
+			$( '.naano-esp-tab' ).removeClass( 'naano-esp-tab--active' );
+			$( '.naano-esp-tab[data-tab="style"]' ).addClass( 'naano-esp-tab--active' );
+			$( '.naano-esp-tab-pane' ).hide();
+			$( '#naano-esp-pane-style' ).show();
+			$( '#naano-esp-custom-css' ).val( '' );
+
+			var computed = elData.computed || {};
+			$( '#naano-element-style-panel [data-prop]' ).each( function () {
+				var prop = $( this ).data( 'prop' );
+				var val  = computed[ prop ] || '';
+				if ( $( this ).is( 'input[type=color]' ) && val ) {
+					val = NaanoBuilder._rgbToHex( val ) || val;
+				}
+				$( this ).val( val );
+			} );
+
+			$( '#naano-element-style-panel' ).show();
+		},
+
+		/**
+		 * Read all style-panel inputs and post them to the iframe to be applied inline.
+		 */
+		_applyElementStyle: function () {
+			if ( ! NaanoBuilder.selectedElId ) { return; }
+
+			var styles = {};
+			$( '#naano-esp-pane-style [data-prop]' ).each( function () {
+				var prop = $( this ).data( 'prop' );
+				var val  = $( this ).val().trim();
+				if ( val ) { styles[ prop ] = val; }
+			} );
+
+			var customCss = $( '#naano-esp-custom-css' ).val().trim();
+
+			NaanoBuilder._iframePost( {
+				type:      'naano-apply-element-style',
+				elId:      NaanoBuilder.selectedElId,
+				styles:    styles,
+				customCss: customCss
+			} );
+		},
+
+		/**
+		 * Convert an rgb(r,g,b) string to #rrggbb hex for use in <input type="color">.
+		 *
+		 * @param  {string} rgb
+		 * @return {string|null}
+		 */
+		_rgbToHex: function ( rgb ) {
+			var m = rgb.match( /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/ );
+			if ( ! m ) { return null; }
+			return '#' + [ m[1], m[2], m[3] ].map( function ( x ) {
+				return ( '0' + parseInt( x, 10 ).toString( 16 ) ).slice( -2 );
+			} ).join( '' );
+		},
+
 		/**
 		 * Listen for postMessage events from the live-preview iframe.
 		 */
 		_bindIframeMessages: function () {
 			window.addEventListener( 'message', function ( e ) {
 				var msg = e.data;
-				if ( ! msg || msg.type !== 'naano-section-clicked' ) { return; }
+				if ( ! msg || ! msg.type ) { return; }
 
-				var sectionId = msg.sectionId;
-				if ( sectionId && NaanoBuilder.pageId ) {
-					NaanoBuilder.openEditPanel( sectionId, true );
+				if ( msg.type === 'naano-section-clicked' ) {
+					var sectionId = msg.sectionId;
+					if ( sectionId && NaanoBuilder.pageId ) {
+						NaanoBuilder.openEditPanel( sectionId, true );
+					}
+				}
+
+				if ( msg.type === 'naano-element-selected' ) {
+					NaanoBuilder.selectedElId        = msg.elId;
+					NaanoBuilder.selectedElSectionId = msg.sectionId;
+					NaanoBuilder._renderStylePanel( msg );
+				}
+
+				if ( msg.type === 'naano-element-html-updated' ) {
+					var idx = NaanoBuilder._findSectionIndex( msg.sectionId );
+					if ( idx !== -1 ) {
+						NaanoBuilder.sectionsData[ idx ].html = msg.html;
+					}
 				}
 			} );
 		},
@@ -933,8 +1146,8 @@
 			} );
 
 			// Interaction helper script injected into the iframe.
-			// - Listens for postMessage from parent (update section, highlight, loading).
-			// - Reports section clicks back to parent via postMessage.
+			// - Listens for postMessage from parent (update section, highlight, loading, inspect).
+			// - Reports section clicks + element selections back to parent via postMessage.
 			var helperScript = [
 				'(function(){',
 				'var s=document.createElement("style");',
@@ -945,8 +1158,77 @@
 				'+"[data-section].naano-section-loading{position:relative;pointer-events:none;}"',
 				'+"[data-section].naano-section-loading::after{content:\'\';position:absolute;inset:0;background:rgba(255,255,255,0.65);z-index:9999;animation:naano-pulse 1s infinite;}"',
 				'+"@keyframes naano-pulse{0%,100%{opacity:0.5;}50%{opacity:1;}}"',
-				'+"@keyframes naano-flash{0%{box-shadow:inset 0 0 0 3px rgba(34,113,177,0.7);}100%{box-shadow:none;}}";',
+				'+"@keyframes naano-flash{0%{box-shadow:inset 0 0 0 3px rgba(34,113,177,0.7);}100%{box-shadow:none;}}"',
+				'+"body.naano-inspect-active{cursor:crosshair!important;}"',
+				'+"body.naano-inspect-active *{cursor:crosshair!important;}"',
+				'+"body.naano-inspect-active [data-section]:hover{outline:none!important;}"',
+				'+"body.naano-inspect-active .naano-el-hover{outline:2px dashed #f59e0b!important;outline-offset:2px;z-index:9998;}"',
+				'+"body.naano-inspect-active .naano-el-selected{outline:2px solid #f59e0b!important;outline-offset:2px;z-index:9998;}";',
 				'document.head.appendChild(s);',
+
+				// Inspect-mode state.
+				'var inspectActive=false;',
+				'var elCounter=0;',
+
+				'function getOrAssignId(el){',
+				'  if(!el.dataset.naanoEl)el.dataset.naanoEl="nel-"+(++elCounter);',
+				'  return el.dataset.naanoEl;',
+				'}',
+
+				'function getSectionId(el){',
+				'  var p=el;',
+				'  while(p&&p!==document.body){',
+				'    if(p.hasAttribute("data-section"))return p.getAttribute("data-section");',
+				'    p=p.parentElement;',
+				'  }',
+				'  return null;',
+				'}',
+
+				'function buildBreadcrumb(el){',
+				'  var parts=[];var cur=el;',
+				'  while(cur&&cur!==document.body){',
+				'    var tag=cur.tagName.toLowerCase();',
+				'    if(cur.id)tag+="#"+cur.id;',
+				'    else if(cur.className&&typeof cur.className==="string"){',
+				'      var cls=cur.className.trim().split(/\\s+/).slice(0,2).join(".");',
+				'      if(cls)tag+="."+cls;',
+				'    }',
+				'    parts.unshift(tag);cur=cur.parentElement;',
+				'    if(parts.length>4){parts.unshift("\\u2026");break;}',
+				'  }',
+				'  return parts.join(" \\u203a ");',
+				'}',
+
+				// Hover highlight in inspect mode.
+				'document.addEventListener("mouseover",function(e){',
+				'  if(!inspectActive)return;',
+				'  e.stopPropagation();',
+				'  document.querySelectorAll(".naano-el-hover").forEach(function(n){n.classList.remove("naano-el-hover");});',
+				'  var el=e.target;',
+				'  if(el&&el!==document.body&&el!==document.documentElement)el.classList.add("naano-el-hover");',
+				'});',
+
+				// Click in inspect mode — capture phase so it fires before section-click handler.
+				'document.addEventListener("click",function(e){',
+				'  if(!inspectActive)return;',
+				'  e.stopImmediatePropagation();e.preventDefault();',
+				'  var el=e.target;',
+				'  if(!el||el===document.body||el===document.documentElement)return;',
+				'  var elId=getOrAssignId(el);',
+				'  var sectionId=getSectionId(el);',
+				'  var cs=window.getComputedStyle(el);',
+				'  var styleProps=["color","backgroundColor","fontSize","fontWeight","textAlign",',
+				'    "width","height","maxWidth",',
+				'    "paddingTop","paddingRight","paddingBottom","paddingLeft",',
+				'    "marginTop","marginRight","marginBottom","marginLeft",',
+				'    "border","borderRadius","backgroundImage","backgroundSize"];',
+				'  var computed={};',
+				'  styleProps.forEach(function(p){computed[p]=cs[p]||"";});',
+				'  document.querySelectorAll(".naano-el-selected").forEach(function(n){n.classList.remove("naano-el-selected");});',
+				'  el.classList.add("naano-el-selected");',
+				'  window.parent.postMessage({type:"naano-element-selected",elId:elId,sectionId:sectionId,',
+				'    tagName:el.tagName.toLowerCase(),breadcrumb:buildBreadcrumb(el),computed:computed},"*");',
+				'},true);',
 
 				// Listen for messages from parent.
 				'window.addEventListener("message",function(e){',
@@ -987,10 +1269,44 @@
 				'      else el.classList.remove("naano-section-loading");',
 				'    }',
 				'  }',
+
+				// Toggle inspect mode.
+				'  if(m.type==="naano-inspect-mode"){',
+				'    inspectActive=!!m.active;',
+				'    document.body.classList.toggle("naano-inspect-active",inspectActive);',
+				'    if(!inspectActive){',
+				'      document.querySelectorAll(".naano-el-hover,.naano-el-selected").forEach(function(n){',
+				'        n.classList.remove("naano-el-hover","naano-el-selected");',
+				'      });',
+				'    }',
+				'  }',
+
+				// Apply inline styles to a [data-naano-el] element.
+				'  if(m.type==="naano-apply-element-style"){',
+				'    var el=document.querySelector(\'[data-naano-el="\'+m.elId+\'"]\');',
+				'    if(!el)return;',
+				'    var props=m.styles||{};',
+				'    Object.keys(props).forEach(function(p){if(props[p]!=="")el.style[p]=props[p];});',
+				'    if(m.customCss&&m.customCss.trim()){',
+				'      var styleId="naano-custom-"+m.elId;',
+				'      var existing=document.getElementById(styleId);',
+				'      if(existing)existing.remove();',
+				'      var tag=document.createElement("style");',
+				'      tag.id=styleId;',
+				'      tag.textContent=\'[data-naano-el="\'+m.elId+\'"]{\'+ m.customCss +\'}\';',
+				'      document.head.appendChild(tag);',
+				'    }',
+				'    var sectionEl=el.closest("[data-section]");',
+				'    if(sectionEl){',
+				'      window.parent.postMessage({type:"naano-element-html-updated",',
+				'        sectionId:sectionEl.getAttribute("data-section"),html:sectionEl.innerHTML},"*");',
+				'    }',
+				'  }',
 				'});',
 
-				// Report section clicks to parent (toggle).
+				// Report section clicks to parent — only when NOT in inspect mode.
 				'document.addEventListener("click",function(e){',
+				'  if(inspectActive)return;',
 				'  var el=e.target;',
 				'  while(el&&el!==document.body){',
 				'    if(el.hasAttribute("data-section")){',

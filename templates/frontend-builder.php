@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$page_id  = get_queried_object_id() ?: 0;
+$page_id  = empty( $_GET['naano_new'] ) ? ( get_queried_object_id() ?: 0 ) : 0;
 $has_page = $page_id > 0;
 
 $section_types = [
@@ -187,7 +187,36 @@ $admin_pages_url = admin_url( 'admin.php?page=naano-ai-builder' );
 							<?php esc_html_e( 'Please select at least one section.', 'naano-ai-website-builder' ); ?>
 						</p>
 					</div>
-
+				<?php if ( ! empty( $existing_components ) ) : ?>
+				<div class="naano-drawer__field naano-import-components-field">
+					<label class="naano-import-label">
+						<?php esc_html_e( 'Import from Existing Pages', 'naano-ai-website-builder' ); ?>
+						<button type="button" class="naano-link-btn" id="naano-import-toggle"><?php esc_html_e( 'Show', 'naano-ai-website-builder' ); ?></button>
+					</label>
+					<p class="naano-field-hint"><?php esc_html_e( 'Reuse the header or footer from an existing page instead of regenerating it.', 'naano-ai-website-builder' ); ?></p>
+					<div id="naano-import-list" style="display:none;">
+						<?php foreach ( $existing_components as $ep ) : ?>
+						<div class="naano-import-page">
+							<span class="naano-import-page-name"><?php echo esc_html( $ep['pageTitle'] ); ?></span>
+							<div class="naano-import-btns">
+								<?php foreach ( $ep['sections'] as $sec ) :
+									$sec_type  = sanitize_key( $sec['type'] ?? $sec['id'] ?? '' );
+									$sec_label = ucfirst( str_replace( [ '_', '-' ], ' ', $sec['id'] ?? $sec_type ) );
+								?>
+								<button type="button"
+										class="naano-import-section-btn"
+										data-section-id="<?php echo esc_attr( $sec['id'] ); ?>"
+										data-section-type="<?php echo esc_attr( $sec_type ); ?>">
+									<span class="naano-import-check dashicons dashicons-yes" style="display:none;"></span>
+									<?php echo esc_html( $sec_label ); ?>
+								</button>
+								<?php endforeach; ?>
+							</div>
+						</div>
+						<?php endforeach; ?>
+					</div>
+				</div><!-- .naano-import-components-field -->
+				<?php endif; ?>
 					<div class="naano-drawer__actions">
 						<button type="button" class="naano-btn-generate" id="naano-generate-btn">
 							<span class="dashicons dashicons-superhero-alt"></span>

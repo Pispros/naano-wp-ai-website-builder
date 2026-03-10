@@ -55,7 +55,18 @@ class Naano_Ajax_Handler {
 		$description = sanitize_textarea_field( wp_unslash( $_POST['description'] ?? '' ) );
 		$sections    = array_map( 'sanitize_text_field', (array) ( $_POST['sections'] ?? [] ) );
 
-		if ( ! $description || empty( $sections ) ) {
+		// Parse imported sections (header/footer cloned from other pages, no LLM needed).
+		// NOTE: wp_unslash only — sanitize_text_field would strip HTML tags from the JSON.
+		$imported_json = wp_unslash( $_POST['imported_sections'] ?? '' );
+		$imported_data = [];
+		if ( $imported_json ) {
+			$decoded = json_decode( $imported_json, true );
+			if ( is_array( $decoded ) ) {
+				$imported_data = $decoded;
+			}
+		}
+
+		if ( ! $description || ( empty( $sections ) && empty( $imported_data ) ) ) {
 			wp_send_json_error( [ 'message' => __( 'Missing required fields.', 'naano-ai-website-builder' ) ] );
 		}
 
@@ -76,6 +87,43 @@ class Naano_Ajax_Handler {
 			}
 
 			$page_id = $new_id;
+		}
+
+		// Save any imported sections — fetch HTML from DB using the source page reference
+		// so we never trust client-supplied HTML (avoids sanitization stripping CSS/styles).
+		if ( ! empty( $imported_data ) ) {
+			$imp_sm  = new Naano_Section_Manager();
+			$src_cache = []; // cache get_sections() calls per source page
+			foreach ( $imported_data as $imp ) {
+				$imp_id     = sanitize_key( $imp['id']            ?? '' );
+				$imp_type   = sanitize_key( $imp['type']          ?? '' );
+				$src_pid    = (int) ( $imp['sourcePageId']        ?? 0 );
+				if ( ! $imp_id || ! $src_pid ) { continue; }
+				// Auth check: source page must exist and have Naano sections.
+				if ( ! isset( $src_cache[ $src_pid ] ) ) {
+					$src_cache[ $src_pid ] = $imp_sm->get_sections( $src_pid );
+				}
+				$imp_html = '';
+				foreach ( $src_cache[ $src_pid ] as $src_sec ) {
+					if ( ( $src_sec['id'] ?? '' ) === $imp_id ) {
+						$imp_html = $src_sec['html'] ?? '';
+						break;
+					}
+				}
+				if ( trim( $imp_html ) ) {
+					$imp_sm->update_section( $page_id, $imp_id, $imp_html, $imp_type );
+				}
+			}
+		}
+
+		// If only imported sections were requested (no AI generation), return immediately.
+		if ( empty( $sections ) ) {
+			$sm = new Naano_Section_Manager();
+			wp_send_json_success( [
+				'page_id'  => $page_id,
+				'sections' => $sm->get_sections( $page_id ),
+				'html'     => $sm->get_assembled_html( $page_id ),
+			] );
 		}
 
 		try {
@@ -135,7 +183,7 @@ class Naano_Ajax_Handler {
 
 			wp_send_json_success( [
 				'page_id'  => $page_id,
-				'sections' => $parsed,
+				'sections' => $section_manager->get_sections( $page_id ),
 				'html'     => $section_manager->get_assembled_html( $page_id ),
 			] );
 		} catch ( \Throwable $e ) {

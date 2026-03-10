@@ -28,6 +28,9 @@ class Naano_Admin_Page {
 		// "Build with Naano AI" in the Pages list row actions.
 		add_filter( 'page_row_actions', [ $this, 'add_page_row_action' ], 10, 2 );
 
+		// Delete page from the Naano pages list.
+		add_action( 'admin_post_naano_delete_page', [ $this, 'handle_delete_page' ] );
+
 		// Frontend builder: intercept ?naano_builder=1 on frontend pages.
 		add_action( 'template_redirect', [ $this, 'maybe_render_frontend_builder' ] );
 
@@ -36,6 +39,32 @@ class Naano_Admin_Page {
 
 		// Serve standalone Naano pages as raw HTML (no theme wrapping).
 		add_action( 'template_redirect', [ $this, 'maybe_render_standalone_page' ] );
+	}
+
+	/**
+	 * Handle admin-post.php delete page request.
+	 *
+	 * Moves the page to trash (reversible). Only allowed for users who can
+	 * delete the specific post.
+	 *
+	 * @return void
+	 */
+	public function handle_delete_page(): void {
+		$page_id = (int) ( $_POST['page_id'] ?? 0 );
+
+		check_admin_referer( 'naano_delete_page_' . $page_id );
+
+		if ( ! $page_id || ! current_user_can( 'delete_post', $page_id ) ) {
+			wp_die( esc_html__( 'You do not have permission to delete this page.', 'naano-ai-website-builder' ) );
+		}
+
+		wp_trash_post( $page_id );
+
+		wp_safe_redirect( add_query_arg(
+			[ 'page' => 'naano-pages', 'deleted' => '1' ],
+			admin_url( 'admin.php' )
+		) );
+		exit;
 	}
 
 	/**
@@ -274,7 +303,8 @@ class Naano_Admin_Page {
 		}
 
 		// Determine the page ID from the queried object (e.g. /my-page/?naano_builder=1).
-		$page_id = get_queried_object_id() ?: 0;
+		// When naano_new=1 is present the user wants a blank new page — ignore the queried object.
+		$page_id = empty( $_GET['naano_new'] ) ? ( get_queried_object_id() ?: 0 ) : 0;
 
 		// Enqueue all required assets for the builder.
 		wp_enqueue_style( 'dashicons' );
@@ -315,18 +345,62 @@ class Naano_Admin_Page {
 			}
 		}
 
+		// Fetch header/footer sections from other Naano pages for the "Import Components" UI
+		// (only needed on the new-page screen where $page_id === 0).
+		$existing_components = [];
+		if ( ! $page_id ) {
+			$comp_sm    = new Naano_Section_Manager();
+			$comp_pages = get_posts( [
+				'post_type'      => 'page',
+				'post_status'    => 'any',
+				'posts_per_page' => 20,
+				'meta_key'       => '_naano_sections',
+				'orderby'        => 'modified',
+				'order'          => 'DESC',
+			] );
+			foreach ( $comp_pages as $cp ) {
+				$cp_sections = $comp_sm->get_sections( $cp->ID );
+				$comp_filtered = array_values( array_filter(
+					$cp_sections,
+					static function ( $s ) {
+						$t = $s['type'] ?? '';
+						$i = $s['id']   ?? '';
+						return in_array( $t, [ 'header', 'footer' ], true )
+							|| strpos( $i, 'header' ) !== false
+							|| strpos( $i, 'footer' ) !== false;
+					}
+				) );
+				// Strip full HTML — client will reference by sourcePageId+id; server fetches from DB.
+				$comps = array_map( static function ( $s ) use ( $cp ) {
+					return [
+						'id'           => $s['id']   ?? '',
+						'type'         => $s['type'] ?? '',
+						'sourcePageId' => $cp->ID,
+					];
+				}, $comp_filtered );
+				if ( ! empty( $comps ) ) {
+					$existing_components[] = [
+						'pageId'    => $cp->ID,
+						'pageTitle' => $cp->post_title ?: __( '(no title)', 'naano-ai-website-builder' ),
+						'sections'  => $comps,
+					];
+				}
+			}
+		}
+
 		$_mlp        = get_option( 'naano_provider', 'claude' );
 		$_mlm        = get_option( 'naano_model', '' );
 		$_mld        = [ 'claude' => 'claude-sonnet-4-20250514', 'gemini' => 'gemini-2.5-flash', 'kimi' => 'kimi-k2-0711-preview' ];
 		$model_label = $_mlm ?: ( $_mld[ $_mlp ] ?? $_mlp );
 
 		wp_localize_script( 'naano-builder', 'naanoBuilderData', [
-			'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
-			'nonce'      => wp_create_nonce( 'naano_builder_nonce' ),
-			'pageId'     => $page_id,
-			'sections'   => $sections,
-			'references' => $references,
-			'modelLabel' => $model_label,
+			'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
+			'nonce'              => wp_create_nonce( 'naano_builder_nonce' ),
+			'pageId'             => $page_id,
+			'sections'           => $sections,
+			'references'         => $references,
+			'modelLabel'         => $model_label,
+			'existingComponents' => $existing_components,
 			'strings'    => [
 				'confirm_delete'    => __( 'Are you sure you want to delete this section?', 'naano-ai-website-builder' ),
 				'generating'        => __( 'Generating…', 'naano-ai-website-builder' ),
