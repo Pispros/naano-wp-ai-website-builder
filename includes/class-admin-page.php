@@ -315,13 +315,18 @@ class Naano_Admin_Page {
 			}
 		}
 
+		$_mlp        = get_option( 'naano_provider', 'claude' );
+		$_mlm        = get_option( 'naano_model', '' );
+		$_mld        = [ 'claude' => 'claude-sonnet-4-20250514', 'gemini' => 'gemini-2.5-flash', 'kimi' => 'kimi-k2-0711-preview' ];
+		$model_label = $_mlm ?: ( $_mld[ $_mlp ] ?? $_mlp );
+
 		wp_localize_script( 'naano-builder', 'naanoBuilderData', [
 			'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
 			'nonce'      => wp_create_nonce( 'naano_builder_nonce' ),
 			'pageId'     => $page_id,
 			'sections'   => $sections,
 			'references' => $references,
-			'videoUrl'   => NAANO_PLUGIN_URL . 'assets/video/loading.mp4',
+			'modelLabel' => $model_label,
 			'strings'    => [
 				'confirm_delete'    => __( 'Are you sure you want to delete this section?', 'naano-ai-website-builder' ),
 				'generating'        => __( 'Generating…', 'naano-ai-website-builder' ),

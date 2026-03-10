@@ -22,6 +22,9 @@
 		/** @type {Array<{label: string, url: string}>} Page-level URL redirections. */
 		pageRedirects: [],
 
+		/** @type {Object|null} Active code-animation state (timers, counters). */
+		_claState: null,
+
 		/**
 		 * Initialise the builder.
 		 */
@@ -31,14 +34,59 @@
 			// Activate full-screen layout.
 			$( 'body' ).addClass( 'naano-fullscreen' );
 
-			// Inject the shared canvas loading video overlay (hidden by default).
-			if ( data.videoUrl ) {
+			// Inject code-generation loading overlay.
+			( function () {
+				if ( ! document.getElementById( 'naano-cla-fonts' ) ) {
+					var link = document.createElement( 'link' );
+					link.id   = 'naano-cla-fonts';
+					link.rel  = 'stylesheet';
+					link.href = 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap';
+					document.head.appendChild( link );
+				}
 				$( '#naano-vb-canvas' ).append(
 					'<div class="naano-canvas-loading-overlay" id="naano-canvas-loading-overlay">' +
-					'<video class="naano-canvas-loading-overlay__video" src="' + $( '<div>' ).text( data.videoUrl ).html() + '" autoplay loop muted playsinline></video>' +
-					'</div>'
+					'<canvas class="naano-cla-rain" id="naano-cla-rain"></canvas>' +
+					'<div class="naano-cla-scanline"></div>' +
+					'<div class="naano-cla-wrapper">' +
+					'<div class="naano-cla-card">' +
+					'<div class="naano-cla-titlebar">' +
+					'<div class="naano-cla-dots"><div class="naano-cla-dot"></div><div class="naano-cla-dot"></div><div class="naano-cla-dot"></div></div>' +
+					'<span class="naano-cla-title-label" id="naano-cla-title-text">output.html — generating</span>' +
+					'<span class="naano-cla-badge">LLM ✶</span>' +
+					'</div>' +
+					'<div class="naano-cla-status-row">' +
+					'<div class="naano-cla-pulse"></div>' +
+					'<span class="naano-cla-status-text">Generating<span class="naano-cla-ellipsis"><span>.</span><span>.</span><span>.</span></span></span>' +
+					'<span class="naano-cla-token-count">tokens: <span id="naano-cla-token-count">0</span></span>' +
+					'</div>' +
+					'<div class="naano-cla-progress-wrap"><div class="naano-cla-progress-track"><div class="naano-cla-progress-fill" id="naano-cla-progress-fill"></div></div></div>' +
+					'<div class="naano-cla-code-area">' +
+					'<div class="naano-cla-code-header">' +
+					'<span class="naano-cla-lang-tag">HTML/CSS/JS</span>' +
+					'<span id="naano-cla-filename">output.html</span>' +
+					'<span class="naano-cla-line-count">lines: <span id="naano-cla-line-count">0</span></span>' +
+					'</div>' +
+					'<div class="naano-cla-code-scroll"><div class="naano-cla-code-lines" id="naano-cla-code-lines"></div></div>' +
+					'</div>' +
+					'<div class="naano-cla-meta-row">' +
+					'<div class="naano-cla-meta-item"><span class="naano-cla-meta-label">Speed</span>' +
+					'<span class="naano-cla-meta-value naano-cla-meta-value--cyan" id="naano-cla-speed">0</span>' +
+					'<span class="naano-cla-meta-label">tok/s</span></div>' +
+					'<div class="naano-cla-meta-item"><span class="naano-cla-meta-label">Model</span>' +
+					'<span class="naano-cla-meta-value naano-cla-meta-value--purple" id="naano-cla-model-main"></span>' +
+					'<span class="naano-cla-meta-label" id="naano-cla-model-ver"></span></div>' +
+					'<div class="naano-cla-meta-item"><span class="naano-cla-meta-label">Elapsed</span>' +
+					'<span class="naano-cla-meta-value naano-cla-meta-value--green" id="naano-cla-elapsed">0.0</span>' +
+					'<span class="naano-cla-meta-label">seconds</span></div>' +
+					'</div>' +
+					'</div></div></div>'
 				);
-			}
+				// Set model name safely via text() to prevent XSS.
+				var m    = data.modelLabel || 'llm';
+				var dash = m.lastIndexOf( '-' );
+				$( '#naano-cla-model-main' ).text( dash > 0 ? m.slice( 0, dash ) : m );
+				$( '#naano-cla-model-ver' ).text( dash > 0 ? m.slice( dash + 1 ) : '' );
+			}() );
 
 			NaanoBuilder._bindGenerationForm();
 			NaanoBuilder._bindActionBar();
@@ -95,9 +143,7 @@
 			if ( ! valid ) { return; }
 
 			NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', true );
-
-			// Show the video loading overlay on the canvas.
-			NaanoBuilder._showCanvasLoading();
+			NaanoBuilder._showCanvasLoading( { filename: ( pageName || 'output' ) + '.html' } );
 
 			$.post( data.ajaxUrl, {
 				action:      'naano_generate_site',
@@ -232,7 +278,7 @@
 			}
 
 			NaanoBuilder._setLoading( '#naano-update-section-btn', '#naano-update-loading', true );
-			NaanoBuilder._showCanvasLoading();
+			NaanoBuilder._showCanvasLoading( { filename: NaanoBuilder._displayName( sectionId ).toLowerCase().replace( /\s+/g, '-' ) + '.html' } );
 
 			// Show loading overlay on the section and dim the canvas.
 			NaanoBuilder._iframePost( { type: 'naano-loading-section', sectionId: sectionId, loading: true } );
@@ -1009,7 +1055,7 @@
 			var slug        = sectionName.toLowerCase().replace( /\s+/g, '-' ).replace( /[^a-z0-9-]/g, '' );
 
 			NaanoBuilder._setLoading( '#naano-add-new-section-btn', '#naano-update-loading', true );
-			NaanoBuilder._showCanvasLoading();
+			NaanoBuilder._showCanvasLoading( { filename: slug + '.html' } );
 
 			$.post( data.ajaxUrl, {
 				action:      'naano_update_section',
@@ -1053,18 +1099,174 @@
 			$( '#naano-live-iframe-wrap' ).show();
 		},
 
-		_showCanvasLoading: function () {
-			var $overlay = $( '#naano-canvas-loading-overlay' );
-			$overlay.addClass( 'naano-canvas-loading-overlay--visible' );
-			var vid = $overlay.find( 'video' ).get( 0 );
-			if ( vid ) { vid.currentTime = 0; vid.play(); }
+		_showCanvasLoading: function ( opts ) {
+			opts = opts || {};
+			var filename = opts.filename || 'output.html';
+			$( '#naano-cla-title-text' ).text( filename + ' — generating' );
+			$( '#naano-cla-filename' ).text( filename );
+			$( '#naano-canvas-loading-overlay' ).addClass( 'naano-canvas-loading-overlay--visible' );
+			NaanoBuilder._claStart();
 		},
 
 		_hideCanvasLoading: function () {
-			var $overlay = $( '#naano-canvas-loading-overlay' );
-			$overlay.removeClass( 'naano-canvas-loading-overlay--visible' );
-			var vid = $overlay.find( 'video' ).get( 0 );
-			if ( vid ) { vid.pause(); }
+			NaanoBuilder._claStop();
+			$( '#naano-canvas-loading-overlay' ).removeClass( 'naano-canvas-loading-overlay--visible' );
+		},
+
+		_claStart: function () {
+			NaanoBuilder._claStop();
+
+			// Restart progress-bar CSS animation via clone trick.
+			var pfill = document.getElementById( 'naano-cla-progress-fill' );
+			if ( pfill ) {
+				var clone = pfill.cloneNode( false );
+				pfill.parentNode.replaceChild( clone, pfill );
+			}
+
+			// Clear code lines and counters.
+			var linesEl = document.getElementById( 'naano-cla-code-lines' );
+			if ( linesEl ) { linesEl.innerHTML = ''; }
+			$( '#naano-cla-token-count' ).text( '0' );
+			$( '#naano-cla-line-count' ).text( '0' );
+			$( '#naano-cla-speed' ).text( '0' );
+			$( '#naano-cla-elapsed' ).text( '0.0' );
+
+			var state = {
+				lineIndex:    0,
+				tokenCount:   0,
+				elapsed:      0,
+				lastTime:     performance.now(),
+				lineTimer:    null,
+				statsTimer:   null,
+				rainInterval: null
+			};
+			NaanoBuilder._claState = state;
+
+			// ── Matrix rain ──────────────────────────────────────────────
+			var canvas  = document.getElementById( 'naano-cla-rain' );
+			var overlay = document.getElementById( 'naano-canvas-loading-overlay' );
+			if ( canvas && overlay ) {
+				canvas.width  = overlay.offsetWidth;
+				canvas.height = overlay.offsetHeight;
+				var ctx   = canvas.getContext( '2d' );
+				var chars = '01\u30A2\u30A4\u30A6\u30A8\u30AA{}[]<>/\\;:=()!?#';
+				var cols  = Math.floor( canvas.width / 18 );
+				var drops = new Array( cols ).fill( 1 );
+				state.rainInterval = setInterval( function () {
+					ctx.fillStyle = 'rgba(8,12,16,0.1)';
+					ctx.fillRect( 0, 0, canvas.width, canvas.height );
+					ctx.fillStyle = '#00e5ff';
+					ctx.font = '13px Courier New, monospace';
+					for ( var i = 0; i < drops.length; i++ ) {
+						var c = chars[ Math.floor( Math.random() * chars.length ) ];
+						ctx.fillText( c, i * 18, drops[ i ] * 18 );
+						if ( drops[ i ] * 18 > canvas.height && Math.random() > 0.97 ) { drops[ i ] = 0; }
+						drops[ i ]++;
+					}
+				}, 55 );
+			}
+
+			// ── Fake code lines ──────────────────────────────────────────
+			var codeData = [
+				[ [ 'k', '<!DOCTYPE ' ], [ 'p', 'html' ], [ 'k', '>' ] ],
+				[ [ 't', '<html ' ], [ 'a', 'lang' ], [ 'p', '=' ], [ 's', '"en"' ], [ 't', '>' ] ],
+				[ [ 't', '<head>' ] ],
+				[ [ 'c', '  <!-- meta & viewport -->' ] ],
+				[ [ 't', '  <meta ' ], [ 'a', 'charset' ], [ 'p', '=' ], [ 's', '"UTF-8"' ], [ 'p', '/>' ] ],
+				[ [ 't', '  <meta ' ], [ 'a', 'name' ], [ 'p', '="viewport" ' ], [ 'a', 'content' ], [ 'p', '=' ], [ 's', '"width=device-width"' ], [ 'p', '/>' ] ],
+				[ [ 't', '  <title>' ], [ 'p', 'Page' ], [ 't', '</title>' ] ],
+				[ [ 't', '</head>' ] ],
+				[ [ 't', '<body>' ] ],
+				[ [ 't', '  <div ' ], [ 'a', 'class' ], [ 'p', '=' ], [ 's', '"app"' ], [ 't', '>' ] ],
+				[ [ 't', '    <nav ' ], [ 'a', 'class' ], [ 'p', '=' ], [ 's', '"navbar"' ], [ 't', '>' ] ],
+				[ [ 't', '      <a ' ], [ 'a', 'href' ], [ 'p', '=' ], [ 's', '"/"' ], [ 't', '>' ], [ 'p', 'Home' ], [ 't', '</a>' ] ],
+				[ [ 't', '    </nav>' ] ],
+				[ [ 't', '    <main>' ] ],
+				[ [ 't', '      <section ' ], [ 'a', 'id' ], [ 'p', '=' ], [ 's', '"hero"' ], [ 't', '>' ] ],
+				[ [ 'k', '      <style>' ] ],
+				[ [ 'p', '        .hero { display: ' ], [ 'n', 'grid' ], [ 'p', '; }' ] ],
+				[ [ 'p', '          gap: ' ], [ 'n', '2rem' ], [ 'p', '; padding: ' ], [ 'n', '4rem 2rem' ], [ 'p', ';' ] ],
+				[ [ 'p', '          background: linear-gradient(' ] ],
+				[ [ 'n', '            135deg' ], [ 'p', ',' ] ],
+				[ [ 's', '            #0d1117' ], [ 'p', ', ' ], [ 's', '#1a1f2e' ], [ 'p', ' );' ] ],
+				[ [ 'k', '      </style>' ] ],
+				[ [ 't', '      </section>' ] ],
+				[ [ 't', '    </main>' ] ],
+				[ [ 't', '  </div>' ] ],
+				[ [ 'k', '<script>' ] ],
+				[ [ 'k', '  const ' ], [ 'f', 'init' ], [ 'p', ' = () => {' ] ],
+				[ [ 'k', '    const ' ], [ 'p', 'el = document.querySelector( ' ], [ 's', '"#app"' ], [ 'p', ' );' ] ],
+				[ [ 'p', '    el.classList.add( ' ], [ 's', '"ready"' ], [ 'p', ' );' ] ],
+				[ [ 'k', '    fetch' ], [ 'p', '( ' ], [ 's', '"/api/content"' ], [ 'p', ' )' ] ],
+				[ [ 'p', '      .' ], [ 'f', 'then' ], [ 'p', '( r => r.' ], [ 'f', 'json' ], [ 'p', '() )' ] ],
+				[ [ 'p', '      .' ], [ 'f', 'then' ], [ 'p', '( data => ' ], [ 'f', 'render' ], [ 'p', '( data ) );' ] ],
+				[ [ 'p', '  };' ] ],
+				[ [ 'f', '  document' ], [ 'p', '.addEventListener( ' ], [ 's', '"DOMContentLoaded"' ], [ 'p', ', init );' ] ],
+				[ [ 'k', '</script>' ] ],
+				[ [ 't', '</body>' ] ],
+				[ [ 't', '</html>' ] ]
+			];
+
+			function addCodeLine() {
+				var el = document.getElementById( 'naano-cla-code-lines' );
+				if ( ! el ) { return; }
+				var fragment = codeData[ state.lineIndex % codeData.length ];
+				var ln       = String( state.lineIndex + 1 ).padStart( 3, ' ' );
+				var inner    = fragment.map( function ( tok ) {
+					return '<span class="naano-cla-' + tok[ 0 ] + '">' +
+						tok[ 1 ].replace( /&/g, '&amp;' ).replace( /</g, '&lt;' ).replace( />/g, '&gt;' ) + '</span>';
+				} ).join( '' );
+				var row = document.createElement( 'div' );
+				row.className = 'naano-cla-code-line';
+				row.innerHTML = '<span class="naano-cla-ln">' + ln + '</span>' + inner;
+				el.appendChild( row );
+				// Move cursor to last line.
+				var old = el.querySelector( '.naano-cla-cursor' );
+				if ( old ) { old.remove(); }
+				var cur = document.createElement( 'span' );
+				cur.className = 'naano-cla-cursor';
+				row.appendChild( cur );
+				// Keep last 22 lines visible.
+				while ( el.children.length > 22 ) { el.removeChild( el.firstChild ); }
+				state.lineIndex++;
+				var charCount = fragment.reduce( function ( acc, t ) { return acc + t[ 1 ].length; }, 0 );
+				state.tokenCount += charCount;
+				var lc = document.getElementById( 'naano-cla-line-count' );
+				var tc = document.getElementById( 'naano-cla-token-count' );
+				if ( lc ) { lc.textContent = state.lineIndex; }
+				if ( tc ) { tc.textContent = state.tokenCount.toLocaleString(); }
+			}
+
+			function nextLine() {
+				state.lineTimer = setTimeout( function () {
+					if ( ! NaanoBuilder._claState ) { return; }
+					addCodeLine();
+					nextLine();
+				}, 120 + Math.random() * 160 );
+			}
+			nextLine();
+
+			// Stats interval.
+			state.statsTimer = setInterval( function () {
+				if ( ! NaanoBuilder._claState ) { return; }
+				var now = performance.now();
+				state.elapsed += ( now - state.lastTime ) / 1000;
+				state.lastTime  = now;
+				var speed     = state.elapsed > 0 ? Math.round( state.tokenCount / state.elapsed ) : 0;
+				var elapsedEl = document.getElementById( 'naano-cla-elapsed' );
+				var speedEl   = document.getElementById( 'naano-cla-speed' );
+				if ( elapsedEl ) { elapsedEl.textContent = state.elapsed.toFixed( 1 ); }
+				if ( speedEl )   { speedEl.textContent   = speed; }
+			}, 250 );
+		},
+
+		_claStop: function () {
+			var s = NaanoBuilder._claState;
+			if ( ! s ) { return; }
+			clearTimeout( s.lineTimer );
+			clearInterval( s.statsTimer );
+			clearInterval( s.rainInterval );
+			NaanoBuilder._claState = null;
 		},
 
 		_bindAssetsPanel: function () {
