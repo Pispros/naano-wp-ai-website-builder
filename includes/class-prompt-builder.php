@@ -308,6 +308,8 @@ Apple marketing pages
 {variables_block}
 
 {references_block}
+
+{custom_prompt_block}
 PROMPT;
 
 	/**
@@ -335,17 +337,23 @@ PROMPT;
 	/**
 	 * Build the full system prompt, replacing placeholders.
 	 *
+	 * Applies the `naano_system_prompt` filter so external code can modify
+	 * the assembled prompt before it is sent to the LLM.
+	 *
 	 * @return string Assembled system prompt.
 	 */
 	public function build_system_prompt(): string {
-		$vars_block = $this->build_variables_block();
-		$refs_block = $this->build_references_block();
+		$vars_block   = $this->build_variables_block();
+		$refs_block   = $this->build_references_block();
+		$custom_block = $this->build_custom_prompt_block();
 
-		return str_replace(
-			[ '{variables_block}', '{references_block}' ],
-			[ $vars_block, $refs_block ],
+		$prompt = str_replace(
+			[ '{variables_block}', '{references_block}', '{custom_prompt_block}' ],
+			[ $vars_block, $refs_block, $custom_block ],
 			$this->base_system_prompt
 		);
+
+		return (string) apply_filters( 'naano_system_prompt', $prompt );
 	}
 
 	/**
@@ -390,7 +398,6 @@ PROMPT;
 	 */
 	public function build_initial_message( string $description, array $section_types ): string {
 		$section_list = implode( ', ', $section_types );
-		$refs_block   = $this->build_references_block();
 
 		$pages_block = '';
 		if ( ! empty( $this->site_pages ) ) {
@@ -400,8 +407,6 @@ PROMPT;
 			}
 			$pages_block = implode( "\n", $lines ) . "\n";
 		}
-
-		$refs_section = $refs_block ? "\n\n{$refs_block}" : '';
 
 		return <<<MSG
 Create a complete, visually stunning, agency-quality website based on the following brief.
@@ -423,7 +428,7 @@ QUALITY CHECKLIST — before finalising each section confirm:
 ✓ Layout is fully responsive from 375px to 1280px+
 ✓ No placeholder "Lorem ipsum" text
 ✓ No missing alt attributes
-✓ CSS is scoped to the section root class{$refs_section}
+✓ CSS is scoped to the section root class
 MSG;
 	}
 
@@ -469,6 +474,61 @@ Output ONLY the updated section:
 <!-- END:{$section_id} -->
 
 Do NOT output any other sections or any text outside the markers.
+MSG;
+	}
+
+	/**
+	 * Build the user message for generating a single section in the initial
+	 * site-generation flow (one LLM call per section to avoid timeouts).
+	 *
+	 * References are already injected into the system prompt via {references_block},
+	 * so they are NOT repeated here.
+	 *
+	 * @param string $description  Site description / brief from user.
+	 * @param string $section_type Section type name (e.g. "hero", "features").
+	 * @return string User message content.
+	 */
+	public function build_single_section_message( string $description, string $section_type ): string {
+		$section_id  = sanitize_title( $section_type );
+		$pages_block = '';
+		if ( ! empty( $this->site_pages ) ) {
+			$lines = [ "\nSITE PAGES (use these exact URLs for navigation links):" ];
+			foreach ( $this->site_pages as $p ) {
+				$lines[] = '- ' . $p['title'] . ': ' . $p['url'];
+			}
+			$pages_block = implode( "\n", $lines ) . "\n";
+		}
+
+		return <<<MSG
+Create a single, visually stunning, agency-quality website section based on the following brief.
+
+BRIEF:
+{$description}
+{$pages_block}
+SECTION TO CREATE: {$section_type}
+
+The SECTION_ID for this section is "{$section_id}".
+
+Output ONLY this one section using the required markers:
+<!-- BEGIN:{$section_id} -->
+<section class="section-{$section_id}">
+<style>
+/* scoped styles here */
+</style>
+<!-- your full markup here -->
+</section>
+<!-- END:{$section_id} -->
+
+QUALITY CHECKLIST — before finalising confirm:
+✓ Typography follows the scale defined in the system prompt
+✓ Spacing uses the 8px grid — no arbitrary px values
+✓ Colors match the design variables and have sufficient contrast
+✓ Every interactive element has a hover/focus state
+✓ Layout is fully responsive from 375px to 1280px+
+✓ No placeholder "Lorem ipsum" text
+✓ No missing alt attributes
+✓ CSS scoped to .section-{$section_id} — single <style> block at top of the section
+✓ No JavaScript, no external CSS frameworks, no inline styles
 MSG;
 	}
 
@@ -568,5 +628,20 @@ MSG;
 		}
 
 		return implode( "\n", $lines );
+	}
+
+	/**
+	 * Build the custom system prompt block from the saved option.
+	 *
+	 * @return string Formatted custom prompt block, or empty string.
+	 */
+	private function build_custom_prompt_block(): string {
+		$custom = get_option( 'naano_custom_prompt', '' );
+		$custom = is_string( $custom ) ? trim( $custom ) : '';
+		if ( ! $custom ) {
+			return '';
+		}
+
+		return "════════════════════════════════\nADDITIONAL INSTRUCTIONS\n════════════════════════════════\n\n" . $custom;
 	}
 }

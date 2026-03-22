@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface {
 
 	private const API_ENDPOINT    = 'https://api.moonshot.cn/v1/chat/completions';
-	private const DEFAULT_MODEL   = 'kimi-k2-0711-preview';
+	private const DEFAULT_MODEL   = 'kimi-k2.5';
 	private const MAX_TOKENS      = 16000;
 	private const TIMEOUT_SECONDS = 180;
 
@@ -43,11 +43,15 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface {
 		);
 
 		$payload = [
-			'model'       => $this->model,
-			'max_tokens'  => self::MAX_TOKENS,
-			'temperature' => 1.0,
-			'messages'    => $all_messages,
+			'model'                => $this->model,
+			'max_completion_tokens' => self::MAX_TOKENS,
+			'messages'             => $all_messages,
 		];
+
+		// kimi-k2.5 does not allow modifying temperature.
+		if ( stripos( $this->model, 'kimi-k2.5' ) === false ) {
+			$payload['temperature'] = 0.6;
+		}
 
 		$response = $this->request( $payload );
 

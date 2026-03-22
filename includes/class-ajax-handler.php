@@ -24,6 +24,10 @@ class Naano_Ajax_Handler {
 			'naano_generate_site',
 			'naano_update_section',
 			'naano_test_connection',
+			'naano_save_api_key',
+			'naano_save_global_config',
+			'naano_save_assets',
+			'naano_save_redirects',
 			'naano_add_reference',
 			'naano_remove_reference',
 			'naano_delete_section',
@@ -43,11 +47,13 @@ class Naano_Ajax_Handler {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Generate a full website section-by-section.
+	 * Generate a full website, one LLM call per section.
 	 *
 	 * POST: page_id, description, sections[] (section type names)
 	 */
 	public static function handle_naano_generate_site(): void {
+		set_time_limit( 0 );
+		ignore_user_abort( true );
 		self::verify_nonce();
 
 		$page_id     = self::get_int( 'page_id' );
@@ -92,14 +98,13 @@ class Naano_Ajax_Handler {
 		// Save any imported sections — fetch HTML from DB using the source page reference
 		// so we never trust client-supplied HTML (avoids sanitization stripping CSS/styles).
 		if ( ! empty( $imported_data ) ) {
-			$imp_sm  = new Naano_Section_Manager();
-			$src_cache = []; // cache get_sections() calls per source page
+			$imp_sm    = new Naano_Section_Manager();
+			$src_cache = [];
 			foreach ( $imported_data as $imp ) {
-				$imp_id     = sanitize_key( $imp['id']            ?? '' );
-				$imp_type   = sanitize_key( $imp['type']          ?? '' );
-				$src_pid    = (int) ( $imp['sourcePageId']        ?? 0 );
+				$imp_id  = sanitize_key( $imp['id']         ?? '' );
+				$imp_type = sanitize_key( $imp['type']       ?? '' );
+				$src_pid = (int) ( $imp['sourcePageId']      ?? 0 );
 				if ( ! $imp_id || ! $src_pid ) { continue; }
-				// Auth check: source page must exist and have Naano sections.
 				if ( ! isset( $src_cache[ $src_pid ] ) ) {
 					$src_cache[ $src_pid ] = $imp_sm->get_sections( $src_pid );
 				}
@@ -116,7 +121,7 @@ class Naano_Ajax_Handler {
 			}
 		}
 
-		// If only imported sections were requested (no AI generation), return immediately.
+		// Imported-only request — no LLM needed.
 		if ( empty( $sections ) ) {
 			$sm = new Naano_Section_Manager();
 			wp_send_json_success( [
@@ -124,6 +129,7 @@ class Naano_Ajax_Handler {
 				'sections' => $sm->get_sections( $page_id ),
 				'html'     => $sm->get_assembled_html( $page_id ),
 			] );
+			return;
 		}
 
 		try {
@@ -132,33 +138,29 @@ class Naano_Ajax_Handler {
 			$vars    = get_option( 'naano_variables', [] );
 			$builder->set_variables( is_array( $vars ) ? $vars : [] );
 
-			// Extract any URLs mentioned in the description and fetch their content
-			// server-side, so the LLM can actually replicate the referenced websites.
+			// Fetch any URLs mentioned in the description once, reuse for every section.
 			preg_match_all( '/https?:\/\/[^\s,"\'<>]+/i', $description, $url_matches );
 			$desc_refs = [];
 			foreach ( array_unique( $url_matches[0] ?? [] ) as $desc_url ) {
-				$desc_url = rtrim( $desc_url, '.,;)\'"' ); // strip trailing punctuation
-				$content  = Naano_Reference_Manager::fetch_url_text( $desc_url );
+				$desc_url    = rtrim( $desc_url, '.,;)\'"' );
 				$desc_refs[] = [
 					'url'     => $desc_url,
 					'notes'   => 'mentioned in site description',
-					'content' => $content,
+					'content' => Naano_Reference_Manager::fetch_url_text( $desc_url ),
 				];
 			}
 			if ( ! empty( $desc_refs ) ) {
 				$builder->set_references( $desc_refs );
 			}
 
-			// Collect all published Naano pages so the LLM can use correct
-			// navigation links between pages.
+			// Collect other Naano pages for navigation links.
 			$naano_pages = get_posts( [
 				'post_type'      => 'page',
 				'post_status'    => [ 'publish', 'draft' ],
 				'posts_per_page' => -1,
 				'meta_key'       => '_naano_sections',
-				'exclude'        => $page_id ? [ $page_id ] : [],
+				'exclude'        => [ $page_id ],
 			] );
-
 			$site_pages = [];
 			foreach ( $naano_pages as $np ) {
 				$site_pages[] = [
@@ -168,35 +170,22 @@ class Naano_Ajax_Handler {
 			}
 			$builder->set_site_pages( $site_pages );
 
-			$system  = $builder->build_system_prompt();
-			$message = $builder->build_initial_message( $description, $sections );
-
-			$raw_html = $router->generate( $system, [ [ 'role' => 'user', 'content' => $message ] ] );
-
-			// Parse sections from LLM response.
+			$system          = $builder->build_system_prompt();
 			$section_manager = new Naano_Section_Manager();
-			$conversation    = new Naano_Conversation();
 
-			$parsed = [];
+			// Generate each section with its own focused LLM call + 1 refinement pass.
 			foreach ( $sections as $section_type ) {
-				$section_id  = sanitize_title( $section_type );
+				$section_id   = sanitize_title( $section_type );
+				$message      = $builder->build_single_section_message( $description, $section_type );
+				$raw_html     = self::generate_and_refine( $router, $system, [ [ 'role' => 'user', 'content' => $message ] ], [], $section_id, (int) get_option( 'naano_initial_refinement_passes', 1 ) );
 				$section_html = Naano_HTML_Sanitizer::extract_section( $raw_html, $section_id );
 
-				if ( $section_html ) {
-					$section_manager->update_section( $page_id, $section_id, $section_html, $section_type );
-					$parsed[ $section_id ] = $section_html;
+				if ( ! $section_html ) {
+					$section_html = $raw_html;
 				}
-			}
 
-			// If no markers found, treat entire response as single block.
-			if ( empty( $parsed ) ) {
-				$section_id = 'main';
-				$section_manager->update_section( $page_id, $section_id, $raw_html, 'main' );
-				$parsed[ $section_id ] = $raw_html;
+				$section_manager->update_section( $page_id, $section_id, $section_html, $section_type );
 			}
-
-			$conversation->add_message( $page_id, 'user', $message );
-			$conversation->add_message( $page_id, 'assistant', $raw_html );
 
 			wp_send_json_success( [
 				'page_id'  => $page_id,
@@ -214,6 +203,8 @@ class Naano_Ajax_Handler {
 	 * POST: page_id, section_id, instruction
 	 */
 	public static function handle_naano_update_section(): void {
+		set_time_limit( 0 );
+		ignore_user_abort( true );
 		self::verify_nonce();
 
 		$page_id    = self::get_int( 'page_id' );
@@ -260,7 +251,7 @@ class Naano_Ajax_Handler {
 				$url_refs = $ref_manager->prepare_url_references( $page_id, $section_id );
 			}
 
-			$builder = new Naano_Prompt_Builder();
+			$builder = new ²();
 			$vars    = get_option( 'naano_variables', [] );
 			$builder->set_variables( is_array( $vars ) ? $vars : [] );
 			$builder->set_references( $url_refs );
@@ -273,7 +264,7 @@ class Naano_Ajax_Handler {
 
 			$history[] = [ 'role' => 'user', 'content' => $message ];
 
-			$raw_html     = $router->generate( $system, $history, $images );
+			$raw_html     = self::generate_and_refine( $router, $system, $history, $images, $section_id, (int) get_option( 'naano_update_refinement_passes', 1 ) );
 			$section_html = Naano_HTML_Sanitizer::extract_section( $raw_html, $section_id );
 
 			if ( ! $section_html ) {
@@ -293,6 +284,49 @@ class Naano_Ajax_Handler {
 		} catch ( \Throwable $e ) {
 			wp_send_json_error( [ 'message' => $e->getMessage() ] );
 		}
+	}
+
+	/**
+	 * Save the API key independently via AJAX.
+	 */
+	public static function handle_naano_save_api_key(): void {
+		self::verify_nonce();
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
+
+		if ( empty( $api_key ) ) {
+			wp_send_json_error( [ 'message' => __( 'API key cannot be empty.', 'naano-ai-website-builder' ) ] );
+		}
+
+		update_option( 'naano_api_key', $api_key );
+
+		wp_send_json_success( [ 'message' => __( 'API key saved.', 'naano-ai-website-builder' ) ] );
+	}
+
+	/**
+	 * Save global configuration via AJAX.
+	 */
+	public static function handle_naano_save_global_config(): void {
+		self::verify_nonce();
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$initial = absint( $_POST['initial_refinement_passes'] ?? 1 );
+		$update  = absint( $_POST['update_refinement_passes']  ?? 3 );
+
+		if ( $initial > 10 ) { $initial = 10; }
+		if ( $update  > 10 ) { $update  = 10; }
+
+		update_option( 'naano_initial_refinement_passes', $initial );
+		update_option( 'naano_update_refinement_passes', $update );
+
+		wp_send_json_success( [ 'message' => __( 'Global config saved.', 'naano-ai-website-builder' ) ] );
 	}
 
 	/**
@@ -322,6 +356,71 @@ class Naano_Ajax_Handler {
 		} catch ( \Throwable $e ) {
 			wp_send_json_error( [ 'message' => $e->getMessage() ] );
 		}
+	}
+
+	/**
+	 * Save page-level assets.
+	 *
+	 * POST: page_id, assets (JSON)
+	 */
+	public static function handle_naano_save_assets(): void {
+		self::verify_nonce();
+
+		$page_id = self::get_int( 'page_id' );
+		if ( ! $page_id ) {
+			wp_send_json_error( [ 'message' => __( 'Missing page ID.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$raw    = wp_unslash( $_POST['assets'] ?? '[]' );
+		$assets = json_decode( $raw, true );
+		if ( ! is_array( $assets ) ) {
+			$assets = [];
+		}
+
+		// Sanitise each entry.
+		$clean = [];
+		foreach ( $assets as $a ) {
+			if ( ! is_array( $a ) || empty( $a['url'] ) ) { continue; }
+			$clean[] = [
+				'url'  => esc_url_raw( $a['url'] ),
+				'desc' => sanitize_text_field( $a['desc'] ?? '' ),
+			];
+		}
+
+		update_post_meta( $page_id, '_naano_assets', $clean );
+		wp_send_json_success();
+	}
+
+	/**
+	 * Save page-level redirects.
+	 *
+	 * POST: page_id, redirects (JSON)
+	 */
+	public static function handle_naano_save_redirects(): void {
+		self::verify_nonce();
+
+		$page_id = self::get_int( 'page_id' );
+		if ( ! $page_id ) {
+			wp_send_json_error( [ 'message' => __( 'Missing page ID.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$raw       = wp_unslash( $_POST['redirects'] ?? '[]' );
+		$redirects = json_decode( $raw, true );
+		if ( ! is_array( $redirects ) ) {
+			$redirects = [];
+		}
+
+		$clean = [];
+		foreach ( $redirects as $r ) {
+			if ( ! is_array( $r ) || empty( $r['label'] ) || empty( $r['url'] ) ) { continue; }
+			$clean[] = [
+				'label' => sanitize_text_field( $r['label'] ),
+				'url'   => esc_url_raw( $r['url'] ),
+			];
+		}
+
+		update_post_meta( $page_id, '_naano_redirects', $clean );
+		wp_send_json_success();
 	}
 
 	/**
@@ -538,6 +637,63 @@ class Naano_Ajax_Handler {
 	// -------------------------------------------------------------------------
 
 	/**
+	 * Run the initial LLM generation then refine the result a given number of times.
+	 *
+	 * Each refinement pass appends the previous assistant response to the
+	 * conversation and asks the LLM to self-review against the design standards
+	 * in the system prompt. Stops early if a pass returns an empty response.
+	 *
+	 * Images are passed only on the first call – the LLM already has that
+	 * context captured in its initial response for subsequent refinement turns.
+	 *
+	 * @param Naano_LLM_Router $router
+	 * @param string           $system     Assembled system prompt.
+	 * @param array            $messages   Full message history including the initial user message.
+	 * @param array            $images     Optional image references (first call only).
+	 * @param string           $section_id Section ID used to build the BEGIN/END marker hint.
+	 * @param int              $passes     Number of refinement passes to run.
+	 * @return string Final HTML after all passes.
+	 */
+	private static function generate_and_refine(
+		Naano_LLM_Router $router,
+		string $system,
+		array $messages,
+		array $images = [],
+		string $section_id = '',
+		int $passes = 1
+	): string {
+		$html    = $router->generate( $system, $messages, $images );
+		$history = $messages;
+
+		$marker = $section_id
+			? "Return ONLY the improved section wrapped in its required markers:\n<!-- BEGIN:{$section_id} -->\n…improved HTML here…\n<!-- END:{$section_id} -->"
+			: 'Return ONLY the improved HTML using the same <!-- BEGIN --> / <!-- END --> markers as before.';
+
+		for ( $pass = 1; $pass <= $passes; $pass++ ) {
+			$history[] = [ 'role' => 'assistant', 'content' => $html ];
+			$history[] = [
+				'role'    => 'user',
+				'content' => "Refinement pass {$pass}/{$passes} — self-review the section you just produced and improve it:\n\n"
+					. "✓ CSS fully scoped to the section root class — zero leaking or global selectors\n"
+					. "✓ Responsive from 375 px → 1280 px+ — verify every breakpoint mentally\n"
+					. "✓ Typography scale and 8 px spacing grid enforced throughout\n"
+					. "✓ Every interactive element has a clearly visible hover and focus state\n"
+					. "✓ Visual quality matches a premium agency — improve polish, contrast, and depth\n"
+					. "✓ No placeholder text, no missing alt attributes, no JavaScript, no inline styles\n\n"
+					. $marker,
+			];
+
+			$refined = $router->generate( $system, $history );
+			if ( ! trim( $refined ) ) {
+				break; // stop early if a pass produces nothing
+			}
+			$html = $refined;
+		}
+
+		return $html;
+	}
+
+	/**
 	 * Verify AJAX nonce, die on failure.
 	 *
 	 * @return void
@@ -565,7 +721,7 @@ class Naano_Ajax_Handler {
 	private static function build_router(): Naano_LLM_Router {
 		$provider = get_option( 'naano_provider', 'claude' );
 		$api_key  = get_option( 'naano_api_key', '' );
-		$model    = get_option( 'naano_model', '' );
+		$model    = (string) get_option( 'naano_model', '' );
 
 		if ( ! $api_key ) {
 			throw new RuntimeException(

@@ -122,6 +122,16 @@
 				NaanoBuilder._refreshLivePreview();
 				NaanoBuilder._renderSectionsList();
 			}
+
+			// Restore persisted assets & redirects.
+			if ( data.assets && data.assets.length ) {
+				NaanoBuilder.pageAssets = data.assets.slice();
+				NaanoBuilder._renderAssetList();
+			}
+			if ( data.redirects && data.redirects.length ) {
+				NaanoBuilder.pageRedirects = data.redirects.slice();
+				NaanoBuilder._renderRedirectList();
+			}
 		},
 
 		// =====================================================================
@@ -175,10 +185,9 @@
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
 				NaanoBuilder._hideCanvasLoading();
-				if ( response.success ) {
+				if ( response && response.success ) {
 					NaanoBuilder.pageId = response.data.page_id || NaanoBuilder.pageId;
 
-					// Store sections in memory.
 					if ( Array.isArray( response.data.sections ) ) {
 						NaanoBuilder.sectionsData = response.data.sections.slice();
 					} else {
@@ -188,7 +197,6 @@
 						} );
 					}
 
-					// Update page name display.
 					if ( pageName ) {
 						$( '#naano-current-page-name' ).text( pageName );
 					}
@@ -202,13 +210,91 @@
 						.removeClass( 'naano-import-section-btn--selected' )
 						.find( '.naano-import-check' ).hide();
 				} else {
-					NaanoBuilder._toast( ( response.data && response.data.message ) || data.strings.error_generic, 'error' );
+					NaanoBuilder._toast( ( response && response.data && response.data.message ) || data.strings.error_generic, 'error' );
 				}
 			} )
 			.fail( function () {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
 				NaanoBuilder._hideCanvasLoading();
 				NaanoBuilder._toast( data.strings.error_generic, 'error' );
+			} );
+		},
+
+		/**
+		 * Recursively generate each section in sequence (initial site generation).
+		 * Each call produces one LLM request so no individual request can time out.
+		 *
+		 * @param {string[]} sections      Ordered list of section type names.
+		 * @param {string}   description   Site brief.
+		 * @param {number}   index         Current position in the list.
+		 * @param {number}   [successCount] Sections successfully generated so far.
+		 * @param {string}   [lastError]    Last error message received, if any.
+		 */
+		_generateSectionsSequential: function ( sections, description, index, successCount, lastError ) {
+			successCount = successCount || 0;
+			lastError    = lastError    || '';
+
+			if ( index >= sections.length ) {
+				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
+				NaanoBuilder._hideCanvasLoading();
+				NaanoBuilder.importedSections = [];
+				$( '.naano-import-section-btn' )
+					.removeClass( 'naano-import-section-btn--selected' )
+					.find( '.naano-import-check' ).hide();
+
+				if ( successCount > 0 ) {
+					var msg = successCount === sections.length
+						? 'Website generated successfully! 🎉'
+						: successCount + ' of ' + sections.length + ' sections generated. ⚠️';
+					NaanoBuilder._toast( msg, successCount === sections.length ? 'success' : 'warning' );
+				} else {
+					NaanoBuilder._toast(
+						'Generation failed: ' + ( lastError || 'unknown error — check API settings.' ),
+						'error'
+					);
+				}
+				return;
+			}
+
+			var sectionType = sections[ index ];
+			var label = sectionType.charAt( 0 ).toUpperCase() + sectionType.slice( 1 ).replace( /-/g, ' ' );
+
+			$( '#naano-cla-title-text' ).text( label + ' (' + ( index + 1 ) + '/' + sections.length + ') — generating' );
+			$( '#naano-cla-filename' ).text( sectionType + '.html' );
+
+			$.post( data.ajaxUrl, {
+				action:       'naano_generate_site_section',
+				nonce:        data.nonce,
+				page_id:      NaanoBuilder.pageId,
+				description:  description,
+				section_type: sectionType
+			} )
+			.done( function ( response ) {
+				if ( response && response.success ) {
+					var id   = response.data.section_id;
+					var html = response.data.section_html;
+
+					var existing = NaanoBuilder._findSectionIndex( id );
+					if ( existing === -1 ) {
+						NaanoBuilder.sectionsData.push( { id: id, html: html } );
+					} else {
+						NaanoBuilder.sectionsData[ existing ].html = html;
+					}
+
+					NaanoBuilder._refreshLivePreview();
+					NaanoBuilder._renderSectionsList();
+					NaanoBuilder._generateSectionsSequential( sections, description, index + 1, successCount + 1, lastError );
+				} else {
+					var errMsg = ( response && response.data && response.data.message )
+						? response.data.message
+						: data.strings.error_generic;
+					NaanoBuilder._toast( label + ': ' + errMsg, 'error' );
+					NaanoBuilder._generateSectionsSequential( sections, description, index + 1, successCount, errMsg );
+				}
+			} )
+			.fail( function () {
+				NaanoBuilder._toast( label + ': ' + data.strings.error_generic, 'error' );
+				NaanoBuilder._generateSectionsSequential( sections, description, index + 1, successCount, data.strings.error_generic );
 			} );
 		},
 
@@ -1734,6 +1820,7 @@
 				if ( ! url ) { $( '#naano-asset-url' ).focus(); return; }
 				NaanoBuilder.pageAssets.push( { url: url, desc: desc } );
 				NaanoBuilder._renderAssetList();
+				NaanoBuilder._persistAssets();
 				$( '#naano-add-asset-form' ).hide().find( 'input' ).val( '' );
 				$( '#naano-asset-picker' ).show();
 			} );
@@ -1742,6 +1829,7 @@
 				var idx = parseInt( $( this ).data( 'index' ), 10 );
 				NaanoBuilder.pageAssets.splice( idx, 1 );
 				NaanoBuilder._renderAssetList();
+				NaanoBuilder._persistAssets();
 			} );
 
 			$( document ).on( 'keydown', '#naano-asset-url, #naano-asset-desc', function ( e ) {
@@ -1775,6 +1863,7 @@
 				var attachment = frame.state().get( 'selection' ).first().toJSON();
 				NaanoBuilder.pageAssets.push( { url: attachment.url, desc: attachment.title || '' } );
 				NaanoBuilder._renderAssetList();
+				NaanoBuilder._persistAssets();
 				NaanoBuilder._toast( 'Asset added!', 'success' );
 			} );
 
@@ -1806,6 +1895,7 @@
 				}
 				NaanoBuilder.pageRedirects.push( { label: label, url: url } );
 				NaanoBuilder._renderRedirectList();
+				NaanoBuilder._persistRedirects();
 				$( '#naano-add-redirect-form' ).hide().find( 'input' ).val( '' );
 				$( '#naano-add-redirect-btn' ).show();
 			} );
@@ -1814,6 +1904,7 @@
 				var idx = parseInt( $( this ).data( 'index' ), 10 );
 				NaanoBuilder.pageRedirects.splice( idx, 1 );
 				NaanoBuilder._renderRedirectList();
+				NaanoBuilder._persistRedirects();
 			} );
 
 			$( document ).on( 'keydown', '#naano-redirect-label, #naano-redirect-url', function ( e ) {
@@ -1830,6 +1921,26 @@
 						.append( $( '<span>' ).text( label ) )
 						.append( ' <button type="button" class="naano-remove-ref-btn naano-remove-redirect-btn" data-index="' + i + '">✕</button>' )
 				);
+			} );
+		},
+
+		_persistAssets: function () {
+			if ( ! NaanoBuilder.pageId ) { return; }
+			$.post( data.ajaxUrl, {
+				action:  'naano_save_assets',
+				nonce:   data.nonce,
+				page_id: NaanoBuilder.pageId,
+				assets:  JSON.stringify( NaanoBuilder.pageAssets )
+			} );
+		},
+
+		_persistRedirects: function () {
+			if ( ! NaanoBuilder.pageId ) { return; }
+			$.post( data.ajaxUrl, {
+				action:    'naano_save_redirects',
+				nonce:     data.nonce,
+				page_id:   NaanoBuilder.pageId,
+				redirects: JSON.stringify( NaanoBuilder.pageRedirects )
 			} );
 		},
 

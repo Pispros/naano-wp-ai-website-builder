@@ -20,7 +20,10 @@ $languages            = get_option( 'naano_languages', [] );
 if ( ! is_array( $languages ) ) {
 	$languages = [];
 }
+$custom_prompt        = get_option( 'naano_custom_prompt', '' );
 $default_lang_label   = get_option( 'naano_default_lang_label', '' );
+$initial_refine       = get_option( 'naano_initial_refinement_passes', 1 );
+$update_refine        = get_option( 'naano_update_refinement_passes', 1 );
 ?>
 <div class="wrap naano-builder-wrap">
 	<h1 class="naano-page-title">
@@ -33,6 +36,7 @@ $default_lang_label   = get_option( 'naano_default_lang_label', '' );
 	<nav class="nav-tab-wrapper naano-settings-tab-nav" style="margin-bottom:0;border-bottom:1px solid #c3c4c7;">
 		<button type="button" class="nav-tab nav-tab-active" data-naano-tab="llm"><?php esc_html_e( 'LLM Provider', 'naano-ai-website-builder' ); ?></button>
 		<button type="button" class="nav-tab" data-naano-tab="variables"><?php esc_html_e( 'Design Variables', 'naano-ai-website-builder' ); ?></button>
+		<button type="button" class="nav-tab" data-naano-tab="global"><?php esc_html_e( 'Global Config', 'naano-ai-website-builder' ); ?></button>
 		<button type="button" class="nav-tab" data-naano-tab="translation"><?php esc_html_e( 'Translation', 'naano-ai-website-builder' ); ?></button>
 	</nav>
 
@@ -70,6 +74,13 @@ $default_lang_label   = get_option( 'naano_default_lang_label', '' );
 							   class="regular-text"
 							   value="<?php echo esc_attr( $api_key ); ?>"
 							   autocomplete="new-password">
+						<button type="button" class="button" id="naano-save-api-key-btn" style="margin-left:8px;">
+							<?php esc_html_e( 'Save Key', 'naano-ai-website-builder' ); ?>
+						</button>
+						<span class="naano-loading" id="naano-save-key-loading" style="display:none;">
+							<span class="spinner is-active"></span>
+						</span>
+						<span id="naano-save-key-result" style="display:none;margin-left:8px;"></span>
 						<p class="description">
 							<?php esc_html_e( 'Your API key is stored in the WordPress options table. Use a read-only key when possible.', 'naano-ai-website-builder' ); ?>
 						</p>
@@ -104,6 +115,65 @@ $default_lang_label   = get_option( 'naano_default_lang_label', '' );
 			</div>
 		</div><!-- /.naano-card -->
 		</div><!-- /.naano-settings-panel#llm -->
+
+		<!-- ============================================================
+		     GLOBAL CONFIG
+		     ============================================================ -->
+		<div class="naano-settings-panel" id="naano-panel-global" style="display:none;">
+		<div class="naano-card" style="margin-top:20px;">
+			<h2><?php esc_html_e( 'Global Configuration', 'naano-ai-website-builder' ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'Control how many self-review refinement passes the LLM runs after generation. More passes improve quality but take longer.', 'naano-ai-website-builder' ); ?>
+			</p>
+
+			<table class="form-table">
+				<tr>
+					<th scope="row">
+						<label for="naano_initial_refinement_passes"><?php esc_html_e( 'Initial Generation Refinements', 'naano-ai-website-builder' ); ?></label>
+					</th>
+					<td>
+						<input type="number"
+							   name="naano_initial_refinement_passes"
+							   id="naano_initial_refinement_passes"
+							   class="small-text"
+							   value="<?php echo esc_attr( $initial_refine ); ?>"
+							   min="0"
+							   max="10">
+						<p class="description">
+							<?php esc_html_e( 'Number of refinement passes when generating a new site. Each pass adds one extra LLM call per section. (Default: 1)', 'naano-ai-website-builder' ); ?>
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">
+						<label for="naano_update_refinement_passes"><?php esc_html_e( 'Section Update Refinements', 'naano-ai-website-builder' ); ?></label>
+					</th>
+					<td>
+						<input type="number"
+							   name="naano_update_refinement_passes"
+							   id="naano_update_refinement_passes"
+							   class="small-text"
+							   value="<?php echo esc_attr( $update_refine ); ?>"
+							   min="0"
+							   max="10">
+						<p class="description">
+							<?php esc_html_e( 'Number of refinement passes when updating an existing section. Each pass adds one extra LLM call. (Default: 1)', 'naano-ai-website-builder' ); ?>
+						</p>
+					</td>
+				</tr>
+			</table>
+
+			<div style="margin-top:10px;">
+				<button type="button" class="button button-primary" id="naano-save-global-config-btn">
+					<?php esc_html_e( 'Save Global Config', 'naano-ai-website-builder' ); ?>
+				</button>
+				<span class="naano-loading" id="naano-save-global-loading" style="display:none;">
+					<span class="spinner is-active"></span>
+				</span>
+				<span id="naano-save-global-result" style="display:none;margin-left:8px;"></span>
+			</div>
+		</div><!-- /.naano-card -->
+		</div><!-- /.naano-settings-panel#global -->
 
 		<!-- ============================================================
 		     DESIGN VARIABLES
@@ -172,10 +242,29 @@ $default_lang_label   = get_option( 'naano_default_lang_label', '' );
 				+ <?php esc_html_e( 'Add Variable', 'naano-ai-website-builder' ); ?>
 			</button>
 		</div><!-- /.naano-card -->
-		</div><!-- /.naano-settings-panel#variables -->
 
-		<!-- ============================================================
-		     LANGUAGES (for translation feature)
+	<div class="naano-card" style="margin-top:20px;">
+		<h2><?php esc_html_e( 'Custom System Prompt', 'naano-ai-website-builder' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Additional instructions appended to every system prompt. Use this to enforce brand tone, content rules, or any site-specific constraints.', 'naano-ai-website-builder' ); ?>
+		</p>
+		<table class="form-table">
+			<tr>
+				<th scope="row">
+					<label for="naano_custom_prompt"><?php esc_html_e( 'Additional Instructions', 'naano-ai-website-builder' ); ?></label>
+				</th>
+				<td>
+					<textarea
+						name="naano_custom_prompt"
+						id="naano_custom_prompt"
+						class="large-text"
+						rows="6"
+						placeholder="<?php esc_attr_e( 'e.g. Always write copy in a friendly, conversational tone. Avoid formal language. The brand voice is warm and approachable.', 'naano-ai-website-builder' ); ?>"><?php echo esc_textarea( $custom_prompt ); ?></textarea>
+					<p class="description"><?php esc_html_e( 'These instructions are appended to the system prompt for every LLM call. You can also modify the full assembled prompt programmatically via the naano_system_prompt WordPress filter.', 'naano-ai-website-builder' ); ?></p>
+				</td>
+			</tr>
+		</table>
+	</div><!-- /.naano-card -->
 		     ============================================================ -->
 		<div class="naano-settings-panel" id="naano-panel-translation" style="display:none;">
 		<div class="naano-card" style="margin-top:20px;">
@@ -306,6 +395,82 @@ jQuery(function($){	// Settings tab switching.
 	// Remove language row.
 	$(document).on('click', '.naano-remove-language', function(){
 		$(this).closest('tr').remove();
+	});
+
+	// Save global config.
+	$('#naano-save-global-config-btn').on('click', function(){
+		var $btn    = $(this);
+		var $load   = $('#naano-save-global-loading');
+		var $result = $('#naano-save-global-result');
+
+		$btn.prop('disabled', true);
+		$load.show();
+		$result.hide();
+
+		$.post(
+			<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
+			{
+				action:                     'naano_save_global_config',
+				nonce:                      <?php echo wp_json_encode( wp_create_nonce( 'naano_builder_nonce' ) ); ?>,
+				initial_refinement_passes:  $('#naano_initial_refinement_passes').val(),
+				update_refinement_passes:   $('#naano_update_refinement_passes').val()
+			},
+			function(response){
+				$load.hide();
+				$btn.prop('disabled', false);
+				$result.show();
+				if(response.success){
+					$result.html('<span class="naano-success">✅ ' + response.data.message + '</span>');
+				} else {
+					$result.html('<span class="naano-error">❌ ' + response.data.message + '</span>');
+				}
+			}
+		).fail(function(){
+			$load.hide();
+			$btn.prop('disabled', false);
+			$result.show().html('<span class="naano-error">❌ <?php echo esc_js( __( 'Request failed.', 'naano-ai-website-builder' ) ); ?></span>');
+		});
+	});
+
+	// Save API key.
+	$('#naano-save-api-key-btn').on('click', function(){
+		var $btn    = $(this);
+		var $load   = $('#naano-save-key-loading');
+		var $result = $('#naano-save-key-result');
+		var apiKey  = $('#naano_api_key').val();
+
+		if ( ! apiKey ) {
+			$result.show().html('<span class="naano-error">⚠️ <?php echo esc_js( __( 'Please enter an API key.', 'naano-ai-website-builder' ) ); ?></span>');
+			$('#naano_api_key').focus();
+			return;
+		}
+
+		$btn.prop('disabled', true);
+		$load.show();
+		$result.hide();
+
+		$.post(
+			<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
+			{
+				action:  'naano_save_api_key',
+				nonce:   <?php echo wp_json_encode( wp_create_nonce( 'naano_builder_nonce' ) ); ?>,
+				api_key: apiKey
+			},
+			function(response){
+				$load.hide();
+				$btn.prop('disabled', false);
+				$result.show();
+				if(response.success){
+					$result.html('<span class="naano-success">✅ ' + response.data.message + '</span>');
+				} else {
+					$result.html('<span class="naano-error">❌ ' + response.data.message + '</span>');
+				}
+			}
+		).fail(function(){
+			$load.hide();
+			$btn.prop('disabled', false);
+			$result.show().html('<span class="naano-error">❌ <?php echo esc_js( __( 'Request failed.', 'naano-ai-website-builder' ) ); ?></span>');
+		});
 	});
 
 	// Test connection.

@@ -220,6 +220,15 @@ class Naano_Admin_Page {
 
 		register_setting(
 			'naano_settings_group',
+			'naano_custom_prompt',
+			[
+				'sanitize_callback' => 'sanitize_textarea_field',
+				'default'           => '',
+			]
+		);
+
+		register_setting(
+			'naano_settings_group',
 			'naano_variables',
 			[
 				'sanitize_callback' => [ $this, 'sanitize_variables' ],
@@ -242,6 +251,24 @@ class Naano_Admin_Page {
 			[
 				'sanitize_callback' => 'sanitize_text_field',
 				'default'           => '',
+			]
+		);
+
+		register_setting(
+			'naano_settings_group',
+			'naano_initial_refinement_passes',
+			[
+				'sanitize_callback' => 'absint',
+				'default'           => 1,
+			]
+		);
+
+		register_setting(
+			'naano_settings_group',
+			'naano_update_refinement_passes',
+			[
+				'sanitize_callback' => 'absint',
+				'default'           => 1,
 			]
 		);
 	}
@@ -750,12 +777,19 @@ HTML;
 			}
 		}
 
+		$saved_assets    = $page_id ? get_post_meta( $page_id, '_naano_assets', true )    : [];
+		$saved_redirects = $page_id ? get_post_meta( $page_id, '_naano_redirects', true ) : [];
+		if ( ! is_array( $saved_assets ) )    { $saved_assets    = []; }
+		if ( ! is_array( $saved_redirects ) ) { $saved_redirects = []; }
+
 		wp_localize_script( 'naano-builder', 'naanoBuilderData', [
 			'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
 			'nonce'              => wp_create_nonce( 'naano_builder_nonce' ),
 			'pageId'             => $page_id,
 			'sections'           => $sections,
 			'references'         => $references,
+			'assets'             => $saved_assets,
+			'redirects'          => $saved_redirects,
 			'modelLabel'         => $model_label,
 			'existingComponents' => $existing_components,
 			'currentLang'        => $current_lang,
