@@ -35,8 +35,9 @@ $update_refine        = get_option( 'naano_update_refinement_passes', 1 );
 
 	<nav class="nav-tab-wrapper naano-settings-tab-nav" style="margin-bottom:0;border-bottom:1px solid #c3c4c7;">
 		<button type="button" class="nav-tab nav-tab-active" data-naano-tab="llm"><?php esc_html_e( 'LLM Provider', 'naano-ai-website-builder' ); ?></button>
-		<button type="button" class="nav-tab" data-naano-tab="variables"><?php esc_html_e( 'Design Variables', 'naano-ai-website-builder' ); ?></button>
-		<button type="button" class="nav-tab" data-naano-tab="global"><?php esc_html_e( 'Global Config', 'naano-ai-website-builder' ); ?></button>
+		<button type="button" class="nav-tab" data-naano-tab="variables"><?php esc_html_e( 'Prompt Global Variables', 'naano-ai-website-builder' ); ?></button>
+		<button type="button" class="nav-tab" data-naano-tab="global"><?php esc_html_e( 'Global Configurations', 'naano-ai-website-builder' ); ?></button>
+		<button type="button" class="nav-tab" data-naano-tab="firecrawl"><?php esc_html_e( 'References / Website Scraping', 'naano-ai-website-builder' ); ?></button>
 		<button type="button" class="nav-tab" data-naano-tab="translation"><?php esc_html_e( 'Translation', 'naano-ai-website-builder' ); ?></button>
 	</nav>
 
@@ -266,6 +267,64 @@ $update_refine        = get_option( 'naano_update_refinement_passes', 1 );
 		</table>
 	</div><!-- /.naano-card -->
 		</div><!-- /.naano-settings-panel#variables -->
+
+		<!-- ============================================================
+		     FIRECRAWL
+		     ============================================================ -->
+		<div class="naano-settings-panel" id="naano-panel-firecrawl" style="display:none;">
+		<div class="naano-card" style="margin-top:20px;">
+			<h2><?php esc_html_e( 'Firecrawl — Web Scraping', 'naano-ai-website-builder' ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'Firecrawl turns any website URL into clean, structured HTML that the AI can actually read.', 'naano-ai-website-builder' ); ?>
+				<?php esc_html_e( 'When you add a URL reference to a section, the built-in scraper only grabs basic text. Firecrawl renders JavaScript, handles SPAs, and returns rich HTML — giving the AI much better context about layouts, components, and design patterns from the reference site.', 'naano-ai-website-builder' ); ?>
+			</p>
+			<p class="description" style="margin-top:8px;">
+				<?php
+				printf(
+					/* translators: %s = link to firecrawl.dev */
+					esc_html__( 'Get your free API key at %s (500 credits/month on the free plan).', 'naano-ai-website-builder' ),
+					'<a href="https://www.firecrawl.dev" target="_blank" rel="noopener">firecrawl.dev</a>'
+				);
+				?>
+			</p>
+
+			<table class="form-table">
+				<tr>
+					<th scope="row">
+						<label for="naano_firecrawl_api_key"><?php esc_html_e( 'Firecrawl API Key', 'naano-ai-website-builder' ); ?></label>
+					</th>
+					<td>
+						<input type="password"
+							   name="naano_firecrawl_api_key"
+							   id="naano_firecrawl_api_key"
+							   class="regular-text"
+							   value="<?php echo esc_attr( get_option( 'naano_firecrawl_api_key', '' ) ); ?>"
+							   autocomplete="new-password">
+						<button type="button" class="button" id="naano-save-firecrawl-key-btn" style="margin-left:8px;">
+							<?php esc_html_e( 'Save Key', 'naano-ai-website-builder' ); ?>
+						</button>
+						<span class="naano-loading" id="naano-save-firecrawl-loading" style="display:none;">
+							<span class="spinner is-active"></span>
+						</span>
+						<span id="naano-save-firecrawl-result" style="display:none;margin-left:8px;"></span>
+						<p class="description">
+							<?php esc_html_e( 'When set, URL references will be scraped with Firecrawl instead of the basic built-in fetcher. Results are cached so the same URL is never scraped twice.', 'naano-ai-website-builder' ); ?>
+						</p>
+					</td>
+				</tr>
+			</table>
+
+			<div class="naano-test-connection-row">
+				<button type="button" class="button" id="naano-test-firecrawl-btn">
+					<?php esc_html_e( 'Test Connection', 'naano-ai-website-builder' ); ?>
+				</button>
+				<span class="naano-loading" id="naano-test-firecrawl-loading" style="display:none;">
+					<span class="spinner is-active"></span>
+				</span>
+				<div id="naano-test-firecrawl-result" class="naano-test-result" style="display:none;"></div>
+			</div>
+		</div><!-- /.naano-card -->
+		</div><!-- /.naano-settings-panel#firecrawl -->
 
 		<!-- ============================================================
 		     TRANSLATION
@@ -511,6 +570,92 @@ jQuery(function($){	// Settings tab switching.
 					$result.html(
 						'<span class="naano-success">✅ <?php echo esc_js( __( 'Connected!', 'naano-ai-website-builder' ) ); ?> ' +
 						'Model: ' + response.data.model + ' — ' + response.data.latency_ms + 'ms</span>'
+					);
+				} else {
+					$result.html(
+						'<span class="naano-error">❌ ' + (response.data.message || response.data.error) + '</span>'
+					);
+				}
+			}
+		).fail(function(){
+			$load.hide();
+			$btn.prop('disabled', false);
+			$result.show().html('<span class="naano-error">❌ <?php echo esc_js( __( 'Request failed.', 'naano-ai-website-builder' ) ); ?></span>');
+		});
+	});
+
+	// Save Firecrawl API key.
+	$('#naano-save-firecrawl-key-btn').on('click', function(){
+		var $btn    = $(this);
+		var $load   = $('#naano-save-firecrawl-loading');
+		var $result = $('#naano-save-firecrawl-result');
+		var apiKey  = $('#naano_firecrawl_api_key').val();
+
+		if ( ! apiKey ) {
+			$result.show().html('<span class="naano-error">⚠️ <?php echo esc_js( __( 'Please enter an API key.', 'naano-ai-website-builder' ) ); ?></span>');
+			$('#naano_firecrawl_api_key').focus();
+			return;
+		}
+
+		$btn.prop('disabled', true);
+		$load.show();
+		$result.hide();
+
+		$.post(
+			<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
+			{
+				action:  'naano_save_firecrawl_key',
+				nonce:   <?php echo wp_json_encode( wp_create_nonce( 'naano_builder_nonce' ) ); ?>,
+				api_key: apiKey
+			},
+			function(response){
+				$load.hide();
+				$btn.prop('disabled', false);
+				$result.show();
+				if(response.success){
+					$result.html('<span class="naano-success">✅ ' + response.data.message + '</span>');
+				} else {
+					$result.html('<span class="naano-error">❌ ' + response.data.message + '</span>');
+				}
+			}
+		).fail(function(){
+			$load.hide();
+			$btn.prop('disabled', false);
+			$result.show().html('<span class="naano-error">❌ <?php echo esc_js( __( 'Request failed.', 'naano-ai-website-builder' ) ); ?></span>');
+		});
+	});
+
+	// Test Firecrawl connection.
+	$('#naano-test-firecrawl-btn').on('click', function(){
+		var $btn    = $(this);
+		var $load   = $('#naano-test-firecrawl-loading');
+		var $result = $('#naano-test-firecrawl-result');
+		var apiKey  = $('#naano_firecrawl_api_key').val();
+
+		if ( ! apiKey ) {
+			$result.show().html('<span class="naano-error">⚠️ <?php echo esc_js( __( 'Please enter an API key first.', 'naano-ai-website-builder' ) ); ?></span>');
+			$('#naano_firecrawl_api_key').focus();
+			return;
+		}
+
+		$btn.prop('disabled', true);
+		$load.show();
+		$result.hide();
+
+		$.post(
+			<?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
+			{
+				action:  'naano_test_firecrawl',
+				nonce:   <?php echo wp_json_encode( wp_create_nonce( 'naano_builder_nonce' ) ); ?>,
+				api_key: apiKey
+			},
+			function(response){
+				$load.hide();
+				$btn.prop('disabled', false);
+				$result.show();
+				if(response.success){
+					$result.html(
+						'<span class="naano-success">✅ ' + response.data.message + ' — ' + response.data.latency_ms + '</span>'
 					);
 				} else {
 					$result.html(

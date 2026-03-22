@@ -301,6 +301,15 @@ class Naano_Admin_Page {
 				'default'           => 1,
 			]
 		);
+
+		register_setting(
+			'naano_settings_group',
+			'naano_firecrawl_api_key',
+			[
+				'sanitize_callback' => 'sanitize_text_field',
+				'default'           => '',
+			]
+		);
 	}
 
 	/**

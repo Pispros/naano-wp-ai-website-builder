@@ -36,6 +36,8 @@ class Naano_Ajax_Handler {
 			'naano_export_html',
 			'naano_save_as_page',
 			'naano_set_homepage',
+			'naano_save_firecrawl_key',
+			'naano_test_firecrawl',
 		];
 
 		foreach ( $actions as $action ) {
@@ -150,6 +152,26 @@ class Naano_Ajax_Handler {
 					'content' => Naano_Reference_Manager::fetch_url_text( $desc_url ),
 				];
 			}
+
+			// Process user-added URL references from the initial form.
+			$initial_refs_json = wp_unslash( $_POST['initial_references'] ?? '' );
+			if ( $initial_refs_json ) {
+				$initial_refs = json_decode( $initial_refs_json, true );
+				if ( is_array( $initial_refs ) ) {
+					foreach ( $initial_refs as $ref ) {
+						$ref_url = esc_url_raw( $ref['url'] ?? '' );
+						if ( ! $ref_url ) {
+							continue;
+						}
+						$desc_refs[] = [
+							'url'     => $ref_url,
+							'notes'   => sanitize_text_field( $ref['notes'] ?? '' ),
+							'content' => Naano_Reference_Manager::fetch_url_text( $ref_url ),
+						];
+					}
+				}
+			}
+
 			if ( ! empty( $desc_refs ) ) {
 				$builder->set_references( $desc_refs );
 			}
@@ -306,6 +328,87 @@ class Naano_Ajax_Handler {
 		update_option( 'naano_api_key', $api_key );
 
 		wp_send_json_success( [ 'message' => __( 'API key saved.', 'naano-ai-website-builder' ) ] );
+	}
+
+	/**
+	 * Save Firecrawl API key via AJAX.
+	 */
+	public static function handle_naano_save_firecrawl_key(): void {
+		self::verify_nonce();
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
+
+		if ( empty( $api_key ) ) {
+			wp_send_json_error( [ 'message' => __( 'API key cannot be empty.', 'naano-ai-website-builder' ) ] );
+		}
+
+		update_option( 'naano_firecrawl_api_key', $api_key );
+
+		wp_send_json_success( [ 'message' => __( 'Firecrawl API key saved.', 'naano-ai-website-builder' ) ] );
+	}
+
+	/**
+	 * Test Firecrawl API key by scraping a lightweight page.
+	 */
+	public static function handle_naano_test_firecrawl(): void {
+		self::verify_nonce();
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission denied.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
+		if ( empty( $api_key ) ) {
+			wp_send_json_error( [ 'message' => __( 'Please enter an API key first.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$start = microtime( true );
+
+		$body = wp_json_encode( [
+			'url'             => 'https://example.com',
+			'formats'         => [ 'html' ],
+			'onlyMainContent' => true,
+		] );
+
+		$response = wp_remote_post( 'https://api.firecrawl.dev/v2/scrape', [
+			'timeout' => 30,
+			'headers' => [
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $api_key,
+			],
+			'body'    => $body,
+		] );
+
+		$latency = round( ( microtime( true ) - $start ) * 1000 );
+
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error( [ 'message' => $response->get_error_message() ] );
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( $code === 401 || $code === 403 ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid API key.', 'naano-ai-website-builder' ) ] );
+		}
+
+		if ( $code < 200 || $code >= 300 ) {
+			$msg = $data['error'] ?? ( 'HTTP ' . $code );
+			wp_send_json_error( [ 'message' => $msg ] );
+		}
+
+		if ( empty( $data['success'] ) ) {
+			wp_send_json_error( [ 'message' => $data['error'] ?? __( 'Unknown error.', 'naano-ai-website-builder' ) ] );
+		}
+
+		wp_send_json_success( [
+			'message'    => __( 'Connected!', 'naano-ai-website-builder' ),
+			'latency_ms' => $latency . 'ms',
+		] );
 	}
 
 	/**

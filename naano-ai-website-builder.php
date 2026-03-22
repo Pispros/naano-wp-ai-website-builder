@@ -103,6 +103,7 @@ require_once NAANO_PLUGIN_DIR . 'includes/class-payload-compressor.php';
 require_once NAANO_PLUGIN_DIR . 'includes/class-html-sanitizer.php';
 require_once NAANO_PLUGIN_DIR . 'includes/class-prompt-builder.php';
 require_once NAANO_PLUGIN_DIR . 'includes/class-reference-manager.php';
+require_once NAANO_PLUGIN_DIR . 'includes/class-firecrawl.php';
 require_once NAANO_PLUGIN_DIR . 'includes/class-section-manager.php';
 require_once NAANO_PLUGIN_DIR . 'includes/class-conversation.php';
 require_once NAANO_PLUGIN_DIR . 'includes/class-ajax-handler.php';

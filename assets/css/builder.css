@@ -398,6 +398,9 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	color: rgba(255,255,255,0.45);
 	line-height: 1.4;
 }
+.naano-field-hint--warn {
+	color: #fbbf24;
+}
 
 /* Asset picker two-button row */
 .naano-asset-picker {
@@ -612,6 +615,27 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+}
+
+.naano-generation-warning {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	margin: 0;
+	padding: 8px 10px;
+	background: rgba(251, 191, 36, 0.1);
+	border: 1px solid rgba(251, 191, 36, 0.3);
+	border-radius: 6px;
+	color: #fbbf24;
+	font-size: 12px;
+	line-height: 1.4;
+}
+.naano-generation-warning .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+	margin-top: 1px;
+	flex-shrink: 0;
 }
 
 .naano-mt-8 {

@@ -31,6 +31,9 @@
 		/** @type {Array<{id: string, type: string, html: string}>} Sections imported from other pages (pre-seeded, no LLM generation). */
 		importedSections: [],
 
+		/** @type {Array<{url: string, notes: string}>} URL references for initial generation. */
+		initialReferences: [],
+
 		/** @type {boolean} Whether element-inspect mode is active. */
 		inspectModeActive: false,
 
@@ -252,13 +255,14 @@
 			NaanoBuilder._showCanvasLoading( { filename: ( pageName || 'output' ) + '.html' } );
 
 			$.post( data.ajaxUrl, {
-				action:            'naano_generate_site',
-				nonce:             data.nonce,
-				page_id:           NaanoBuilder.pageId,
-				page_name:         pageName,
-				description:       description,
-				sections:          sections,
-				imported_sections: JSON.stringify( NaanoBuilder.importedSections )
+				action:             'naano_generate_site',
+				nonce:              data.nonce,
+				page_id:            NaanoBuilder.pageId,
+				page_name:          pageName,
+				description:        description,
+				sections:           sections,
+				imported_sections:  JSON.stringify( NaanoBuilder.importedSections ),
+				initial_references: JSON.stringify( NaanoBuilder.initialReferences )
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
@@ -284,6 +288,7 @@
 					NaanoBuilder._renderSectionsList();
 					NaanoBuilder._toast( 'Website generated successfully! 🎉', 'success' );
 					NaanoBuilder.importedSections = [];
+					NaanoBuilder.initialReferences = [];
 					$( '.naano-import-section-btn' )
 						.removeClass( 'naano-import-section-btn--selected' )
 						.find( '.naano-import-check' ).hide();
@@ -1051,6 +1056,41 @@
 					e.preventDefault();
 					$( '#naano-add-custom-section' ).trigger( 'click' );
 				}
+			} );
+
+			// Initial URL references.
+			$( document ).on( 'click', '#naano-initial-add-url-btn', function () {
+				$( '#naano-initial-add-url-form' ).slideDown( 150 );
+				$( '#naano-initial-ref-url' ).focus();
+			} );
+
+			$( document ).on( 'click', '#naano-initial-cancel-url-btn', function () {
+				$( '#naano-initial-add-url-form' ).slideUp( 150 );
+				$( '#naano-initial-ref-url' ).val( '' );
+				$( '#naano-initial-ref-notes' ).val( '' );
+			} );
+
+			$( document ).on( 'click', '#naano-initial-save-url-btn', function () {
+				var url   = $( '#naano-initial-ref-url' ).val().trim();
+				var notes = $( '#naano-initial-ref-notes' ).val().trim();
+
+				if ( ! url ) {
+					NaanoBuilder._toast( 'Please enter a URL.', 'error' );
+					return;
+				}
+
+				NaanoBuilder.initialReferences.push( { url: url, notes: notes } );
+				NaanoBuilder._renderInitialUrlList();
+
+				$( '#naano-initial-ref-url' ).val( '' );
+				$( '#naano-initial-ref-notes' ).val( '' );
+				$( '#naano-initial-add-url-form' ).slideUp( 150 );
+			} );
+
+			$( document ).on( 'click', '.naano-initial-remove-ref', function () {
+				var idx = $( this ).data( 'index' );
+				NaanoBuilder.initialReferences.splice( idx, 1 );
+				NaanoBuilder._renderInitialUrlList();
 			} );
 		},
 
@@ -2052,6 +2092,20 @@
 					$li.append( ' <button type="button" class="naano-remove-ref-btn" data-index="' + index + '">✕</button>' );
 					$urls.append( $li );
 				}
+			} );
+		},
+
+		_renderInitialUrlList: function () {
+			var $list = $( '#naano-initial-url-list' ).empty();
+			NaanoBuilder.initialReferences.forEach( function ( ref, index ) {
+				var $li   = $( '<li class="naano-reference-item">' );
+				var $link = $( '<a>' ).attr( { href: ref.url, target: '_blank' } ).text( ref.url );
+				$li.append( $link );
+				if ( ref.notes ) {
+					$li.append( ' — ' + $( '<span>' ).text( ref.notes ).html() );
+				}
+				$li.append( ' <button type="button" class="naano-initial-remove-ref" data-index="' + index + '">✕</button>' );
+				$list.append( $li );
 			} );
 		},
 

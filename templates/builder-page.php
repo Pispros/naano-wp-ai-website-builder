@@ -163,7 +163,36 @@ $section_types = [
 						</p>
 					</div>
 
+					<div class="naano-drawer__field naano-reference-section">
+						<label><?php esc_html_e( 'URL References', 'naano-ai-website-builder' ); ?></label>
+						<p class="naano-field-hint"><?php esc_html_e( 'Add reference websites for the AI to study and replicate their design patterns.', 'naano-ai-website-builder' ); ?></p>
+						<p class="naano-field-hint naano-field-hint--warn"><?php esc_html_e( 'Scraping may fail for ThemeForest previews and similar protected platforms — use screenshots instead for best results.', 'naano-ai-website-builder' ); ?></p>
+						<ul class="naano-reference-list" id="naano-initial-url-list"></ul>
+						<div class="naano-add-url-form" id="naano-initial-add-url-form" style="display:none;">
+							<input type="url" id="naano-initial-ref-url" class="naano-input"
+								   placeholder="https://example.com">
+							<input type="text" id="naano-initial-ref-notes" class="naano-input"
+								   placeholder="<?php esc_attr_e( 'Notes (optional)', 'naano-ai-website-builder' ); ?>">
+							<div class="naano-add-url-form__btns">
+								<button type="button" class="naano-btn-primary" id="naano-initial-save-url-btn">
+									<?php esc_html_e( 'Add', 'naano-ai-website-builder' ); ?>
+								</button>
+								<button type="button" class="naano-btn-ghost" id="naano-initial-cancel-url-btn">
+									<?php esc_html_e( 'Cancel', 'naano-ai-website-builder' ); ?>
+								</button>
+							</div>
+						</div>
+						<button type="button" class="naano-btn-secondary" id="naano-initial-add-url-btn">
+							<span class="dashicons dashicons-admin-links"></span>
+							<?php esc_html_e( 'Add URL', 'naano-ai-website-builder' ); ?>
+						</button>
+					</div>
+
 					<div class="naano-drawer__actions">
+						<p class="naano-generation-warning">
+							<span class="dashicons dashicons-info-outline"></span>
+							<?php esc_html_e( 'Initial generation may take a while depending on the number of sections and refinement passes configured in settings.', 'naano-ai-website-builder' ); ?>
+						</p>
 						<button type="button" class="naano-btn-generate" id="naano-generate-btn">
 							<span class="dashicons dashicons-superhero-alt"></span>
 							<?php esc_html_e( 'Generate Full Website', 'naano-ai-website-builder' ); ?>
@@ -382,6 +411,7 @@ $section_types = [
 					<!-- URL References -->
 					<div class="naano-drawer__field naano-reference-section">
 						<label><?php esc_html_e( 'URL References', 'naano-ai-website-builder' ); ?></label>
+						<p class="naano-field-hint naano-field-hint--warn"><?php esc_html_e( 'Scraping may fail for ThemeForest previews and similar protected platforms — use screenshots instead for best results.', 'naano-ai-website-builder' ); ?></p>
 						<ul class="naano-reference-list" id="naano-url-list"></ul>
 						<div class="naano-add-url-form" id="naano-add-url-form" style="display:none;">
 							<input type="url" id="naano-ref-url" class="naano-input"

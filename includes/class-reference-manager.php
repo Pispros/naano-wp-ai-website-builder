@@ -146,19 +146,29 @@ class Naano_Reference_Manager {
 	}
 
 	/**
-	 * Fetch the text content of a URL via cURL for LLM context injection.
+	 * Fetch the text content of a URL for LLM context injection.
 	 *
-	 * Strips scripts, styles, and HTML tags; normalises whitespace; truncates
-	 * to $max_chars to stay within token budgets.
+	 * When Firecrawl is configured, it is used for richer HTML scraping
+	 * (handles JS-rendered pages, SPAs, etc.). Falls back to a basic
+	 * cURL fetch otherwise.
 	 *
 	 * @param string $url       A valid http(s) URL.
 	 * @param int    $max_chars Maximum characters to return.
-	 * @return string Plain-text excerpt, or empty string on failure.
+	 * @return string Content excerpt, or empty string on failure.
 	 */
 	public static function fetch_url_text( string $url, int $max_chars = 3500 ): string {
 		// Only fetch http/https URLs.
 		if ( ! preg_match( '/^https?:\/\//i', $url ) ) {
 			return '';
+		}
+
+		// Use Firecrawl when configured — returns clean HTML (cached).
+		if ( Naano_Firecrawl::is_configured() ) {
+			$html = Naano_Firecrawl::scrape( $url );
+			if ( $html ) {
+				return mb_substr( $html, 0, $max_chars );
+			}
+			// Fall through to basic fetcher if Firecrawl fails.
 		}
 
 		if ( ! function_exists( 'curl_init' ) ) {
