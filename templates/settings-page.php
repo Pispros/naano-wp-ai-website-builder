@@ -265,6 +265,10 @@ $update_refine        = get_option( 'naano_update_refinement_passes', 1 );
 			</tr>
 		</table>
 	</div><!-- /.naano-card -->
+		</div><!-- /.naano-settings-panel#variables -->
+
+		<!-- ============================================================
+		     TRANSLATION
 		     ============================================================ -->
 		<div class="naano-settings-panel" id="naano-panel-translation" style="display:none;">
 		<div class="naano-card" style="margin-top:20px;">
