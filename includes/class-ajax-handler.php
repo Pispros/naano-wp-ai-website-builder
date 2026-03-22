@@ -23,6 +23,7 @@ class Naano_Ajax_Handler {
 		$actions = [
 			'naano_generate_site',
 			'naano_update_section',
+			'naano_enhance_prompt',
 			'naano_test_connection',
 			'naano_save_api_key',
 			'naano_save_global_config',
@@ -327,6 +328,80 @@ class Naano_Ajax_Handler {
 		update_option( 'naano_update_refinement_passes', $update );
 
 		wp_send_json_success( [ 'message' => __( 'Global config saved.', 'naano-ai-website-builder' ) ] );
+	}
+
+	/**
+	 * Enhance a user prompt using the LLM.
+	 *
+	 * POST: raw_text, context ('initial' or 'edit')
+	 * Returns: enhanced_text, suggested_sections (for initial context only)
+	 */
+	public static function handle_naano_enhance_prompt(): void {
+		self::verify_nonce();
+
+		$raw_text = sanitize_textarea_field( wp_unslash( $_POST['raw_text'] ?? '' ) );
+		$context  = sanitize_text_field( wp_unslash( $_POST['context'] ?? 'initial' ) );
+
+		if ( ! $raw_text ) {
+			wp_send_json_error( [ 'message' => __( 'Please enter some text to enhance.', 'naano-ai-website-builder' ) ] );
+		}
+
+		$available_sections = [
+			'header', 'hero', 'features', 'about', 'services',
+			'pricing', 'testimonials', 'contact', 'footer',
+		];
+
+		if ( $context === 'initial' ) {
+			$system = "You are a website planning assistant. The user will give you a rough idea for a website. "
+				. "Your job is to:\n"
+				. "1. Rewrite their idea into a detailed, well-structured website brief that a web designer would use. "
+				. "Include: business name (if mentioned), target audience, tone, key features to highlight, and any specific content.\n"
+				. "2. Suggest which website sections would best fit this project from this list: "
+				. implode( ', ', $available_sections ) . ". You can also suggest custom section names.\n\n"
+				. "Respond in EXACTLY this format (no markdown, no extra text):\n"
+				. "---ENHANCED_PROMPT---\n"
+				. "(the enhanced website brief here)\n"
+				. "---SUGGESTED_SECTIONS---\n"
+				. "(comma-separated list of section names, e.g.: header, hero, features, about, contact, footer)";
+		} else {
+			$system = "You are a website editing assistant. The user will give you a rough instruction for editing a website section. "
+				. "Your job is to rewrite it into a clear, detailed, and precise instruction that a web designer would follow. "
+				. "Be specific about layout, styling, content changes, and visual expectations.\n\n"
+				. "Respond with ONLY the enhanced instruction text. No markdown, no extra formatting, no explanations.";
+		}
+
+		$messages = [
+			[ 'role' => 'user', 'content' => $raw_text ],
+		];
+
+		try {
+			$router = self::build_router();
+			$result = $router->generate( $system, $messages );
+
+			if ( $context === 'initial' ) {
+				$enhanced  = $raw_text;
+				$suggested = $available_sections;
+
+				if ( preg_match( '/---ENHANCED_PROMPT---\s*([\s\S]*?)\s*---SUGGESTED_SECTIONS---\s*([\s\S]*)$/i', $result, $m ) ) {
+					$enhanced  = trim( $m[1] );
+					$suggested = array_map( 'trim', explode( ',', strtolower( trim( $m[2] ) ) ) );
+					$suggested = array_filter( $suggested, function ( $s ) { return $s !== ''; } );
+					$suggested = array_values( $suggested );
+				} elseif ( trim( $result ) ) {
+					$enhanced = trim( $result );
+				}
+
+				wp_send_json_success( [
+					'enhanced_text'      => $enhanced,
+					'suggested_sections' => $suggested,
+				] );
+			} else {
+				$enhanced = trim( $result ) ?: $raw_text;
+				wp_send_json_success( [ 'enhanced_text' => $enhanced ] );
+			}
+		} catch ( \Throwable $e ) {
+			wp_send_json_error( [ 'message' => $e->getMessage() ] );
+		}
 	}
 
 	/**

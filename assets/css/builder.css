@@ -564,6 +564,39 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	height: 16px;
 }
 
+/* Enhance button (Prompt Builder) */
+.naano-vb .naano-btn-enhance {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	background: #2c3338;
+	border: 1px solid #3d4246;
+	color: #d0d0d0;
+	padding: 6px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	margin-top: 8px;
+	transition: background 0.15s, color 0.15s;
+}
+
+.naano-vb .naano-btn-enhance:hover:not(:disabled) {
+	background: #3d4246;
+	color: #fff;
+	border-color: #50575e;
+}
+
+.naano-vb .naano-btn-enhance:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.naano-vb .naano-btn-enhance .dashicons {
+	font-size: 13px;
+	width: 13px;
+	height: 13px;
+}
+
 /* Drawer actions */
 .naano-drawer__actions {
 	margin-top: 20px;

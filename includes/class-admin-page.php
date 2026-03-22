@@ -43,6 +43,9 @@ class Naano_Admin_Page {
 
 		// Serve standalone Naano pages as raw HTML (no theme wrapping).
 		add_action( 'template_redirect', [ $this, 'maybe_render_standalone_page' ] );
+
+		// Add "Edit with Naano AI" to the WP admin bar on standalone Naano pages.
+		add_action( 'admin_bar_menu', [ $this, 'add_admin_bar_edit_link' ], 80 );
 	}
 
 	/**
@@ -121,6 +124,33 @@ class Naano_Admin_Page {
 			return false;
 		}
 		return $show;
+	}
+
+	/**
+	 * Add an "Edit with Naano AI" link to the WP admin bar on standalone pages.
+	 *
+	 * @param \WP_Admin_Bar $wp_admin_bar
+	 */
+	public function add_admin_bar_edit_link( \WP_Admin_Bar $wp_admin_bar ): void {
+		if ( is_admin() || ! is_singular( 'page' ) || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$page_id = get_queried_object_id();
+		if ( ! $page_id || ! get_post_meta( $page_id, '_naano_standalone', true ) ) {
+			return;
+		}
+
+		$builder_url = add_query_arg( 'naano_builder', '1', get_permalink( $page_id ) );
+
+		$icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 340" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;fill:none;stroke:currentColor;stroke-width:18"><rect x="54" y="54" width="232" height="232" rx="26" ry="26"/><line x1="115" y1="54" x2="115" y2="26" stroke-width="17" stroke-linecap="round"/><line x1="170" y1="54" x2="170" y2="26" stroke-width="17" stroke-linecap="round"/><line x1="225" y1="54" x2="225" y2="26" stroke-width="17" stroke-linecap="round"/><line x1="115" y1="286" x2="115" y2="314" stroke-width="17" stroke-linecap="round"/><line x1="170" y1="286" x2="170" y2="314" stroke-width="17" stroke-linecap="round"/><line x1="225" y1="286" x2="225" y2="314" stroke-width="17" stroke-linecap="round"/><line x1="54" y1="115" x2="26" y2="115" stroke-width="17" stroke-linecap="round"/><line x1="54" y1="170" x2="26" y2="170" stroke-width="17" stroke-linecap="round"/><line x1="54" y1="225" x2="26" y2="225" stroke-width="17" stroke-linecap="round"/><line x1="286" y1="115" x2="314" y2="115" stroke-width="17" stroke-linecap="round"/><line x1="286" y1="170" x2="314" y2="170" stroke-width="17" stroke-linecap="round"/><line x1="286" y1="225" x2="314" y2="225" stroke-width="17" stroke-linecap="round"/><line x1="106" y1="106" x2="106" y2="234" stroke-width="22" stroke-linecap="round"/><line x1="234" y1="106" x2="234" y2="234" stroke-width="22" stroke-linecap="round"/><line x1="106" y1="106" x2="234" y2="234" stroke-width="22" stroke-linecap="round"/></svg>';
+
+		$wp_admin_bar->add_node( [
+			'id'    => 'naano-edit-page',
+			'title' => $icon . __( 'Edit with Naano AI', 'naano-ai-website-builder' ),
+			'href'  => $builder_url,
+			'meta'  => [ 'class' => 'naano-ab-edit' ],
+		] );
 	}
 
 	/**
@@ -522,16 +552,41 @@ class Naano_Admin_Page {
 				}
 			}
 
+			// Inject CSS + JS to offset fixed/sticky headers below the WP admin bar.
+			// WP core sets html { margin-top: 32px } for static content.  For
+			// position:fixed / position:sticky elements we must add a matching
+			// top offset.  Because scoped <style> blocks set position via CSS
+			// (not inline), we use a small script that inspects computedStyle.
+			$admin_bar_css = '<style id="naano-admin-bar-fix">'
+				. '.naano-abfix { top: 32px !important; }'
+				. '@media screen and (max-width:782px){ .naano-abfix { top: 46px !important; } }'
+				. '#wpadminbar .naano-ab-edit > .ab-item { display: flex; align-items: center; }'
+				. '</style>';
+
+			$admin_bar_js = '<script id="naano-admin-bar-fix-js">'
+				. '(function(){'
+				. 'function f(){'
+				. 'document.querySelectorAll("header,nav,section,[class*=header],[class*=nav]").forEach(function(el){'
+				. 'var s=getComputedStyle(el).position;'
+				. 'if(s==="fixed"||s==="sticky")el.classList.add("naano-abfix");'
+				. '});'
+				. '}'
+				. 'f();'
+				. 'window.addEventListener("load",f);'
+				. '})();'
+				. '</script>';
+
 			// Inject head assets before </head>.
 			if ( stripos( $html, '</head>' ) !== false ) {
-				$html = str_ireplace( '</head>', $head_assets . '</head>', $html );
+				$html = str_ireplace( '</head>', $admin_bar_css . $head_assets . '</head>', $html );
 			}
 
-			// Inject footer assets before </body>.
+			// Inject footer assets + admin bar fix script before </body>.
+			$footer_all = $footer_assets . $admin_bar_js;
 			if ( stripos( $html, '</body>' ) !== false ) {
-				$html = str_ireplace( '</body>', $footer_assets . '</body>', $html );
+				$html = str_ireplace( '</body>', $footer_all . '</body>', $html );
 			} else {
-				$html .= $footer_assets;
+				$html .= $footer_all;
 			}
 		}
 
@@ -839,6 +894,7 @@ HTML;
 				'updating'          => __( 'Updating…', 'naano-ai-website-builder' ),
 				'error_generic'     => __( 'An error occurred. Please try again.', 'naano-ai-website-builder' ),
 				'select_section'    => __( 'Please select a section first.', 'naano-ai-website-builder' ),
+				'enter_description' => __( 'Please enter a site description.', 'naano-ai-website-builder' ),
 				'enter_instruction' => __( 'Please enter an instruction.', 'naano-ai-website-builder' ),
 				'new_section_name'  => __( 'New section name (e.g. "Team", "Gallery"):', 'naano-ai-website-builder' ),
 				'click_section'     => __( '— click a section in the preview —', 'naano-ai-website-builder' ),

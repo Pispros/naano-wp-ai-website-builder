@@ -139,6 +139,83 @@
 		// =====================================================================
 
 		/**
+		 * Enhance a prompt (description or instruction) using the LLM.
+		 *
+		 * @param {string} context 'initial' or 'edit'
+		 */
+		enhancePrompt: function ( context ) {
+			var isInitial = context === 'initial';
+			var $textarea = isInitial ? $( '#naano-description' ) : $( '#naano-instruction' );
+			var $btn      = isInitial ? $( '#naano-enhance-description-btn' ) : $( '#naano-enhance-instruction-btn' );
+			var $loading  = isInitial ? $( '#naano-enhance-description-loading' ) : $( '#naano-enhance-instruction-loading' );
+			var rawText   = $textarea.val().trim();
+
+			if ( ! rawText ) {
+				NaanoBuilder._toast( isInitial ? data.strings.enter_description : data.strings.enter_instruction, 'error' );
+				$textarea.focus();
+				return;
+			}
+
+			$btn.prop( 'disabled', true );
+			$loading.show();
+
+			$.post( data.ajaxUrl, {
+				action:   'naano_enhance_prompt',
+				nonce:    data.nonce,
+				raw_text: rawText,
+				context:  context
+			} )
+			.done( function ( response ) {
+				$btn.prop( 'disabled', false );
+				$loading.hide();
+
+				if ( response && response.success ) {
+					$textarea.val( response.data.enhanced_text );
+
+					// For initial context, auto-check suggested sections.
+					if ( isInitial && response.data.suggested_sections ) {
+						var suggested = response.data.suggested_sections;
+
+						// Uncheck all first.
+						$( '#naano-section-checkboxes input[type=checkbox]' ).prop( 'checked', false );
+
+						// Check suggested ones.
+						suggested.forEach( function ( sectionName ) {
+							var slug = sectionName.replace( /\s+/g, '-' ).replace( /[^a-z0-9-]/g, '' );
+							var $cb  = $( '#naano-section-checkboxes input[value="' + slug + '"]' );
+							if ( $cb.length ) {
+								$cb.prop( 'checked', true );
+							} else if ( slug ) {
+								// Add as custom section if not in the default list.
+								var label = sectionName.charAt( 0 ).toUpperCase() + sectionName.slice( 1 ).replace( /-/g, ' ' );
+								var $label = $( '<label class="naano-checkbox-label naano-checkbox-label--custom">' );
+								$label.append(
+									$( '<input>', { type: 'checkbox', name: 'sections[]', value: slug, checked: true } ),
+									document.createTextNode( ' ' + label + ' ' ),
+									$( '<button>', {
+										type: 'button',
+										'class': 'naano-remove-custom-section',
+										title: 'Remove'
+									} ).text( '\u00d7' )
+								);
+								$( '#naano-section-checkboxes' ).append( $label );
+							}
+						} );
+					}
+
+					NaanoBuilder._toast( isInitial ? 'Prompt enhanced & sections suggested!' : 'Instruction enhanced!', 'success' );
+				} else {
+					NaanoBuilder._toast( ( response && response.data && response.data.message ) || data.strings.error_generic, 'error' );
+				}
+			} )
+			.fail( function () {
+				$btn.prop( 'disabled', false );
+				$loading.hide();
+				NaanoBuilder._toast( data.strings.error_generic, 'error' );
+			} );
+		},
+
+		/**
 		 * Generate a full website from the form.
 		 */
 		generateSite: function () {
@@ -930,6 +1007,10 @@
 				NaanoBuilder.generateSite();
 			} );
 
+			$( document ).on( 'click', '#naano-enhance-description-btn', function () {
+				NaanoBuilder.enhancePrompt( 'initial' );
+			} );
+
 			$( document ).on( 'click', '#naano-add-custom-section', function () {
 				var $input = $( '#naano-custom-section-input' );
 				var $error = $( '#naano-custom-section-error' );
@@ -1021,6 +1102,10 @@
 		_bindEditPanel: function () {
 			$( document ).on( 'click', '#naano-update-section-btn', function () {
 				NaanoBuilder.updateSection();
+			} );
+
+			$( document ).on( 'click', '#naano-enhance-instruction-btn', function () {
+				NaanoBuilder.enhancePrompt( 'edit' );
 			} );
 
 			// Select-all / deselect-all.
