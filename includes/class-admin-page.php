@@ -885,6 +885,15 @@ HTML;
 		if ( ! is_array( $saved_assets ) )    { $saved_assets    = []; }
 		if ( ! is_array( $saved_redirects ) ) { $saved_redirects = []; }
 
+		// Collect WordPress navigation menus for the builder.
+		$wp_menus = [];
+		foreach ( wp_get_nav_menus() as $menu ) {
+			$wp_menus[] = [
+				'id'   => $menu->term_id,
+				'name' => $menu->name,
+			];
+		}
+
 		wp_localize_script( 'naano-builder', 'naanoBuilderData', [
 			'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
 			'nonce'              => wp_create_nonce( 'naano_builder_nonce' ),
@@ -897,6 +906,7 @@ HTML;
 			'existingComponents' => $existing_components,
 			'currentLang'        => $current_lang,
 			'translations'       => $translations,
+			'wpMenus'            => $wp_menus,
 			'strings'    => [
 				'confirm_delete'    => __( 'Are you sure you want to delete this section?', 'naano-ai-website-builder' ),
 				'generating'        => __( 'Generating…', 'naano-ai-website-builder' ),

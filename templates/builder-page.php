@@ -163,6 +163,14 @@ $section_types = [
 						</p>
 					</div>
 
+					<div class="naano-drawer__field">
+						<label for="naano-initial-wp-menu"><?php esc_html_e( 'Navigation Menu', 'naano-ai-website-builder' ); ?></label>
+						<p class="naano-field-hint"><?php esc_html_e( 'Select a WordPress menu to inject into header/footer sections.', 'naano-ai-website-builder' ); ?></p>
+						<select id="naano-initial-wp-menu" class="naano-input">
+							<option value=""><?php esc_html_e( '— None —', 'naano-ai-website-builder' ); ?></option>
+						</select>
+					</div>
+
 					<div class="naano-drawer__field naano-reference-section">
 						<label><?php esc_html_e( 'URL References', 'naano-ai-website-builder' ); ?></label>
 						<p class="naano-field-hint"><?php esc_html_e( 'Add reference websites for the AI to study and replicate their design patterns.', 'naano-ai-website-builder' ); ?></p>
@@ -342,6 +350,15 @@ $section_types = [
 							<button type="button" class="naano-btn-ghost" id="naano-esp-deselect-btn">✕ <?php esc_html_e( 'Clear', 'naano-ai-website-builder' ); ?></button>
 						</div>
 					</div><!-- #naano-element-style-panel -->
+
+					<!-- Navigation Menu -->
+					<div class="naano-drawer__field">
+						<label for="naano-edit-wp-menu"><?php esc_html_e( 'Navigation Menu', 'naano-ai-website-builder' ); ?></label>
+						<p class="naano-field-hint"><?php esc_html_e( 'Select a WordPress menu to inject into header/footer sections.', 'naano-ai-website-builder' ); ?></p>
+						<select id="naano-edit-wp-menu" class="naano-input">
+							<option value=""><?php esc_html_e( '— None —', 'naano-ai-website-builder' ); ?></option>
+						</select>
+					</div>
 
 					<!-- Page Assets -->
 					<div class="naano-drawer__field naano-assets-section">

@@ -193,6 +193,12 @@ class Naano_Ajax_Handler {
 			}
 			$builder->set_site_pages( $site_pages );
 
+			// Render WordPress nav menu if selected.
+			$wp_menu_id = (int) ( $_POST['wp_menu'] ?? 0 );
+			if ( $wp_menu_id ) {
+				$builder->set_nav_menu( self::render_nav_menu( $wp_menu_id ) );
+			}
+
 			$system          = $builder->build_system_prompt();
 			$section_manager = new Naano_Section_Manager();
 
@@ -280,6 +286,12 @@ class Naano_Ajax_Handler {
 			$builder->set_references( $url_refs );
 			$builder->set_assets( $assets );
 			$builder->set_redirects( $redirects );
+
+			// Render WordPress nav menu if selected.
+			$wp_menu_id = (int) ( $_POST['wp_menu'] ?? 0 );
+			if ( $wp_menu_id ) {
+				$builder->set_nav_menu( self::render_nav_menu( $wp_menu_id ) );
+			}
 
 			$system  = $builder->build_system_prompt();
 			$history = $conversation->get_trimmed( $page_id );
@@ -820,6 +832,29 @@ class Naano_Ajax_Handler {
 
 	/**
 	 * Run the initial LLM generation then refine the result a given number of times.
+	/**
+	 * Render a WordPress nav menu as a flat HTML list.
+	 *
+	 * @param int $menu_id WordPress nav menu term ID.
+	 * @return string Rendered HTML (ul > li > a items).
+	 */
+	private static function render_nav_menu( int $menu_id ): string {
+		$items = wp_get_nav_menu_items( $menu_id );
+		if ( empty( $items ) || ! is_array( $items ) ) {
+			return '';
+		}
+
+		$lines = [ '<ul>' ];
+		foreach ( $items as $item ) {
+			$lines[] = '<li><a href="' . esc_url( $item->url ) . '">' . esc_html( $item->title ) . '</a></li>';
+		}
+		$lines[] = '</ul>';
+
+		return implode( "\n", $lines );
+	}
+
+	/**
+	 * Generate HTML via LLM with optional refinement passes.
 	 *
 	 * Each refinement pass appends the previous assistant response to the
 	 * conversation and asks the LLM to self-review against the design standards

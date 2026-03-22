@@ -389,6 +389,21 @@ PROMPT;
 		return $this;
 	}
 
+	/** @var string Rendered WordPress nav menu HTML. */
+	private string $nav_menu_html = '';
+
+	/**
+	 * Set the rendered WordPress navigation menu HTML for injection
+	 * into header/footer section prompts.
+	 *
+	 * @param string $html Rendered menu HTML from wp_nav_menu().
+	 * @return static
+	 */
+	public function set_nav_menu( string $html ): static {
+		$this->nav_menu_html = $html;
+		return $this;
+	}
+
 	/**
 	 * Build the user message for generating a complete new site.
 	 *
@@ -450,9 +465,11 @@ MSG;
 
 		$extras_section = $context_extras ? "\n\n" . $context_extras : '';
 
+		$nav_block = $this->build_nav_menu_block( $section_id );
+
 		return <<<MSG
 CURRENT SITE CONTEXT (compressed — other sections shown as placeholders to preserve context):
-{$compressed_context}{$extras_section}
+{$compressed_context}{$extras_section}{$nav_block}
 
 TASK:
 Redesign/update the section with ID "{$section_id}" following this instruction precisely:
@@ -499,12 +516,14 @@ MSG;
 			$pages_block = implode( "\n", $lines ) . "\n";
 		}
 
+		$nav_block = $this->build_nav_menu_block( $section_id );
+
 		return <<<MSG
 Create a single, visually stunning, agency-quality website section based on the following brief.
 
 BRIEF:
 {$description}
-{$pages_block}
+{$pages_block}{$nav_block}
 SECTION TO CREATE: {$section_type}
 
 The SECTION_ID for this section is "{$section_id}".
@@ -535,6 +554,25 @@ MSG;
 	// -------------------------------------------------------------------------
 	// Private helpers
 	// -------------------------------------------------------------------------
+
+	/**
+	 * Build the navigation menu block for header/footer sections.
+	 *
+	 * @param string $section_id Section being generated/edited.
+	 * @return string Nav menu prompt block, or empty string.
+	 */
+	private function build_nav_menu_block( string $section_id ): string {
+		if ( empty( $this->nav_menu_html ) ) {
+			return '';
+		}
+
+		// Only inject for header/footer sections.
+		if ( strpos( $section_id, 'header' ) === false && strpos( $section_id, 'footer' ) === false ) {
+			return '';
+		}
+
+		return "\n\nWORDPRESS NAVIGATION MENU (use these exact links and labels for the nav):\n" . $this->nav_menu_html . "\n";
+	}
 
 	/**
 	 * Build the variables block for the system prompt.

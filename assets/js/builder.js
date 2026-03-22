@@ -118,6 +118,15 @@
 			NaanoBuilder._bindIframeMessages();
 			NaanoBuilder._bindLangSwitcher();
 
+			// Populate WP menu dropdowns.
+			if ( data.wpMenus && data.wpMenus.length ) {
+				var menuOpts = '';
+				$.each( data.wpMenus, function ( _, m ) {
+					menuOpts += '<option value="' + m.id + '">' + $( '<span>' ).text( m.name ).html() + '</option>';
+				} );
+				$( '#naano-initial-wp-menu, #naano-edit-wp-menu' ).append( menuOpts );
+			}
+
 			// If we already have sections (page reload), render them.
 			if ( data.sections && data.sections.length > 0 ) {
 				NaanoBuilder.sectionsData = data.sections.slice();
@@ -262,7 +271,8 @@
 				description:        description,
 				sections:           sections,
 				imported_sections:  JSON.stringify( NaanoBuilder.importedSections ),
-				initial_references: JSON.stringify( NaanoBuilder.initialReferences )
+				initial_references: JSON.stringify( NaanoBuilder.initialReferences ),
+				wp_menu:            $( '#naano-initial-wp-menu' ).val() || ''
 			} )
 			.done( function ( response ) {
 				NaanoBuilder._setLoading( '#naano-generate-btn', '#naano-generate-loading', false );
@@ -568,7 +578,8 @@
 				instruction: instruction,
 				assets:      JSON.stringify( NaanoBuilder.pageAssets ),
 				redirects:   JSON.stringify( NaanoBuilder.pageRedirects ),
-				references:  JSON.stringify( ( data.references && data.references[ sectionId ] ) ? data.references[ sectionId ] : [] )
+				references:  JSON.stringify( ( data.references && data.references[ sectionId ] ) ? data.references[ sectionId ] : [] ),
+				wp_menu:     $( '#naano-edit-wp-menu' ).val() || ''
 			} )
 			.done( function ( response ) {
 				if ( response.success ) {
