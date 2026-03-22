@@ -125,13 +125,15 @@ $section_types = [
 						<p id="naano-description-error" style="display:none;color:#f87171;font-size:12px;margin:4px 0 0;">
 							<?php esc_html_e( 'Please enter a site description.', 'naano-ai-website-builder' ); ?>
 						</p>
-						<button type="button" class="naano-btn-enhance" id="naano-enhance-description-btn">
-							<span class="dashicons dashicons-admin-generic"></span>
-							<?php esc_html_e( 'Enhance with AI', 'naano-ai-website-builder' ); ?>
-						</button>
-						<div class="naano-loading" id="naano-enhance-description-loading" style="display:none;">
-							<span class="spinner is-active"></span>
-							<?php esc_html_e( 'Enhancing…', 'naano-ai-website-builder' ); ?>
+						<div class="naano-enhance-row">
+							<button type="button" class="naano-btn-enhance" id="naano-enhance-description-btn">
+								<span class="dashicons dashicons-admin-generic"></span>
+								<?php esc_html_e( 'Enhance with AI', 'naano-ai-website-builder' ); ?>
+							</button>
+							<div class="naano-loading" id="naano-enhance-description-loading" style="display:none;">
+								<span class="spinner is-active"></span>
+								<?php esc_html_e( 'Enhancing…', 'naano-ai-website-builder' ); ?>
+							</div>
 						</div>
 					</div>
 
@@ -204,13 +206,15 @@ $section_types = [
 						</label>
 						<textarea id="naano-instruction" class="naano-textarea" rows="5"
 								  placeholder="<?php esc_attr_e( 'Describe what you want to change…', 'naano-ai-website-builder' ); ?>"></textarea>
-						<button type="button" class="naano-btn-enhance" id="naano-enhance-instruction-btn">
-							<span class="dashicons dashicons-admin-generic"></span>
-							<?php esc_html_e( 'Enhance with AI', 'naano-ai-website-builder' ); ?>
-						</button>
-						<div class="naano-loading" id="naano-enhance-instruction-loading" style="display:none;">
-							<span class="spinner is-active"></span>
-							<?php esc_html_e( 'Enhancing…', 'naano-ai-website-builder' ); ?>
+						<div class="naano-enhance-row">
+							<button type="button" class="naano-btn-enhance" id="naano-enhance-instruction-btn">
+								<span class="dashicons dashicons-admin-generic"></span>
+								<?php esc_html_e( 'Enhance with AI', 'naano-ai-website-builder' ); ?>
+							</button>
+							<div class="naano-loading" id="naano-enhance-instruction-loading" style="display:none;">
+								<span class="spinner is-active"></span>
+								<?php esc_html_e( 'Enhancing…', 'naano-ai-website-builder' ); ?>
+							</div>
 						</div>
 					</div>
 					<!-- Element Style Editor -->

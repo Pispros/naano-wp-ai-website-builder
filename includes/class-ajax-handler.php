@@ -339,8 +339,9 @@ class Naano_Ajax_Handler {
 	public static function handle_naano_enhance_prompt(): void {
 		self::verify_nonce();
 
-		$raw_text = sanitize_textarea_field( wp_unslash( $_POST['raw_text'] ?? '' ) );
-		$context  = sanitize_text_field( wp_unslash( $_POST['context'] ?? 'initial' ) );
+		$raw_text  = sanitize_textarea_field( wp_unslash( $_POST['raw_text'] ?? '' ) );
+		$context   = sanitize_text_field( wp_unslash( $_POST['context'] ?? 'initial' ) );
+		$page_name = sanitize_text_field( wp_unslash( $_POST['page_name'] ?? '' ) );
 
 		if ( ! $raw_text ) {
 			wp_send_json_error( [ 'message' => __( 'Please enter some text to enhance.', 'naano-ai-website-builder' ) ] );
@@ -353,6 +354,7 @@ class Naano_Ajax_Handler {
 
 		if ( $context === 'initial' ) {
 			$system = "You are a website planning assistant. The user will give you a rough idea for a website. "
+				. ( $page_name ? "The website/page is called \"" . $page_name . "\". " : '' )
 				. "Your job is to:\n"
 				. "1. Rewrite their idea into a detailed, well-structured website brief that a web designer would use. "
 				. "Include: business name (if mentioned), target audience, tone, key features to highlight, and any specific content.\n"
@@ -364,7 +366,9 @@ class Naano_Ajax_Handler {
 				. "---SUGGESTED_SECTIONS---\n"
 				. "(comma-separated list of section names, e.g.: header, hero, features, about, contact, footer)";
 		} else {
-			$system = "You are a website editing assistant. The user will give you a rough instruction for editing a website section. "
+			$system = "You are a website editing assistant. "
+				. ( $page_name ? "The website/page is called \"" . $page_name . "\". " : '' )
+				. "The user will give you a rough instruction for editing a website section. "
 				. "Your job is to rewrite it into a clear, detailed, and precise instruction that a web designer would follow. "
 				. "Be specific about layout, styling, content changes, and visual expectations.\n\n"
 				. "Respond with ONLY the enhanced instruction text. No markdown, no extra formatting, no explanations.";

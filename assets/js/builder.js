@@ -160,10 +160,11 @@
 			$loading.show();
 
 			$.post( data.ajaxUrl, {
-				action:   'naano_enhance_prompt',
-				nonce:    data.nonce,
-				raw_text: rawText,
-				context:  context
+				action:    'naano_enhance_prompt',
+				nonce:     data.nonce,
+				raw_text:  rawText,
+				context:   context,
+				page_name: $( '#naano-page-name' ).val() || ''
 			} )
 			.done( function ( response ) {
 				$btn.prop( 'disabled', false );

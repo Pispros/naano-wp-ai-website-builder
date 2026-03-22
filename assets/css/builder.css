@@ -564,6 +564,14 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	height: 16px;
 }
 
+/* Enhance row (button + loading side by side) */
+.naano-enhance-row {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 8px;
+}
+
 /* Enhance button (Prompt Builder) */
 .naano-vb .naano-btn-enhance {
 	display: inline-flex;
@@ -576,7 +584,6 @@ body.naano-fullscreen #wpbody-content > .wrap {
 	border-radius: 4px;
 	cursor: pointer;
 	font-size: 12px;
-	margin-top: 8px;
 	transition: background 0.15s, color 0.15s;
 }
 
