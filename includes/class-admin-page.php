@@ -496,6 +496,45 @@ class Naano_Admin_Page {
 			}
 		}
 
+		// Inject the WordPress admin bar for logged-in users.
+		if ( is_user_logged_in() && is_admin_bar_showing() ) {
+			// Capture wp_head output (admin bar CSS + scripts).
+			ob_start();
+			wp_head();
+			$head_assets = ob_get_clean();
+
+			// Capture wp_footer output (admin bar HTML + scripts).
+			ob_start();
+			wp_footer();
+			$footer_assets = ob_get_clean();
+
+			// Add admin-bar body class and offset the page content.
+			if ( stripos( $html, '<body' ) !== false ) {
+				$html = preg_replace(
+					'/(<body[^>]*class=["\'])/',
+					'$1admin-bar ',
+					$html,
+					1,
+					$count
+				);
+				if ( ! $count ) {
+					$html = preg_replace( '/(<body)/', '$1 class="admin-bar"', $html, 1 );
+				}
+			}
+
+			// Inject head assets before </head>.
+			if ( stripos( $html, '</head>' ) !== false ) {
+				$html = str_ireplace( '</head>', $head_assets . '</head>', $html );
+			}
+
+			// Inject footer assets before </body>.
+			if ( stripos( $html, '</body>' ) !== false ) {
+				$html = str_ireplace( '</body>', $footer_assets . '</body>', $html );
+			} else {
+				$html .= $footer_assets;
+			}
+		}
+
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo $html;
