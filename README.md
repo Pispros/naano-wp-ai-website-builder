@@ -1,10 +1,27 @@
 # Naano AI Website Builder
 
-> An AI-powered, section-by-section WordPress website builder using Claude, Gemini, Kimi Or ChatGpt — pure PHP, no external backend needed.
+> An AI-powered, section-by-section WordPress website builder using Claude, Gemini, or Kimi — pure PHP, no external backend needed.
 
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?logo=php)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
+
+---
+
+## What's new (1.3.0)
+
+- **WP-Cron job runner** — long generations now run as a chain of single-LLM-call cron ticks, so a 12-section website never trips a shared host's `LSAPI_MAX_PROCESS_TIME` ceiling.
+- **Skip-on-fail policy** — if a single section's worker is killed, the runner persists whatever it had, advances the cursor, and continues. The whole job no longer dies on one bad section.
+- **Failed sections drawer with Retry** — recovered sections clear automatically.
+- **Click-to-edit by default** — the previous `Inspect Elements` toggle is gone; clicking any element in the live preview opens the floating Element Editor (top-right of the canvas, Elementor-style).
+- **Inline text editing** via `contenteditable` — type directly in the preview to change copy.
+- **Link tab** for `<a>` elements (href / target / rel + in-page anchor picker).
+- **Classes tab** — add or replace user CSS classes; AI classes are preserved.
+- **Save changes vs Publish** — manual edits are stored as a draft via the new orange `Save changes` button; `Publish` is its own action.
+- **Global CSS textarea** in the drawer, persisted alongside section edits.
+- **Body-margin reset** — `html, body { margin: 0; padding: 0 }` is injected into both the live preview and the published page so AI-generated sections sit flush with the page edges.
+- **Recovery UI on errors** — when a job ends in error or polling times out, the builder still loads the sections that were already persisted in the DB.
+- **OpenAI / GPT-5.x adapter** with `reasoning_effort: none` to keep tokens flowing within shared-host execution windows.
 
 ---
 
@@ -36,10 +53,20 @@
 ### Visual Builder
 - 🖥️ **Live preview iframe** — see your changes instantly in a sandboxed preview panel
 - 📱 **Responsive viewports** — toggle between Desktop (100%), Tablet (768 px) and Mobile (375 px) inside the builder
-- 🔍 **Element inspector** — Elementor-style inspect mode: click any element in the live preview to select it
-- 🎨 **Visual style panel** — edit Typography (color, size, weight, align), Background (color, image, size), Size (width, height, max-width), Padding, Margin, Border, and Border Radius through a dedicated panel without writing a line of code
-- 💅 **Custom CSS tab** — inject freeform CSS scoped to the selected element directly from the style panel
-- ⚡ **Live apply** — style changes are applied to the iframe in real time without regenerating the section
+- 🖱️ **Click-to-edit by default** — no toggle needed. Click any element in the live preview to open the floating Element Editor (top-right of the canvas, Elementor-style)
+- ✏️ **Inline text editing** — selected elements become `contenteditable`; type directly in the live preview to change copy
+- 🎨 **Style tab** — Typography (color, size, weight, align), Background (color, image, size), Border, Border Radius
+- 📐 **Spacing tab** — Width / Height / Max-width and individual Padding T/R/B/L + Margin T/R/B/L inputs
+- 🏷️ **Classes tab** — add or override CSS class names on the selected element; existing AI-generated classes are preserved
+- 🔗 **Link tab** (auto-shown on `<a>` elements) — edit `href`, `target`, `rel`, or pick an in-page anchor from a dropdown of detected sections (`#header`, `#hero`, …)
+- 💅 **Custom CSS tab** — freeform CSS scoped to `[data-naano-el="…"]` for fine-tuning
+- 🗑️ **Delete element** — remove any element directly from the editor; also exposed as a single click in the panel footer
+- 🪄 **Edit-with-AI shortcut** — from the floating panel, jump straight to the AI editor for the section that contains the selected element
+- 💾 **Save changes (manual)** — toolbar button persists all manual edits (text, styles, classes, deletions, global CSS) to a draft store. Always **separate from Publish** so you control when changes go live
+- 📦 **Global CSS textarea** — page-level CSS injected into the assembled HTML; applies to the whole site, survives section regenerations
+- 🩹 **Failed sections list with Retry** — sections that failed during the original generate (host kill, timeout) appear in a dedicated drawer with one-click Retry; entries clear automatically as sections recover
+- 🪟 **Default browser margin reset** — the assembled page (and the live preview) ships with `html, body { margin: 0; padding: 0; box-sizing: border-box }` so sections sit flush against the page edges
+- ⚡ **Live apply** — manual style changes are applied to the iframe in real time without regenerating the section
 
 ### Multi-LLM Support
 - 🤖 **Claude** (Anthropic) — supports inline base64 image vision
@@ -95,6 +122,16 @@ jQuery AJAX (builder.js)
     ▼
 PHP AJAX Handler (class-ajax-handler.php)
     │
+    ├─► Job Manager (class-job-manager.php)
+    │       Creates a job (transient) and schedules the first WP-Cron tick
+    │
+    ▼
+Job Runner (class-job-runner.php)
+    Runs ONE LLM call per WP-Cron tick (init / refine / persist) so each
+    worker stays well under any LSAPI / shared-host execution ceiling.
+    On unexpected shutdown the runner's "skip-on-fail" policy advances
+    past the broken section instead of failing the whole job.
+    │
     ├─► Payload Compressor (class-payload-compressor.php)
     │       Minifies HTML & CSS, replaces unchanged sections with hash placeholders
     │
@@ -106,7 +143,8 @@ LLM Router (class-llm-router.php)
     │
     ├─► Claude Adapter  (class-llm-claude.php)   ─► cURL → api.anthropic.com
     ├─► Gemini Adapter  (class-llm-gemini.php)   ─► cURL → generativelanguage.googleapis.com
-    └─► Kimi Adapter    (class-llm-kimi.php)     ─► cURL → api.moonshot.cn
+    ├─► Kimi Adapter    (class-llm-kimi.php)     ─► cURL → api.moonshot.cn
+    └─► OpenAI Adapter  (class-llm-openai.php)   ─► cURL → api.openai.com
     │
     ▼
 Raw LLM Response
@@ -118,18 +156,33 @@ HTML Sanitizer (class-html-sanitizer.php)
     ▼
 Section Manager (class-section-manager.php)
     Stores / updates / reorders section HTML in wp_postmeta
+    Also persists global CSS and the "failed sections" retry list
     │
     ▼
 JSON Response → UI Update (builder.js)
     │
-    ├─► Live-preview iframe refresh (srcdoc)
-    └─► Element inspector (postMessage bridge)
+    ├─► Live-preview iframe refresh (srcdoc, with body-margin reset + global CSS)
+    └─► Element Editor (postMessage bridge, floating top-right panel)
             ▲
-            │  naano-element-selected / naano-apply-element-style
+            │  naano-element-selected · naano-apply-element-style ·
+            │  naano-apply-element-classes · naano-apply-element-link ·
+            │  naano-delete-element · naano-element-html-updated · naano-deselect-element
             ▼
         Iframe helper script (injected)
-            Hover highlight · click selection · inline style apply
+            Hover highlight · click selection · inline contenteditable text ·
+            inline style apply · class merge · href/target editing · delete
 ```
+
+### Persistent state (post meta)
+
+| Meta key | Stored on | Value |
+|----------|-----------|-------|
+| `_naano_sections` | Each Naano page | Array of `[id, type, html, order]` per section |
+| `_naano_global_css` | Each Naano page | Raw CSS injected into the assembled page after the platform reset |
+| `_naano_failed_sections` | Each Naano page | List of `[section_id, section_type, reason]` for sections that failed during the last `generate_site` run |
+| `_naano_lang` | Original + translations | Language code (`default`, `es`, `fr`, …) |
+| `_naano_translation_of` | Translations only | Post ID of the original page |
+| `_naano_page_html` | Each Naano page | Raw assembled HTML written by `Publish` (for non-WordPress rendering paths) |
 
 ---
 
@@ -170,35 +223,77 @@ JSON Response → UI Update (builder.js)
 
 1. **Activate** the plugin (see Installation above).
 2. Go to **Naano AI Builder → Settings**.
-3. Select your LLM **Provider** (Claude, Gemini, or Kimi).
+3. Select your LLM **Provider** (Claude, Gemini, Kimi, or OpenAI).
 4. Paste your **API Key** and click **Test Connection**.
 5. Add **Custom Design Variables** (e.g. `primary_color → #3B82F6`, `brand_name → Acme Corp`).
 6. Click **Save Settings**.
 7. Go to **Naano AI Builder → AI Pages** and click **Create New Page with AI**.
 8. Enter a page name and description, optionally import an existing header/footer, check the sections you want, and click **Generate Full Website**.
-9. Click any section in the live preview to open its edit panel.
-10. Attach **screenshot references** or **URL references** to guide the AI on the next update.
-11. Click **Inspect Elements** to enter visual edit mode — click any element to open the style panel and tweak typography, spacing, colors, or inject custom CSS without re-running the AI.
-12. Click **Preview** to see the full site at different breakpoints, **Export HTML** to download, or **Save** to publish as a standalone WordPress page.
+9. Once generation completes, **click any element directly in the live preview** to open the floating Element Editor — type to edit text, switch tabs to tweak Style / Spacing / Classes / Link / Custom CSS.
+10. Use the drawer's **Global CSS** textarea to set page-wide CSS rules.
+11. If sections failed during generation, find them in the **Failed sections** drawer and click **Retry** per entry.
+12. Click **Save changes** in the toolbar to persist your manual edits and Global CSS as a draft (does **not** publish).
+13. Click **Publish** to push the assembled HTML to the live WordPress page. Tick **Set as Homepage** if you want this page to replace the WordPress front page.
+
+### Server prerequisite for AI generation
+
+The AI generation pipeline runs as a chain of WP-Cron ticks. On shared hosts where `wp-cron.php` is unreliable (the default), add an OS-level cron that hits it every minute:
+
+```
+* * * * * wget -q -O - https://your-site.tld/wp-cron.php?doing_wp_cron > /dev/null 2>&1
+```
+
+Without this, generation will still progress whenever a visitor lands on the site, but progress between ticks will be slow.
 
 ---
 
-## Element Inspector (Visual Editing)
+## Element Editor (Visual Editing)
 
-The built-in element inspector works like Elementor's style editor — without blocks or a different page format.
+The built-in element editor works like Elementor's style editor — without blocks, without a different page format. Inspect mode is the default, so any click in the live preview opens the editor.
 
-| Step | Action |
-|------|--------|
-| 1 | Open the builder on any page that has sections |
-| 2 | Click **Inspect Elements** in the left panel (cursor turns to crosshair) |
-| 3 | Hover over any element in the live preview — it is highlighted with an orange dashed outline |
-| 4 | Click the element — the **Element Style Panel** opens in the sidebar |
-| 5 | Edit Typography, Background, Size, Padding, Margin or Border controls |
-| 6 | Switch to the **Custom CSS** tab for freeform CSS scoped to that element |
-| 7 | Click **Apply** — the change is applied live in the iframe |
-| 8 | The updated section HTML is saved in memory; **Save** will persist it to the database |
+### Selecting an element
 
-> Styles applied through the inspector are stored as inline `style` attributes or scoped `<style>` blocks on `[data-naano-el]` elements — fully compatible with any subsequent AI regeneration of that section.
+1. Open the builder on any page that has sections.
+2. Click any element in the live preview — a floating **Element Editor** panel slides in from the top-right corner of the canvas.
+3. The clicked element is highlighted with a solid orange outline and becomes editable in place: type directly into headings, paragraphs, buttons, etc. to change their text. Press `Esc` or click the panel's `×` to deselect.
+
+### Tabs in the floating panel
+
+| Tab | What you can do |
+|------|------------------|
+| **Style** | Color, font-size, font-weight, text-align, background color/image/size, border, border-radius |
+| **Spacing** | Width, height, max-width, padding T/R/B/L, margin T/R/B/L (each side independent) |
+| **Classes** | Type space-separated CSS class names. Existing AI-generated classes are preserved (the iframe merges your input with the AI's classes on apply). |
+| **Link** *(only on `<a>`)* | Edit `href`, `target` (same/new tab), `rel`. The Anchor dropdown lists every `data-section` ID on the page so you can wire up `#header`, `#contact`, etc. without typing. |
+| **Custom CSS** | Freeform CSS scoped to that element via `[data-naano-el="…"]`. Useful for hover states, transitions, etc. |
+
+### Footer actions
+
+| Button | Effect |
+|---------|---------|
+| **Delete** | Removes the selected element from its section (cannot delete the section root) |
+| **Edit section with AI** | Closes the panel and opens the AI edit drawer for the parent section |
+| **Done** | Deselects without applying any pending changes from the inputs |
+| **Apply** | Pushes the panel's styles + classes + link to the live preview and marks the section as "unsaved" |
+
+### Save vs Publish
+
+The toolbar separates the two operations clearly:
+
+- **Save changes** (orange, only visible when there are unsaved manual edits) — persists all dirty section HTML and the **Global CSS** textarea to the draft store via `naano_save_section_html`. Does **not** modify the live published page.
+- **Publish** (the existing primary button) — assembles the final HTML server-side (with the body-margin reset and your global CSS) and writes it to the published WordPress page.
+
+A `beforeunload` warning prompts you if you try to close the tab with unsaved manual edits.
+
+### Global CSS
+
+A textarea in the left drawer (right under URL References) accepts page-level CSS. It's injected into the assembled HTML **after** the platform's reset (`html, body { margin: 0; padding: 0 }` and `box-sizing: border-box`), so you can override anything you want. Persisted alongside section edits via the same **Save changes** button.
+
+### Failed sections & Retry
+
+When `generate_site` is interrupted (host kills the worker on a slow LLM call, exception during a section's render, etc.), failed sections are recorded per page in `_naano_failed_sections` post meta. They surface as a dedicated **Failed sections** drawer field with a one-click **Retry** button per entry. Recovered sections automatically disappear from the list.
+
+> Styles applied through the editor are stored as inline `style` attributes, scoped `<style>` blocks on `[data-naano-el]` elements, or class additions — fully compatible with any subsequent AI regeneration of that section.
 
 ---
 
@@ -322,10 +417,11 @@ All adapters implement `Naano_LLM_Provider_Interface` — adding a new provider 
 | Option | How | Result |
 |--------|-----|--------|
 | **Preview** | Click "Preview" in the toolbar | Full-screen overlay with desktop/tablet/mobile viewport buttons |
-| **Export HTML** | Click "Export" in the toolbar | Downloads `website.html` (complete HTML5 document) |
+| **Export HTML** | Click "Export" in the toolbar | Downloads `website.html` (complete HTML5 document with body-margin reset and your global CSS) |
 | **Copy HTML** | Click "Copy" in the toolbar | Copies the full HTML to your clipboard |
-| **Save** | Click "Save" in the toolbar | Publishes the page as a standalone WordPress page (raw HTML, no theme wrapping) |
-| **Set as Homepage** | Tick the checkbox in the Save modal | Sets `show_on_front=page` and `page_on_front` in WordPress options |
+| **Save changes** | Click the orange "Save changes" button (only visible when you have unsaved manual edits) | Persists section HTML edits + Global CSS to the draft store. Does **not** publish. |
+| **Publish** | Click "Publish" in the toolbar | Publishes the page as a standalone WordPress page (raw HTML, no theme wrapping) |
+| **Set as Homepage** | Tick the checkbox in the Publish modal | Sets `show_on_front=page` and `page_on_front` in WordPress options |
 
 ---
 
@@ -349,15 +445,18 @@ All endpoints require a valid `naano_builder_nonce` nonce in the `nonce` POST fi
 
 | Action | Method | Key Parameters | Success Response |
 |--------|--------|---------------|-----------------|
-| `naano_generate_site` | POST | `page_id`, `page_name`, `description`, `sections[]`, `imported_sections` (JSON) | `{page_id, sections, html}` |
-| `naano_update_section` | POST | `page_id`, `section_id`, `instruction`, `assets` (JSON), `redirects` (JSON) | `{section_id, section_html}` |
+| `naano_generate_site` | POST | `page_id`, `page_name`, `description`, `sections[]`, `imported_sections` (JSON) | `{job_id}` (poll via `naano_poll_job`) |
+| `naano_update_section` | POST | `page_id`, `section_id`, `instruction`, `assets` (JSON), `redirects` (JSON) | `{job_id}` (poll via `naano_poll_job`) |
+| `naano_poll_job` | POST | `job_id` | `{status, data?, partial?, log?}` |
+| `naano_save_section_html` | POST | `page_id`, `sections` (JSON `[{id, html}]`), `global_css` (optional) | `{saved_count, page_id, global_css_saved}` |
+| `naano_get_failed_sections` | POST | `page_id` | `{page_id, failed_sections, global_css}` |
 | `naano_test_connection` | POST | `provider`, `api_key`, `model` | `{success, model, latency_ms}` |
 | `naano_add_reference` | POST | `page_id`, `section_id`, `type`, `url`, `attachment_id`, `notes` | `{references}` |
 | `naano_remove_reference` | POST | `page_id`, `section_id`, `index` | `{references}` |
 | `naano_delete_section` | POST | `page_id`, `section_id` | `{}` |
 | `naano_reorder_sections` | POST | `page_id`, `order[]` | `{}` |
 | `naano_export_html` | POST | `page_id` | `{html}` |
-| `naano_save_as_page` | POST | `page_id`, `title`, `html` | `{page_id, edit_url, view_url, title}` |
+| `naano_save_as_page` | POST | `page_id`, `title`, `html` *(html now optional — server prefers DB-assembled HTML)* | `{page_id, edit_url, view_url, title}` |
 | `naano_set_homepage` | POST | `page_id` | `{}` |
 | `naano_duplicate_for_translation` | POST (admin-post.php) | `page_id`, `lang` | Redirect to new page's builder |
 
@@ -381,15 +480,20 @@ naano-ai-website-builder/
 │   ├── class-llm-claude.php              # Claude (Anthropic) adapter
 │   ├── class-llm-gemini.php              # Gemini (Google) adapter
 │   ├── class-llm-kimi.php                # Kimi (Moonshot) adapter
+│   ├── class-llm-openai.php              # OpenAI (GPT-5.x with reasoning_effort) adapter
 │   ├── class-llm-router.php              # Provider router + sanitize pipeline
+│   ├── class-llm-utils.php               # Shared cURL defaults
 │   ├── class-payload-compressor.php      # HTML/CSS minification + section placeholders
 │   ├── class-html-sanitizer.php          # Extract, clean, validate LLM HTML output
 │   ├── class-prompt-builder.php          # System/user prompt assembly
 │   ├── class-reference-manager.php       # Screenshot uploads + URL references
-│   ├── class-section-manager.php         # Section CRUD + HTML assembly
+│   ├── class-section-manager.php         # Section CRUD + assembled HTML + global CSS + failed sections meta
 │   ├── class-conversation.php            # Conversation history per page
 │   ├── class-ajax-handler.php            # All wp_ajax_* endpoints
-│   └── class-admin-page.php              # Admin menus, settings, asset enqueue, inspector styles
+│   ├── class-admin-page.php              # Admin menus, settings, asset enqueue, inspector styles
+│   └── jobs/
+│       ├── class-job-manager.php         # Transient-backed job state + log
+│       └── class-job-runner.php          # WP-Cron-driven runner: 1 LLM call per tick + skip-on-fail policy
 ├── templates/
 │   ├── admin-pages-list.php              # Back-office pages list (table + delete button)
 │   ├── frontend-builder.php              # Full visual builder UI (toolbar, drawer, iframe, inspector)

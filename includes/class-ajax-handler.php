@@ -37,6 +37,8 @@ class Naano_Ajax_Handler
             "naano_reorder_sections",
             "naano_export_html",
             "naano_save_as_page",
+            "naano_save_section_html",
+            "naano_get_failed_sections",
             "naano_set_homepage",
             "naano_save_firecrawl_key",
             "naano_test_firecrawl",
@@ -300,6 +302,35 @@ class Naano_Ajax_Handler
 
         // Don't leak the original payload nor the auth token back to the client.
         unset($job["payload"], $job["token"]);
+
+        // Always attach a "partial" view of the work persisted so far. This
+        // lets the UI recover gracefully from a job that ended in `error`
+        // (host kill on a single section) or that's still `running` past the
+        // client's polling deadline: the sections that already made it to
+        // the database are shown immediately rather than thrown away with
+        // a generic toast.
+        //
+        // We cheaply look at the original payload (still in the live job
+        // record before we unset()'d it on the response copy) to find the
+        // page_id. Keep this best-effort: any failure here must not break
+        // the poll itself, hence the try/catch and the bare $page_id check.
+        try {
+            $live_job = Naano_Job_Manager::get($job_id);
+            $page_id = (int) (($live_job["payload"] ?? [])["page_id"] ?? 0);
+            if ($page_id > 0) {
+                $section_manager = new Naano_Section_Manager();
+                $sections = $section_manager->get_sections($page_id);
+                $job["partial"] = [
+                    "page_id" => $page_id,
+                    "sections" => $sections,
+                    "section_count" => is_array($sections)
+                        ? count($sections)
+                        : 0,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Swallow — partial is a best-effort enrichment, never required.
+        }
 
         wp_send_json_success($job);
 
@@ -799,6 +830,144 @@ class Naano_Ajax_Handler
     }
 
     /**
+     * Save manual edits made to one or more sections directly to the
+     * section meta store. NO LLM call, no publish — purely a "draft save"
+     * for changes the user made by hand in the manual editor (text edits,
+     * inline styles, deletions, CSS class additions).
+     *
+     * Accepts a batch payload because the user typically modifies several
+     * elements across several sections before clicking "Save changes". One
+     * AJAX round-trip persists everything at once.
+     *
+     * POST:
+     *   page_id : int
+     *   sections: JSON array of { id: string, html: string }
+     *
+     * Returns:
+     *   saved_count : how many sections were written
+     *
+     * The published HTML (_naano_page_html) is intentionally NOT updated
+     * here — that lives behind the dedicated "Publish" button so the user
+     * controls when their draft becomes live.
+     */
+    public static function handle_naano_save_section_html(): void
+    {
+        self::verify_nonce();
+
+        if (!current_user_can("edit_pages")) {
+            wp_send_json_error([
+                "message" => __(
+                    "Insufficient permissions.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $page_id = self::get_int("page_id");
+        if (!$page_id) {
+            wp_send_json_error([
+                "message" => __("Missing page_id.", "naano-ai-website-builder"),
+            ]);
+        }
+
+        // Verify the user owns / can edit this specific page.
+        $post = get_post($page_id);
+        if (!$post || !current_user_can("edit_post", $page_id)) {
+            wp_send_json_error([
+                "message" => __(
+                    "You cannot edit this page.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $sections_json = wp_unslash($_POST["sections"] ?? "");
+        $sections = json_decode($sections_json, true);
+        if (!is_array($sections)) {
+            wp_send_json_error([
+                "message" => __(
+                    "Invalid sections payload.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $manager = new Naano_Section_Manager();
+        $saved = 0;
+
+        foreach ($sections as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $section_id = sanitize_title((string) ($entry["id"] ?? ""));
+            // The HTML is sanitized server-side by Naano_Section_Manager
+            // (which strips scripts, dangerous handlers, etc). We trust
+            // that pipeline here.
+            $html = (string) ($entry["html"] ?? "");
+            if ($section_id === "") {
+                continue;
+            }
+            // Empty html with section_id is the "delete this section"
+            // signal from the client-side delete-element flow when it
+            // empties an entire section.
+            $manager->update_section($page_id, $section_id, $html);
+            $saved++;
+        }
+
+        // Optional: page-level "global CSS" override. Sent by the same
+        // Save button so the user can write a piece of global CSS in the
+        // drawer and have it persisted alongside their per-element edits.
+        // The empty string is a legitimate value (= clear the override).
+        $global_css_saved = false;
+        if (array_key_exists("global_css", $_POST)) {
+            $global_css = (string) wp_unslash($_POST["global_css"]);
+            $manager->set_global_css($page_id, $global_css);
+            $global_css_saved = true;
+        }
+
+        wp_send_json_success([
+            "saved_count" => $saved,
+            "page_id" => $page_id,
+            "global_css_saved" => $global_css_saved,
+        ]);
+    }
+
+    /**
+     * Return the current list of failed sections for a page so the
+     * builder can render a "Failed sections" list with retry buttons
+     * even after a refresh (the list lives in post meta).
+     *
+     * POST: page_id
+     */
+    public static function handle_naano_get_failed_sections(): void
+    {
+        self::verify_nonce();
+
+        if (!current_user_can("edit_pages")) {
+            wp_send_json_error([
+                "message" => __(
+                    "Insufficient permissions.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $page_id = self::get_int("page_id");
+        if (!$page_id) {
+            wp_send_json_error([
+                "message" => __("Missing page_id.", "naano-ai-website-builder"),
+            ]);
+        }
+
+        $manager = new Naano_Section_Manager();
+        wp_send_json_success([
+            "page_id" => $page_id,
+            "failed_sections" => $manager->get_failed_sections($page_id),
+            "global_css" => $manager->get_global_css($page_id),
+        ]);
+    }
+
+    /**
      * Save assembled HTML as a real WordPress page.
      *
      * POST: page_id, title
@@ -831,24 +1000,28 @@ class Naano_Ajax_Handler
             (get_the_title($page_id) ?:
             __("AI Generated Page", "naano-ai-website-builder"));
 
-        // The client sends the assembled HTML directly (built from in-memory
-        // sectionsData) so we never rely on a server-side DB re-assembly which
-        // may be empty if sections meta is on a different page_id.
-        $raw_html = wp_unslash($_POST["html"] ?? "");
-
-        // Strip scripts as a defence-in-depth measure (content was already
-        // sanitized by Naano_HTML_Sanitizer during generation, but this
-        // ensures nothing slips through if the payload is tampered).
-        $html =
-            preg_replace(
-                "/<script\b[^>]*>[\s\S]*?<\/script>/i",
-                "",
-                $raw_html,
-            ) ?? "";
-
-        // Fall back to server-side assembly if the client sent nothing.
-        if (!trim($html)) {
+        // Prefer server-side HTML assembly: it injects the platform's CSS
+        // reset (html,body{margin:0;padding:0}) and the user's "Global CSS"
+        // override. Falling back to the client payload would re-introduce
+        // the default 8px body margin since the in-memory builder HTML is
+        // assembled without those wrappers.
+        $html = "";
+        $sections = $manager->get_sections($page_id);
+        if (!empty($sections)) {
             $html = $manager->get_assembled_html($page_id);
+        }
+
+        // Last-resort fallback for the rare case where sections meta is
+        // empty (brand-new draft, edge race condition). Use the client-sent
+        // HTML so the user doesn't lose their work, but strip scripts.
+        if (!trim($html)) {
+            $raw_html = wp_unslash($_POST["html"] ?? "");
+            $html =
+                preg_replace(
+                    "/<script\b[^>]*>[\s\S]*?<\/script>/i",
+                    "",
+                    $raw_html,
+                ) ?? "";
         }
 
         // Publish / update the SAME page that was edited in the builder.

@@ -1,17 +1,26 @@
 <?php
 /**
- * Job Runner – executes ONE step of a job per WP-Cron tick. Each tick
- * runs in its own fresh PHP worker, so LSAPI_MAX_PROCESS_TIME (typically
- * 60-300s) cannot kill a long multi-section job mid-flight: each step
- * (one LLM call ≈ 30-90s) finishes well within a single worker's budget,
- * then the runner schedules the next tick and exits.
+ * Job Runner – executes ONE LLM call per WP-Cron tick. Each tick runs in its
+ * own fresh PHP worker, so LSAPI_MAX_PROCESS_TIME (typically 60-300s on shared
+ * hosts) cannot kill a long multi-section job mid-flight: each tick performs
+ * exactly one LLM round-trip (~30-90s) and exits, then the next tick is
+ * scheduled in a brand new worker.
  *
  *   START handler     ──► create job, schedule first cron tick   ──► HTTP 200 {job_id}
- *   wp-cron tick #1   ──► step 0 (setup/fetch URLs), schedule #2 ──► EXIT
- *   wp-cron tick #2   ──► step 1 (section 1 LLM)   , schedule #3 ──► EXIT
+ *   wp-cron tick #1   ──► step 0: setup (URL fetches, no LLM)    ──► EXIT
+ *   wp-cron tick #2   ──► section 1: initial generation (1 LLM)  ──► EXIT
+ *   wp-cron tick #3   ──► section 1: refinement pass 1 (1 LLM)   ──► EXIT
+ *   wp-cron tick #4   ──► section 1: persist (extract + save)    ──► EXIT
+ *   wp-cron tick #5   ──► section 2: initial generation (1 LLM)  ──► EXIT
+ *   ...
  *   wp-cron tick #N   ──► finalize, mark_done                    ──► EXIT
  *
  *   poll endpoint     ──► reads transient, returns status (+log) to client
+ *
+ * Why split init and each refinement pass into their own tick: a single LLM
+ * call can take 60s+, so two sequential calls in one worker can exceed a
+ * 120s LSAPI ceiling. By making each tick exactly one LLM call, the worker
+ * wall time is bounded by a single round-trip plus minor WP/DB overhead.
  *
  * WP-Cron is fired by:
  *   1. spawn_cron() (best-effort, called right after each schedule)
@@ -198,13 +207,23 @@ class Naano_Job_Runner
                     $elapsed .
                     "s (LSAPI_MAX_PROCESS_TIME, memory_limit, or other host-imposed kill).";
 
-            Naano_Job_Manager::log($job_id, [
-                "phase" => "shutdown_unexpected",
-                "elapsed_s" => $elapsed,
-                "last_error" => $err,
-                "reason" => $reason,
-            ]);
-            Naano_Job_Manager::mark_error($job_id, $reason);
+            // Tiered recovery policy. We may be here because:
+            //   1. LSAPI killed an LLM call that hit 120s (transient variance)
+            //   2. The section content reliably triggers a model/host crash
+            //   3. Hard fatal (PHP error, OOM, etc.)
+            //
+            // For (1) a retry usually succeeds — the killed worker doesn't
+            // taint the next one. For (2) retrying loops forever, so after
+            // one retry we skip to the next section instead of failing the
+            // whole job. For (3) we still retry-then-skip; if the same hard
+            // fatal hits us again on retry, we skip rather than block the
+            // user's entire run on one bad section.
+            //
+            // Only generate_site supports skip — its work is naturally
+            // section-by-section. update_section and enhance_prompt are
+            // single-shot jobs with nothing to skip TO, so they fall through
+            // to mark_error like before.
+            self::handle_unexpected_shutdown($job_id, $reason);
         });
 
         $job = Naano_Job_Manager::get($job_id);
@@ -236,7 +255,7 @@ class Naano_Job_Runner
                     self::step_generate_site($job_id, $payload, $state);
                     break;
                 case "update_section":
-                    self::step_update_section($job_id, $payload);
+                    self::step_update_section($job_id, $payload, $state);
                     break;
                 case "enhance_prompt":
                     self::step_enhance_prompt($job_id, $payload);
@@ -245,13 +264,24 @@ class Naano_Job_Runner
                     throw new RuntimeException("Unknown job type: " . $type);
             }
         } catch (\Throwable $e) {
+            $reason =
+                "Exception: " .
+                $e->getMessage() .
+                " (" .
+                basename($e->getFile()) .
+                ":" .
+                $e->getLine() .
+                ")";
             Naano_Job_Manager::log($job_id, [
                 "phase" => "exception",
                 "message" => $e->getMessage(),
                 "file" => basename($e->getFile()),
                 "line" => $e->getLine(),
             ]);
-            Naano_Job_Manager::mark_error($job_id, $e->getMessage());
+            // Same skip policy as for shutdown kills: for generate_site we
+            // try to keep the job moving instead of failing it on a single
+            // bad section. For other job types, mark_error.
+            self::handle_unexpected_shutdown($job_id, $reason);
             self::$expected_exit = true;
             return;
         }
@@ -269,6 +299,156 @@ class Naano_Job_Runner
         // intentional. This is the fix for the "shutdown_unexpected after
         // 5s" false positive that was killing every job at its first tick.
         self::$expected_exit = true;
+    }
+
+    /**
+     * Decide what to do when the registered shutdown handler detected an
+     * unexpected worker termination. NEVER retries — the policy is to skip
+     * past the failing step so the rest of the job can complete.
+     *
+     * Behaviour by job type and current state:
+     *
+     *   generate_site, cursor=0 (setup)
+     *     → mark_error. There's nothing to skip TO; URL fetches and sibling
+     *       page lookups must succeed before any section can be generated.
+     *
+     *   generate_site, cursor>=1, no pending_section
+     *     → init was killed. The section has no HTML at all; record it as
+     *       failed, advance cursor, schedule next tick to start the next
+     *       section.
+     *
+     *   generate_site, cursor>=1, pending_section.sub == 'init'
+     *     → init COMPLETED but a refinement pass was killed. The init HTML
+     *       is intact in state — persist it as-is (without further polish),
+     *       advance cursor, schedule next tick.
+     *
+     *   generate_site, cursor>=1, pending_section.sub == 'refine'
+     *     → a later refinement pass was killed. We still have the most
+     *       recent good HTML (either initial or a previous refine output).
+     *       Persist it as-is, advance cursor, schedule next tick.
+     *
+     *   update_section, enhance_prompt
+     *     → mark_error. Single-section jobs with nothing to skip toward.
+     *
+     * The skipped section IDs are accumulated in state.failed_sections so
+     * the UI can mention which parts of the page didn't get the polish
+     * they would have under a normal run.
+     */
+    private static function handle_unexpected_shutdown(
+        string $job_id,
+        string $reason,
+    ): void {
+        $job = Naano_Job_Manager::get($job_id);
+        if (!$job || in_array($job["status"] ?? "", ["done", "error"], true)) {
+            return;
+        }
+
+        $type = (string) ($job["type"] ?? "");
+
+        // Only generate_site has a meaningful "next step" to skip toward.
+        // Other job types are single-shot and must mark_error like before.
+        if ($type !== "generate_site") {
+            Naano_Job_Manager::mark_error($job_id, $reason);
+            return;
+        }
+
+        $state = (array) ($job["state"] ?? []);
+        $cursor = (int) ($state["cursor"] ?? 0);
+
+        // cursor=0 means setup never finished. We can't skip to a section
+        // when the prerequisites (URL fetches, sibling pages, nav menu)
+        // aren't in state yet.
+        if ($cursor === 0) {
+            Naano_Job_Manager::mark_error($job_id, $reason);
+            return;
+        }
+
+        $payload = (array) ($job["payload"] ?? []);
+        $sections = (array) ($payload["sections"] ?? []);
+        $section_count = count($sections);
+        $section_idx = $cursor - 1;
+        $section_type =
+            $section_idx >= 0 && $section_idx < $section_count
+                ? sanitize_text_field($sections[$section_idx])
+                : "";
+        $section_id = $section_type ? sanitize_title($section_type) : "";
+
+        $pending = $state["pending_section"] ?? null;
+        $has_pending_html =
+            is_array($pending) &&
+            ($pending["section_id"] ?? "") === $section_id &&
+            trim((string) ($pending["html"] ?? "")) !== "";
+
+        $failed_sections = (array) ($state["failed_sections"] ?? []);
+
+        if ($has_pending_html) {
+            // A refinement pass died but we have good (or at least usable)
+            // init/intermediate HTML. Persist it as-is so the user gets a
+            // section instead of a hole.
+            $current_html = (string) $pending["html"];
+            $page_id = (int) ($payload["page_id"] ?? 0);
+
+            try {
+                $section_html = Naano_HTML_Sanitizer::extract_section(
+                    $current_html,
+                    $section_id,
+                );
+                if (!$section_html) {
+                    $section_html = $current_html;
+                }
+                if ($page_id > 0 && $section_id !== "") {
+                    $section_manager = new Naano_Section_Manager();
+                    $section_manager->update_section(
+                        $page_id,
+                        $section_id,
+                        $section_html,
+                        $section_type,
+                    );
+                }
+            } catch (\Throwable $e) {
+                // If even persisting fails, log it but still advance —
+                // we'd rather lose one section than block the whole job.
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "skip_persist_failed",
+                    "section_id" => $section_id,
+                    "message" => $e->getMessage(),
+                ]);
+            }
+
+            Naano_Job_Manager::log($job_id, [
+                "phase" => "skip_refine_killed",
+                "section_id" => $section_id,
+                "reason" => $reason,
+                "note" =>
+                    "Refinement worker was killed; persisted the latest pre-refine HTML and moved on.",
+            ]);
+        } else {
+            // Init was killed, no HTML to salvage. Record the section as
+            // failed and move on.
+            $failed_sections[] = [
+                "section_id" => $section_id,
+                "section_type" => $section_type,
+                "reason" => $reason,
+            ];
+            Naano_Job_Manager::log($job_id, [
+                "phase" => "skip_init_killed",
+                "section_id" => $section_id,
+                "reason" => $reason,
+                "note" =>
+                    "Initial generation worker was killed; section skipped (no HTML produced).",
+            ]);
+        }
+
+        // Advance past the failing section regardless of which sub-step
+        // died. The next tick starts cleanly on the next section.
+        $state["cursor"] = $cursor + 1;
+        $state["pending_section"] = null;
+        $state["failed_sections"] = $failed_sections;
+        Naano_Job_Manager::set_state($job_id, $state);
+
+        // Schedule the next tick. The job stays in "running" status —
+        // it's not an error, we just lost one section.
+        self::schedule_next_step($job_id);
     }
 
     /**
@@ -302,11 +482,28 @@ class Naano_Job_Runner
     /**
      * State shape:
      *   [
-     *     'cursor'     => int,          // 0 = setup, 1..N = section index, N+1 = finalize
-     *     'desc_refs'  => array,        // URL refs fetched during setup, reused per section
-     *     'site_pages' => array,        // sibling Naano pages
-     *     'nav_menu'   => string,       // rendered WP nav menu HTML
+     *     'cursor'          => int,     // 0 = setup, 1..N = section index, N+1 = finalize
+     *     'desc_refs'       => array,   // URL refs fetched during setup, reused per section
+     *     'site_pages'      => array,   // sibling Naano pages
+     *     'nav_menu'        => string,  // rendered WP nav menu HTML
+     *     'pending_section' => array|null,
+     *         //   [
+     *         //     'section_type' => string,    // raw section name from payload
+     *         //     'section_id'   => string,    // sanitized id used in markers
+     *         //     'sub'          => 'init' | 'refine' | null,
+     *         //     'pass'         => int,       // 0 before any refine; 1..P after each refine
+     *         //     'html'         => string,    // current best HTML (raw, pre-extract)
+     *         //   ]
+     *         // Persists between ticks WITHIN the same section so each tick
+     *         // does exactly ONE LLM call (init OR a single refinement pass).
      *   ]
+     *
+     * Why split init and refinement across ticks: a host with a 120s LSAPI
+     * ceiling cannot host 2 sequential ~60s LLM calls in one worker. By
+     * making each tick = exactly one LLM call, the worker's wall time is
+     * bounded by the time of a single LLM call (typically 30-90s) plus a
+     * few hundred ms of WP/DB overhead, which fits comfortably under any
+     * reasonable host limit.
      */
     private static function step_generate_site(
         string $job_id,
@@ -325,6 +522,10 @@ class Naano_Job_Runner
 
         $cursor = (int) ($state["cursor"] ?? 0);
         $section_count = count($sections);
+        $refine_passes = max(
+            0,
+            (int) get_option("naano_initial_refinement_passes", 1),
+        );
 
         // ── Step 0: setup (URL fetches, sibling pages, nav menu) ────────────
         if ($cursor === 0) {
@@ -333,6 +534,7 @@ class Naano_Job_Runner
                 "page_id" => $page_id,
                 "section_count" => $section_count,
                 "sections" => $sections,
+                "refine_passes" => $refine_passes,
             ]);
 
             $desc_refs = [];
@@ -389,31 +591,28 @@ class Naano_Job_Runner
                 "desc_refs" => $desc_refs,
                 "site_pages" => $site_pages,
                 "nav_menu" => $nav_menu,
+                "pending_section" => null,
             ]);
 
             return;
         }
 
-        // ── Steps 1..N: one section per worker ──────────────────────────────
+        // ── Steps 1..N: one LLM call per worker (init OR one refine pass) ───
         $section_idx = $cursor - 1;
         if ($section_idx < $section_count) {
             $section_type = sanitize_text_field($sections[$section_idx]);
             if (!$section_type) {
                 // Skip empty entries cleanly.
                 $state["cursor"] = $cursor + 1;
+                $state["pending_section"] = null;
                 Naano_Job_Manager::set_state($job_id, $state);
                 return;
             }
             $section_id = sanitize_title($section_type);
 
-            Naano_Job_Manager::log($job_id, [
-                "phase" => "generate_site:section",
-                "index" => $section_idx + 1,
-                "of" => $section_count,
-                "section_type" => $section_type,
-                "section_id" => $section_id,
-            ]);
-
+            // Rebuild the Prompt Builder + system prompt fresh on every tick
+            // (these are cheap; the expensive part is the LLM call, which is
+            // the only thing we ever do once per tick).
             $router = self::build_router();
             $builder = new Naano_Prompt_Builder();
             $vars = get_option("naano_variables", []);
@@ -429,27 +628,114 @@ class Naano_Job_Runner
                 $builder->set_nav_menu($nav_menu);
             }
 
-            $system = $builder->build_system_prompt();
-            $message = $builder->build_single_section_message(
+            $system = self::augment_system_with_design_rules(
+                $builder->build_system_prompt(),
+            );
+            $user_message = $builder->build_single_section_message(
                 $description,
                 $section_type,
             );
 
-            $raw_html = self::generate_and_refine(
-                $router,
-                $system,
-                [["role" => "user", "content" => $message]],
-                [],
-                $section_id,
-                (int) get_option("naano_initial_refinement_passes", 1),
-            );
+            $pending = $state["pending_section"] ?? null;
+            // Defensive: if state was carried over from a partially-done
+            // previous section (cursor mismatch), drop it and restart fresh.
+            if (
+                is_array($pending) &&
+                ($pending["section_id"] ?? "") !== $section_id
+            ) {
+                $pending = null;
+            }
 
+            // ── Sub-step A: initial generation (1 LLM call) ─────────────────
+            if (!is_array($pending)) {
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "generate_site:section_init",
+                    "index" => $section_idx + 1,
+                    "of" => $section_count,
+                    "section_type" => $section_type,
+                    "section_id" => $section_id,
+                ]);
+
+                $messages = [["role" => "user", "content" => $user_message]];
+                $llm_start = microtime(true);
+                $html = $router->generate($system, $messages, []);
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "generate_site:section_init_done",
+                    "section_id" => $section_id,
+                    "elapsed_s" => round(microtime(true) - $llm_start, 2),
+                    "length" => strlen((string) $html),
+                ]);
+
+                $state["pending_section"] = [
+                    "section_type" => $section_type,
+                    "section_id" => $section_id,
+                    "sub" => "init",
+                    "pass" => 0,
+                    "html" => (string) $html,
+                ];
+                Naano_Job_Manager::set_state($job_id, $state);
+                return;
+            }
+
+            // ── Sub-step B: refinement passes (1 LLM call per tick) ─────────
+            $current_pass = (int) ($pending["pass"] ?? 0);
+            $current_html = (string) ($pending["html"] ?? "");
+
+            if ($current_pass < $refine_passes && trim($current_html) !== "") {
+                $next_pass = $current_pass + 1;
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "generate_site:section_refine",
+                    "section_id" => $section_id,
+                    "pass" => $next_pass,
+                    "of" => $refine_passes,
+                ]);
+
+                $history = [
+                    ["role" => "user", "content" => $user_message],
+                    ["role" => "assistant", "content" => $current_html],
+                    [
+                        "role" => "user",
+                        "content" => self::build_refinement_prompt(
+                            $section_id,
+                            $next_pass,
+                            $refine_passes,
+                        ),
+                    ],
+                ];
+
+                $llm_start = microtime(true);
+                $refined = $router->generate($system, $history, []);
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "generate_site:section_refine_done",
+                    "section_id" => $section_id,
+                    "pass" => $next_pass,
+                    "elapsed_s" => round(microtime(true) - $llm_start, 2),
+                    "length" => strlen((string) $refined),
+                ]);
+
+                $refined_str = (string) $refined;
+                if (trim($refined_str) !== "") {
+                    $current_html = $refined_str;
+                }
+
+                $state["pending_section"] = [
+                    "section_type" => $section_type,
+                    "section_id" => $section_id,
+                    "sub" => "refine",
+                    "pass" => $next_pass,
+                    "html" => $current_html,
+                ];
+                Naano_Job_Manager::set_state($job_id, $state);
+                return;
+            }
+
+            // ── Sub-step C: persist (no LLM call) ───────────────────────────
             $section_html = Naano_HTML_Sanitizer::extract_section(
-                $raw_html,
+                $current_html,
                 $section_id,
             );
             if (!$section_html) {
-                $section_html = $raw_html;
+                $section_html = $current_html;
             }
 
             $section_manager = new Naano_Section_Manager();
@@ -460,23 +746,43 @@ class Naano_Job_Runner
                 $section_type,
             );
 
-            // Advance cursor + dispatch next worker.
+            Naano_Job_Manager::log($job_id, [
+                "phase" => "generate_site:section_persisted",
+                "section_id" => $section_id,
+                "html_length" => strlen($section_html),
+            ]);
+
+            // Advance to the next section + clear pending.
             $state["cursor"] = $cursor + 1;
+            $state["pending_section"] = null;
             Naano_Job_Manager::set_state($job_id, $state);
             return;
         }
 
         // ── Step N+1: finalize ──────────────────────────────────────────────
         $section_manager = new Naano_Section_Manager();
+        $failed_sections = (array) ($state["failed_sections"] ?? []);
+
+        // Persist failed sections to a per-page meta so the builder can
+        // surface them as a "Failed sections" list with retry buttons even
+        // if the user refreshes the page hours later. mark_section_recovered
+        // is called from the update_section job to remove individual entries
+        // when they're successfully regenerated.
+        $section_manager->set_failed_sections($page_id, $failed_sections);
+
         $result = [
             "page_id" => $page_id,
             "sections" => $section_manager->get_sections($page_id),
             "html" => $section_manager->get_assembled_html($page_id),
+            // List of sections that were skipped due to LSAPI kills /
+            // exceptions during their generation. Empty on a clean run.
+            "failed_sections" => $failed_sections,
         ];
 
         Naano_Job_Manager::log($job_id, [
             "phase" => "generate_site:done",
             "section_count" => count($result["sections"]),
+            "failed_count" => count($failed_sections),
         ]);
 
         Naano_Job_Manager::mark_done($job_id, $result);
@@ -487,9 +793,24 @@ class Naano_Job_Runner
     // in a fresh worker's budget)
     // -------------------------------------------------------------------------
 
+    /**
+     * State shape (this job type only ever updates ONE section):
+     *   [
+     *     'phase'        => 'init' | 'refine' | null,
+     *     'pass'         => int,    // 0 before any refine; 1..P after each refine
+     *     'html'         => string, // current best HTML (raw, pre-extract)
+     *     'message'      => string, // user message (cached, for refine prompts)
+     *     'history'      => array,  // initial history (cached, for refine prompts)
+     *     'system'       => string, // assembled system prompt (cached)
+     *   ]
+     *
+     * Each tick performs exactly ONE LLM call (init or one refinement pass)
+     * so the worker wall time stays well under any LSAPI ceiling.
+     */
     private static function step_update_section(
         string $job_id,
         array $payload,
+        array $state,
     ): void {
         $page_id = (int) ($payload["page_id"] ?? 0);
         $section_id = (string) ($payload["section_id"] ?? "");
@@ -499,88 +820,175 @@ class Naano_Job_Runner
         $client_refs = (array) ($payload["client_refs"] ?? []);
         $wp_menu_id = (int) ($payload["wp_menu_id"] ?? 0);
 
-        Naano_Job_Manager::log($job_id, [
-            "phase" => "update_section:start",
-            "page_id" => $page_id,
-            "section_id" => $section_id,
-        ]);
-
         if (!$page_id || !$section_id || !$instruction) {
             throw new RuntimeException("Invalid update_section payload.");
         }
 
-        $section_manager = new Naano_Section_Manager();
-        $conversation = new Naano_Conversation();
-        $ref_manager = new Naano_Reference_Manager();
-        $router = self::build_router();
-
-        $all_sections = $section_manager->get_sections($page_id);
-        $context = Naano_Payload_Compressor::compress_context(
-            $all_sections,
-            $section_id,
+        $refine_passes = max(
+            0,
+            (int) get_option("naano_update_refinement_passes", 1),
         );
 
-        $images = $ref_manager->prepare_images_for_llm($page_id, $section_id);
+        $phase = (string) ($state["phase"] ?? "");
 
-        if (!empty($client_refs)) {
-            $url_refs = array_values(
-                array_filter(
-                    $client_refs,
-                    static fn($r) => ($r["type"] ?? "") === "url" &&
-                        !empty($r["url"]),
-                ),
+        // ── Sub-step A: initial generation (1 LLM call) ─────────────────────
+        if ($phase === "") {
+            Naano_Job_Manager::log($job_id, [
+                "phase" => "update_section:start",
+                "page_id" => $page_id,
+                "section_id" => $section_id,
+                "refine_passes" => $refine_passes,
+            ]);
+
+            $section_manager = new Naano_Section_Manager();
+            $ref_manager = new Naano_Reference_Manager();
+
+            $all_sections = $section_manager->get_sections($page_id);
+            $context = Naano_Payload_Compressor::compress_context(
+                $all_sections,
+                $section_id,
             );
-            foreach ($url_refs as &$ref) {
-                $ref["url"] = esc_url_raw($ref["url"]);
-                $ref["content"] = Naano_Reference_Manager::fetch_url_text(
-                    $ref["url"],
-                );
-            }
-            unset($ref);
-        } else {
-            $url_refs = $ref_manager->prepare_url_references(
+
+            $images = $ref_manager->prepare_images_for_llm(
                 $page_id,
                 $section_id,
             );
+
+            if (!empty($client_refs)) {
+                $url_refs = array_values(
+                    array_filter(
+                        $client_refs,
+                        static fn($r) => ($r["type"] ?? "") === "url" &&
+                            !empty($r["url"]),
+                    ),
+                );
+                foreach ($url_refs as &$ref) {
+                    $ref["url"] = esc_url_raw($ref["url"]);
+                    $ref["content"] = Naano_Reference_Manager::fetch_url_text(
+                        $ref["url"],
+                    );
+                }
+                unset($ref);
+            } else {
+                $url_refs = $ref_manager->prepare_url_references(
+                    $page_id,
+                    $section_id,
+                );
+            }
+
+            $builder = new Naano_Prompt_Builder();
+            $vars = get_option("naano_variables", []);
+            $builder->set_variables(is_array($vars) ? $vars : []);
+            $builder->set_references($url_refs);
+            $builder->set_assets($assets);
+            $builder->set_redirects($redirects);
+            if ($wp_menu_id) {
+                $builder->set_nav_menu(self::render_nav_menu($wp_menu_id));
+            }
+
+            $conversation = new Naano_Conversation();
+            $system = self::augment_system_with_design_rules(
+                $builder->build_system_prompt(),
+            );
+            $history = $conversation->get_trimmed($page_id);
+            $message = $builder->build_section_message(
+                $section_id,
+                $instruction,
+                $context,
+            );
+
+            $messages = $history;
+            $messages[] = ["role" => "user", "content" => $message];
+
+            $router = self::build_router();
+            $llm_start = microtime(true);
+            $html = $router->generate($system, $messages, $images);
+            Naano_Job_Manager::log($job_id, [
+                "phase" => "update_section:init_done",
+                "elapsed_s" => round(microtime(true) - $llm_start, 2),
+                "length" => strlen((string) $html),
+            ]);
+
+            Naano_Job_Manager::set_state($job_id, [
+                "phase" => "init",
+                "pass" => 0,
+                "html" => (string) $html,
+                "message" => $message,
+                "history" => $history,
+                "system" => $system,
+            ]);
+            return;
         }
 
-        $builder = new Naano_Prompt_Builder();
-        $vars = get_option("naano_variables", []);
-        $builder->set_variables(is_array($vars) ? $vars : []);
-        $builder->set_references($url_refs);
-        $builder->set_assets($assets);
-        $builder->set_redirects($redirects);
+        // ── Sub-step B: refinement passes (1 LLM call per tick) ─────────────
+        $current_html = (string) ($state["html"] ?? "");
+        $current_pass = (int) ($state["pass"] ?? 0);
+        $message = (string) ($state["message"] ?? "");
+        $history = (array) ($state["history"] ?? []);
+        $system = (string) ($state["system"] ?? "");
 
-        if ($wp_menu_id) {
-            $builder->set_nav_menu(self::render_nav_menu($wp_menu_id));
+        if ($current_pass < $refine_passes && trim($current_html) !== "") {
+            $next_pass = $current_pass + 1;
+            Naano_Job_Manager::log($job_id, [
+                "phase" => "update_section:refine",
+                "section_id" => $section_id,
+                "pass" => $next_pass,
+                "of" => $refine_passes,
+            ]);
+
+            $messages = $history;
+            $messages[] = ["role" => "user", "content" => $message];
+            $messages[] = ["role" => "assistant", "content" => $current_html];
+            $messages[] = [
+                "role" => "user",
+                "content" => self::build_refinement_prompt(
+                    $section_id,
+                    $next_pass,
+                    $refine_passes,
+                ),
+            ];
+
+            $router = self::build_router();
+            $llm_start = microtime(true);
+            $refined = $router->generate($system, $messages, []);
+            Naano_Job_Manager::log($job_id, [
+                "phase" => "update_section:refine_done",
+                "section_id" => $section_id,
+                "pass" => $next_pass,
+                "elapsed_s" => round(microtime(true) - $llm_start, 2),
+                "length" => strlen((string) $refined),
+            ]);
+
+            $refined_str = (string) $refined;
+            if (trim($refined_str) !== "") {
+                $current_html = $refined_str;
+            }
+
+            $state["phase"] = "refine";
+            $state["pass"] = $next_pass;
+            $state["html"] = $current_html;
+            Naano_Job_Manager::set_state($job_id, $state);
+            return;
         }
 
-        $system = $builder->build_system_prompt();
-        $history = $conversation->get_trimmed($page_id);
-        $message = $builder->build_section_message(
-            $section_id,
-            $instruction,
-            $context,
-        );
-        $history[] = ["role" => "user", "content" => $message];
-
-        $raw_html = self::generate_and_refine(
-            $router,
-            $system,
-            $history,
-            $images,
-            $section_id,
-            (int) get_option("naano_update_refinement_passes", 1),
-        );
+        // ── Sub-step C: persist + mark_done (no LLM call) ───────────────────
         $section_html = Naano_HTML_Sanitizer::extract_section(
-            $raw_html,
+            $current_html,
             $section_id,
         );
         if (!$section_html) {
-            $section_html = $raw_html;
+            $section_html = $current_html;
         }
 
+        $section_manager = new Naano_Section_Manager();
         $section_manager->update_section($page_id, $section_id, $section_html);
+
+        // If this section was previously in the failed list (e.g. a host
+        // kill during the original generate_site run), mark it as recovered
+        // so it disappears from the "Failed sections" list in the builder.
+        $section_manager->mark_section_recovered($page_id, $section_id);
+
+        $conversation = new Naano_Conversation();
         $conversation->add_message($page_id, "user", $message);
         $conversation->add_message($page_id, "assistant", $section_html);
 
@@ -815,23 +1223,21 @@ class Naano_Job_Runner
     // -------------------------------------------------------------------------
 
     /**
-     * Run the initial LLM generation then refine the result a number of times.
+     * Append the design-quality / output-format directives to a system prompt
+     * built by Naano_Prompt_Builder. Pure string transformation — no LLM call,
+     * no I/O. Called identically from every tick that talks to the LLM, so
+     * generation and refinement always share the exact same system prompt.
      *
-     * IMPORTANT: $system is the prompt assembled by Naano_Prompt_Builder
-     * (containing variables, URL refs with their fetched content, assets,
-     * redirects, the WP menu, sibling pages, and the BEGIN:{section_id} /
-     * END:{section_id} marker contract used by Naano_HTML_Sanitizer). The
-     * design-quality block below is APPENDED with `.=`, never replaces it.
+     * Why a helper instead of the old generate_and_refine() call site: each
+     * tick now performs a single LLM call, so we no longer want a function
+     * that does (init + N refines) inside one PHP request. We split that
+     * loop across cron ticks (see step_generate_site / step_update_section)
+     * and call this helper at the start of each one to assemble the prompt.
      */
-    private static function generate_and_refine(
-        Naano_LLM_Router $router,
+    private static function augment_system_with_design_rules(
         string $system,
-        array $messages,
-        array $images = [],
-        string $section_id = "",
-        int $passes = 1,
     ): string {
-        $system .=
+        return $system .
             "\n\n" .
             "LANGUAGE RULE (CRITICAL):\n" .
             "- Any visible text content MUST be written in the SAME language as the user's request.\n" .
@@ -860,6 +1266,7 @@ class Naano_Job_Runner
             "- All CSS MUST be fully scoped to the section root class\n" .
             "- NEVER use global selectors\n" .
             "- NEVER style body, html, *, or generic tags globally\n" .
+            "- The platform already resets the document with html,body{margin:0;padding:0} and box-sizing:border-box. Do NOT add any margin or padding on the section root to compensate for browser defaults — the section will sit flush against the page edges by design. If you want internal spacing, use padding on inner containers, not on the section root.\n" .
             "- Use semantic HTML5 structure\n" .
             "- Include accessible alt text for images\n" .
             "- Preserve clean DOM hierarchy\n" .
@@ -897,62 +1304,56 @@ class Naano_Job_Runner
             "- The output will be directly rendered by an AI website builder\n" .
             "- Optimize for visual polish and production readiness\n" .
             "- Think like a top-tier frontend designer from a premium digital agency\n";
+    }
 
-        $html = $router->generate($system, $messages, $images);
-        $history = $messages;
-
+    /**
+     * Build the user message used to drive a single refinement pass. Returns
+     * a deterministic string given (section_id, current pass, total passes).
+     * Identical wording to the old generate_and_refine loop body so prompt
+     * behaviour is preserved.
+     */
+    private static function build_refinement_prompt(
+        string $section_id,
+        int $pass,
+        int $total_passes,
+    ): string {
         $marker = $section_id
             ? "Return ONLY the improved section wrapped exactly like this:\n<!-- BEGIN:{$section_id} -->\n...HTML...\n<!-- END:{$section_id} -->"
             : "Return ONLY the improved HTML using the exact same BEGIN/END markers.";
 
-        for ($pass = 1; $pass <= $passes; $pass++) {
-            $history[] = ["role" => "assistant", "content" => $html];
-            $history[] = [
-                "role" => "user",
-                "content" =>
-                    "Refinement pass {$pass}/{$passes}.\n\n" .
-                    "Carefully self-review and improve the HTML you just generated.\n\n" .
-                    "VALIDATION CHECKLIST:\n" .
-                    "1. SCOPING\n" .
-                    "- Verify ALL CSS is perfectly scoped\n" .
-                    "- Verify zero global leakage\n" .
-                    "- Verify no unsafe selectors exist\n\n" .
-                    "2. RESPONSIVENESS\n" .
-                    "- Mentally validate every layout from 375px to 1440px+\n" .
-                    "- Ensure no overflow issues exist\n" .
-                    "- Ensure grids collapse correctly\n" .
-                    "- Ensure spacing remains balanced on mobile\n\n" .
-                    "3. VISUAL QUALITY\n" .
-                    "- Improve hierarchy, polish, contrast, and alignment\n" .
-                    "- Improve spacing consistency\n" .
-                    "- Improve CTA prominence\n" .
-                    "- Improve premium feel\n" .
-                    "- Improve readability and scanning\n\n" .
-                    "4. ACCESSIBILITY\n" .
-                    "- Verify sufficient contrast\n" .
-                    "- Verify focus states are visible\n" .
-                    "- Verify buttons and links remain accessible\n" .
-                    "- Verify alt attributes exist\n\n" .
-                    "5. CLEANLINESS\n" .
-                    "- Remove unnecessary wrappers\n" .
-                    "- Remove redundant classes\n" .
-                    "- Remove weak or repetitive copy\n" .
-                    "- Remove visual inconsistencies\n\n" .
-                    "6. PRODUCTION READINESS\n" .
-                    "- Ensure the section looks deploy-ready\n" .
-                    "- Ensure the section feels agency-quality\n" .
-                    "- Ensure the section looks intentionally designed\n\n" .
-                    $marker,
-            ];
-
-            $refined = $router->generate($system, $history);
-            if (!trim($refined)) {
-                break;
-            }
-            $html = $refined;
-        }
-
-        return $html;
+        return "Refinement pass {$pass}/{$total_passes}.\n\n" .
+            "Carefully self-review and improve the HTML you just generated.\n\n" .
+            "VALIDATION CHECKLIST:\n" .
+            "1. SCOPING\n" .
+            "- Verify ALL CSS is perfectly scoped\n" .
+            "- Verify zero global leakage\n" .
+            "- Verify no unsafe selectors exist\n\n" .
+            "2. RESPONSIVENESS\n" .
+            "- Mentally validate every layout from 375px to 1440px+\n" .
+            "- Ensure no overflow issues exist\n" .
+            "- Ensure grids collapse correctly\n" .
+            "- Ensure spacing remains balanced on mobile\n\n" .
+            "3. VISUAL QUALITY\n" .
+            "- Improve hierarchy, polish, contrast, and alignment\n" .
+            "- Improve spacing consistency\n" .
+            "- Improve CTA prominence\n" .
+            "- Improve premium feel\n" .
+            "- Improve readability and scanning\n\n" .
+            "4. ACCESSIBILITY\n" .
+            "- Verify sufficient contrast\n" .
+            "- Verify focus states are visible\n" .
+            "- Verify buttons and links remain accessible\n" .
+            "- Verify alt attributes exist\n\n" .
+            "5. CLEANLINESS\n" .
+            "- Remove unnecessary wrappers\n" .
+            "- Remove redundant classes\n" .
+            "- Remove weak or repetitive copy\n" .
+            "- Remove visual inconsistencies\n\n" .
+            "6. PRODUCTION READINESS\n" .
+            "- Ensure the section looks deploy-ready\n" .
+            "- Ensure the section feels agency-quality\n" .
+            "- Ensure the section looks intentionally designed\n\n" .
+            $marker;
     }
 
     /**

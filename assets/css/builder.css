@@ -9,1132 +9,1165 @@
    ============================================================ */
 body.naano-fullscreen #adminmenuback,
 body.naano-fullscreen #adminmenuwrap {
-	display: none !important;
+    display: none !important;
 }
 
 body.naano-fullscreen #wpcontent {
-	margin-left: 0 !important;
+    margin-left: 0 !important;
 }
 
 body.naano-fullscreen #wpbody-content {
-	padding: 0 !important;
+    padding: 0 !important;
 }
 
 body.naano-fullscreen #wpbody {
-	padding-top: 0 !important;
+    padding-top: 0 !important;
 }
 
 /* Remove default WP page padding */
 body.naano-fullscreen #wpbody-content > .wrap {
-	margin: 0 !important;
-	padding: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* ============================================================
    VISUAL BUILDER CONTAINER
    ============================================================ */
 .naano-vb {
-	display: flex;
-	flex-direction: column;
-	width: 100%;
-	height: calc(100vh - 32px); /* 32px = WP admin bar */
-	background: #1d2327;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-	overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: calc(100vh - 32px); /* 32px = WP admin bar */
+    background: #1d2327;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
 }
 
 /* ============================================================
    TOP TOOLBAR
    ============================================================ */
 .naano-vb__toolbar {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	height: 48px;
-	min-height: 48px;
-	background: #1d2327;
-	border-bottom: 1px solid #3d4246;
-	padding: 0 12px;
-	gap: 12px;
-	flex-shrink: 0;
-	z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    min-height: 48px;
+    background: #1d2327;
+    border-bottom: 1px solid #3d4246;
+    padding: 0 12px;
+    gap: 12px;
+    flex-shrink: 0;
+    z-index: 200;
 }
 
 /* Toolbar sections */
 .naano-vb__toolbar-left,
 .naano-vb__toolbar-right {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
 }
 
 .naano-vb__toolbar-right {
-	justify-content: flex-end;
+    justify-content: flex-end;
 }
 
 .naano-vb__toolbar-center {
-	display: flex;
-	align-items: center;
-	justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Drawer toggle */
 .naano-drawer-toggle {
-	background: none;
-	border: none;
-	color: #a7aaad;
-	cursor: pointer;
-	padding: 6px 8px;
-	border-radius: 4px;
-	display: flex;
-	align-items: center;
-	transition: background 0.15s, color 0.15s;
+    background: none;
+    border: none;
+    color: #a7aaad;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition:
+        background 0.15s,
+        color 0.15s;
 }
 
 .naano-drawer-toggle:hover {
-	background: #2c3338;
-	color: #fff;
+    background: #2c3338;
+    color: #fff;
 }
 
 .naano-drawer-toggle .dashicons {
-	font-size: 20px;
-	width: 20px;
-	height: 20px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
 }
 
 /* Brand */
 .naano-vb__brand {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	color: #fff;
-	font-size: 14px;
-	font-weight: 600;
-	white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .naano-vb__brand .dashicons {
-	font-size: 18px;
-	width: 18px;
-	height: 18px;
-	color: #2271b1;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #2271b1;
 }
 
 .naano-vb__separator {
-	width: 1px;
-	height: 20px;
-	background: #3d4246;
+    width: 1px;
+    height: 20px;
+    background: #3d4246;
 }
 
 .naano-vb__page-name {
-	color: #a7aaad;
-	font-size: 13px;
-	max-width: 200px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+    color: #a7aaad;
+    font-size: 13px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Language switcher */
 .naano-lang-switcher-wrap {
-	display: flex;
-	align-items: center;
-	gap: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .naano-lang-icon {
-	color: #a7aaad;
-	font-size: 16px;
-	width: 16px;
-	height: 16px;
-	flex-shrink: 0;
+    color: #a7aaad;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 .naano-lang-select {
-	background: #2c3338;
-	border: 1px solid #3d4246;
-	color: #d0d0d0;
-	font-size: 12px;
-	padding: 3px 6px;
-	border-radius: 4px;
-	cursor: pointer;
-	height: 28px;
-	min-width: 60px;
+    background: #2c3338;
+    border: 1px solid #3d4246;
+    color: #d0d0d0;
+    font-size: 12px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    height: 28px;
+    min-width: 60px;
 }
 
 /* Viewport buttons */
 .naano-viewport-group {
-	display: flex;
-	gap: 2px;
-	background: #2c3338;
-	border-radius: 6px;
-	padding: 3px;
+    display: flex;
+    gap: 2px;
+    background: #2c3338;
+    border-radius: 6px;
+    padding: 3px;
 }
 
 .naano-viewport-btn {
-	background: none;
-	border: none;
-	color: #a7aaad;
-	cursor: pointer;
-	padding: 5px 10px;
-	border-radius: 4px;
-	display: flex;
-	align-items: center;
-	transition: background 0.15s, color 0.15s;
+    background: none;
+    border: none;
+    color: #a7aaad;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition:
+        background 0.15s,
+        color 0.15s;
 }
 
 .naano-viewport-btn:hover {
-	background: #3d4246;
-	color: #fff;
+    background: #3d4246;
+    color: #fff;
 }
 
 .naano-viewport-btn--active {
-	background: #2271b1 !important;
-	color: #fff !important;
+    background: #2271b1 !important;
+    color: #fff !important;
 }
 
 .naano-viewport-btn .dashicons {
-	font-size: 16px;
-	width: 16px;
-	height: 16px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
 }
 
 /* Toolbar action buttons */
 .naano-tb-btn {
-	display: flex;
-	align-items: center;
-	gap: 5px;
-	background: #2c3338;
-	border: 1px solid #3d4246;
-	color: #d0d0d0;
-	padding: 5px 12px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 12px;
-	transition: background 0.15s, color 0.15s, border-color 0.15s;
-	white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #2c3338;
+    border: 1px solid #3d4246;
+    color: #d0d0d0;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+    white-space: nowrap;
 }
 
 .naano-tb-btn:hover {
-	background: #3d4246;
-	color: #fff;
-	border-color: #50575e;
+    background: #3d4246;
+    color: #fff;
+    border-color: #50575e;
 }
 
 .naano-tb-btn--primary {
-	background: #2271b1;
-	border-color: #1a5c96;
-	color: #fff;
+    background: #2271b1;
+    border-color: #1a5c96;
+    color: #fff;
 }
 
 .naano-tb-btn--primary:hover {
-	background: #1a5c96;
-	border-color: #155286;
-	color: #fff;
+    background: #1a5c96;
+    border-color: #155286;
+    color: #fff;
 }
 
 .naano-tb-btn .dashicons {
-	font-size: 14px;
-	width: 14px;
-	height: 14px;
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
 }
 
 /* ============================================================
    BODY (DRAWER + CANVAS)
    ============================================================ */
 .naano-vb__body {
-	display: flex;
-	flex: 1;
-	overflow: hidden;
+    display: flex;
+    flex: 1;
+    overflow: hidden;
 }
 
 /* ============================================================
    LEFT DRAWER
    ============================================================ */
 .naano-vb__drawer {
-	width: 380px;
-	min-width: 380px;
-	background: #23282d;
-	border-right: 1px solid #3d4246;
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease;
-	z-index: 100;
+    width: 380px;
+    min-width: 380px;
+    background: #23282d;
+    border-right: 1px solid #3d4246;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition:
+        width 0.3s ease,
+        min-width 0.3s ease,
+        opacity 0.3s ease;
+    z-index: 100;
 }
 
 .naano-vb__drawer.naano-drawer--collapsed {
-	width: 0;
-	min-width: 0;
-	opacity: 0;
-	overflow: hidden;
+    width: 0;
+    min-width: 0;
+    opacity: 0;
+    overflow: hidden;
 }
 
 .naano-drawer__inner {
-	flex: 1;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding: 0;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
 }
 
 /* Drawer scrollbar */
 .naano-drawer__inner::-webkit-scrollbar {
-	width: 4px;
+    width: 4px;
 }
 
 .naano-drawer__inner::-webkit-scrollbar-track {
-	background: #2c3338;
+    background: #2c3338;
 }
 
 .naano-drawer__inner::-webkit-scrollbar-thumb {
-	background: #50575e;
-	border-radius: 2px;
+    background: #50575e;
+    border-radius: 2px;
 }
 
 /* Drawer panels */
 .naano-drawer-panel {
-	padding: 20px;
+    padding: 20px;
 }
 
 /* Drawer header */
 .naano-drawer__header {
-	margin-bottom: 20px;
-	padding-bottom: 16px;
-	border-bottom: 1px solid #3d4246;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #3d4246;
 }
 
 .naano-drawer__header h3 {
-	margin: 0 0 6px;
-	font-size: 14px;
-	font-weight: 600;
-	color: #fff;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .naano-drawer__header p {
-	margin: 0;
-	font-size: 12px;
-	color: #a7aaad;
-	line-height: 1.5;
+    margin: 0;
+    font-size: 12px;
+    color: #a7aaad;
+    line-height: 1.5;
 }
 
 /* Section editing badge */
 .naano-editing-section-badge {
-	font-size: 12px;
-	color: #7dc1e8;
-	font-style: italic;
-	margin-top: 4px;
+    font-size: 12px;
+    color: #7dc1e8;
+    font-style: italic;
+    margin-top: 4px;
 }
 
 /* Drawer fields */
 .naano-drawer__field {
-	margin-bottom: 18px;
+    margin-bottom: 18px;
 }
 
 .naano-drawer__field label {
-	display: block;
-	font-size: 11px;
-	font-weight: 600;
-	color: #a7aaad;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	margin-bottom: 6px;
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #a7aaad;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
 }
 
 .naano-input {
-	width: 100%;
-	background: #2c3338;
-	border: 1px solid #3d4246;
-	border-radius: 4px;
-	color: #fff;
-	padding: 7px 10px;
-	font-size: 13px;
-	box-sizing: border-box;
-	transition: border-color 0.15s;
+    width: 100%;
+    background: #2c3338;
+    border: 1px solid #3d4246;
+    border-radius: 4px;
+    color: #fff;
+    padding: 7px 10px;
+    font-size: 13px;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
 }
 
 .naano-input:focus {
-	border-color: #2271b1;
-	outline: none;
-	box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+    border-color: #2271b1;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
 }
 
 .naano-input::placeholder {
-	color: rgba(255,255,255,0.45);
+    color: rgba(255, 255, 255, 0.45);
 }
 
 .naano-textarea {
-	width: 100%;
-	background: #2c3338;
-	border: 1px solid #3d4246;
-	border-radius: 4px;
-	color: #fff;
-	padding: 8px 10px;
-	font-size: 13px;
-	box-sizing: border-box;
-	resize: vertical;
-	min-height: 80px;
-	font-family: inherit;
-	line-height: 1.5;
-	transition: border-color 0.15s;
+    width: 100%;
+    background: #2c3338;
+    border: 1px solid #3d4246;
+    border-radius: 4px;
+    color: #fff;
+    padding: 8px 10px;
+    font-size: 13px;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+    line-height: 1.5;
+    transition: border-color 0.15s;
 }
 
 .naano-textarea:focus {
-	border-color: #2271b1;
-	outline: none;
-	box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
+    border-color: #2271b1;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.3);
 }
 
 .naano-textarea::placeholder {
-	color: rgba(255,255,255,0.45);
+    color: rgba(255, 255, 255, 0.45);
 }
 
 /* Field hint text */
 .naano-field-hint {
-	margin: 2px 0 8px;
-	font-size: 11px;
-	color: rgba(255,255,255,0.45);
-	line-height: 1.4;
+    margin: 2px 0 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+    line-height: 1.4;
 }
 .naano-field-hint--warn {
-	color: #fbbf24;
+    color: #fbbf24;
 }
 
 /* Asset picker two-button row */
 .naano-asset-picker {
-	display: flex;
-	gap: 6px;
-	flex-wrap: wrap;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 /* Section checkboxes */
 .naano-section-checkboxes {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
 }
 
 .naano-checkbox-label {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	color: #d0d0d0;
-	cursor: pointer;
-	padding: 4px 6px;
-	border-radius: 4px;
-	transition: background 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #d0d0d0;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.1s;
 }
 
 .naano-checkbox-label:hover {
-	background: #2c3338;
+    background: #2c3338;
 }
 
 .naano-checkbox-label input[type="checkbox"] {
-	accent-color: #2271b1;
+    accent-color: #2271b1;
 }
 
 .naano-remove-custom-section {
-	margin-left: auto;
-	background: none;
-	border: none;
-	color: #6b7280;
-	cursor: pointer;
-	font-size: 16px;
-	line-height: 1;
-	padding: 0 2px;
-	border-radius: 3px;
-	transition: color 0.15s;
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 3px;
+    transition: color 0.15s;
 }
 
 .naano-remove-custom-section:hover {
-	color: #f87171;
+    color: #f87171;
 }
 
 .naano-custom-section-row {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-	margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
 }
 
 .naano-custom-section-row .naano-input {
-	flex: 1;
+    flex: 1;
 }
 
 /* Drawer buttons */
 .naano-btn-secondary {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	background: #2c3338;
-	border: 1px solid #3d4246;
-	color: #d0d0d0;
-	padding: 6px 12px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 12px;
-	transition: background 0.15s, color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #2c3338;
+    border: 1px solid #3d4246;
+    color: #d0d0d0;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition:
+        background 0.15s,
+        color 0.15s;
 }
 
 .naano-btn-secondary:hover {
-	background: #3d4246;
-	color: #fff;
-	border-color: #50575e;
+    background: #3d4246;
+    color: #fff;
+    border-color: #50575e;
 }
 
 .naano-btn-secondary .dashicons {
-	font-size: 13px;
-	width: 13px;
-	height: 13px;
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
 }
 
 .naano-btn-primary {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	background: #2271b1;
-	border: 1px solid #1a5c96;
-	color: #fff;
-	padding: 6px 12px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 12px;
-	font-weight: 500;
-	transition: background 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #2271b1;
+    border: 1px solid #1a5c96;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background 0.15s;
 }
 
 .naano-btn-primary:hover {
-	background: #1a5c96;
+    background: #1a5c96;
 }
 
 .naano-btn-primary .dashicons {
-	font-size: 13px;
-	width: 13px;
-	height: 13px;
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
 }
 
 .naano-btn-ghost {
-	display: inline-flex;
-	align-items: center;
-	background: none;
-	border: none;
-	color: #a7aaad;
-	padding: 6px 8px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 12px;
-	transition: color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #a7aaad;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: color 0.15s;
 }
 
 .naano-btn-ghost:hover {
-	color: #fff;
+    color: #fff;
 }
 
 .naano-btn-generate {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 6px;
-	width: 100%;
-	background: #2271b1;
-	border: none;
-	color: #fff;
-	padding: 10px 16px;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 13px;
-	font-weight: 600;
-	transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    background: #2271b1;
+    border: none;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s;
 }
 
 .naano-btn-generate:hover:not(:disabled) {
-	background: #1a5c96;
+    background: #1a5c96;
 }
 
 .naano-btn-generate:disabled {
-	background: #3d4246;
-	color: #50575e;
-	cursor: not-allowed;
+    background: #3d4246;
+    color: #50575e;
+    cursor: not-allowed;
 }
 
 .naano-btn-generate .dashicons {
-	font-size: 16px;
-	width: 16px;
-	height: 16px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
 }
 
 /* Enhance row (button + loading side by side) */
 .naano-enhance-row {
-	display: inline-flex;
-	align-items: center;
-	gap: 10px;
-	margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
 }
 
 /* Enhance button (Prompt Builder) */
 .naano-vb .naano-btn-enhance {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-	background: #2c3338;
-	border: 1px solid #3d4246;
-	color: #d0d0d0;
-	padding: 6px 12px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 12px;
-	transition: background 0.15s, color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #2c3338;
+    border: 1px solid #3d4246;
+    color: #d0d0d0;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition:
+        background 0.15s,
+        color 0.15s;
 }
 
 .naano-vb .naano-btn-enhance:hover:not(:disabled) {
-	background: #3d4246;
-	color: #fff;
-	border-color: #50575e;
+    background: #3d4246;
+    color: #fff;
+    border-color: #50575e;
 }
 
 .naano-vb .naano-btn-enhance:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .naano-vb .naano-btn-enhance .dashicons {
-	font-size: 13px;
-	width: 13px;
-	height: 13px;
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
 }
 
 /* Drawer actions */
 .naano-drawer__actions {
-	margin-top: 20px;
-	padding-top: 16px;
-	border-top: 1px solid #3d4246;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #3d4246;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .naano-generation-warning {
-	display: flex;
-	align-items: flex-start;
-	gap: 6px;
-	margin: 0;
-	padding: 8px 10px;
-	background: rgba(251, 191, 36, 0.1);
-	border: 1px solid rgba(251, 191, 36, 0.3);
-	border-radius: 6px;
-	color: #fbbf24;
-	font-size: 12px;
-	line-height: 1.4;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 10px;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 6px;
+    color: #fbbf24;
+    font-size: 12px;
+    line-height: 1.4;
 }
 .naano-generation-warning .dashicons {
-	font-size: 14px;
-	width: 14px;
-	height: 14px;
-	margin-top: 1px;
-	flex-shrink: 0;
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    margin-top: 1px;
+    flex-shrink: 0;
 }
 
 .naano-mt-8 {
-	margin-top: 0;
+    margin-top: 0;
 }
 
 /* Loading */
 .naano-loading {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 12px;
-	color: #a7aaad;
-	justify-content: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #a7aaad;
+    justify-content: center;
 }
 
 .naano-loading .spinner {
-	float: none;
-	margin: 0;
+    float: none;
+    margin: 0;
 }
 
 /* ============================================================
    SECTIONS LIST (quick-select in edit panel)
    ============================================================ */
 .naano-sections-list-wrap {
-	border-bottom: 1px solid #3d4246;
-	padding-bottom: 16px;
-	margin-bottom: 16px;
+    border-bottom: 1px solid #3d4246;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
 }
 
 /* Label row with All / None quick-select actions */
 .naano-sections-list-label {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-	font-size: 11px;
-	font-weight: 600;
-	color: #a7aaad;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	margin-bottom: 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #a7aaad;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
 }
 
 .naano-sections-list-meta {
-	margin-left: auto;
-	display: flex;
-	align-items: center;
-	gap: 4px;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .naano-sections-list-sep {
-	color: #50575e;
-	font-size: 10px;
+    color: #50575e;
+    font-size: 10px;
 }
 
 .naano-link-btn {
-	background: none;
-	border: none;
-	padding: 0;
-	font-size: 10px;
-	color: #2271b1;
-	cursor: pointer;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 10px;
+    color: #2271b1;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .naano-link-btn:hover {
-	text-decoration: underline;
-	color: #72aee6;
+    text-decoration: underline;
+    color: #72aee6;
 }
 
 .naano-sections-list {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 3px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .naano-sections-list__item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 6px 10px;
-	background: #2c3338;
-	border: 1px solid #3d4246;
-	border-radius: 4px;
-	cursor: pointer;
-	transition: background 0.1s, border-color 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: #2c3338;
+    border: 1px solid #3d4246;
+    border-radius: 4px;
+    cursor: pointer;
+    transition:
+        background 0.1s,
+        border-color 0.1s;
 }
 
 .naano-sections-list__item:hover {
-	background: #3d4246;
+    background: #3d4246;
 }
 
 .naano-sections-list__item--active {
-	background: rgba(34, 113, 177, 0.2) !important;
-	border-color: #2271b1 !important;
+    background: rgba(34, 113, 177, 0.2) !important;
+    border-color: #2271b1 !important;
 }
 
 .naano-sections-list__item--dragging {
-	opacity: 0.4;
+    opacity: 0.4;
 }
 
 .naano-sections-list__item--dragover {
-	border-color: #2271b1;
-	background: rgba(34, 113, 177, 0.15);
-	box-shadow: 0 0 0 1px #2271b1 inset;
+    border-color: #2271b1;
+    background: rgba(34, 113, 177, 0.15);
+    box-shadow: 0 0 0 1px #2271b1 inset;
 }
 
 .naano-sections-list__handle {
-	color: #50575e;
-	cursor: grab;
-	font-size: 14px;
-	line-height: 1;
-	padding: 0 6px 0 0;
-	flex-shrink: 0;
-	user-select: none;
-	transition: color 0.1s;
+    color: #50575e;
+    cursor: grab;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 6px 0 0;
+    flex-shrink: 0;
+    user-select: none;
+    transition: color 0.1s;
 }
 
 .naano-sections-list__item:hover .naano-sections-list__handle {
-	color: #a7aaad;
+    color: #a7aaad;
 }
 
 .naano-sections-list__handle:active {
-	cursor: grabbing;
+    cursor: grabbing;
 }
 
 .naano-sections-list__name {
-	font-size: 12px;
-	color: #d0d0d0;
-	text-transform: capitalize;
+    font-size: 12px;
+    color: #d0d0d0;
+    text-transform: capitalize;
 }
 
 .naano-sections-list__actions {
-	display: flex;
-	gap: 4px;
-	opacity: 0;
-	transition: opacity 0.1s;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.1s;
 }
 
 .naano-sections-list__item:hover .naano-sections-list__actions {
-	opacity: 1;
+    opacity: 1;
 }
 
 .naano-sections-list__btn {
-	background: none;
-	border: none;
-	color: #a7aaad;
-	cursor: pointer;
-	padding: 2px 5px;
-	border-radius: 3px;
-	font-size: 12px;
-	transition: background 0.1s, color 0.1s;
+    background: none;
+    border: none;
+    color: #a7aaad;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    transition:
+        background 0.1s,
+        color 0.1s;
 }
 
 .naano-sections-list__btn:hover {
-	background: #50575e;
-	color: #fff;
+    background: #50575e;
+    color: #fff;
 }
 
 .naano-sections-list__btn--delete:hover {
-	background: #5c1818;
-	color: #ffaaaa;
+    background: #5c1818;
+    color: #ffaaaa;
 }
 
 /* ============================================================
    REFERENCE SECTIONS (inside drawer)
    ============================================================ */
 .naano-reference-section {
-	border-top: 1px solid #3d4246;
-	padding-top: 14px;
-	margin-top: 14px;
+    border-top: 1px solid #3d4246;
+    padding-top: 14px;
+    margin-top: 14px;
 }
 
 .naano-reference-list {
-	list-style: none;
-	margin: 0 0 8px;
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .naano-reference-item {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 5px 8px;
-	background: #2c3338;
-	border-radius: 4px;
-	font-size: 11px;
-	color: #d0d0d0;
-	border: 1px solid #3d4246;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    background: #2c3338;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #d0d0d0;
+    border: 1px solid #3d4246;
 }
 
 .naano-ref-thumb {
-	width: 36px;
-	height: 26px;
-	object-fit: cover;
-	border-radius: 3px;
-	border: 1px solid #50575e;
-	flex-shrink: 0;
+    width: 36px;
+    height: 26px;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid #50575e;
+    flex-shrink: 0;
 }
 
 .naano-remove-ref-btn {
-	margin-left: auto;
-	background: none;
-	border: none;
-	cursor: pointer;
-	color: #ff6b6b;
-	font-size: 12px;
-	padding: 2px 5px;
-	border-radius: 3px;
-	flex-shrink: 0;
-	transition: background 0.1s;
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #ff6b6b;
+    font-size: 12px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    transition: background 0.1s;
 }
 
 .naano-remove-ref-btn:hover {
-	background: #5c1818;
+    background: #5c1818;
 }
 
 .naano-add-url-form {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	margin-bottom: 8px;
-	padding: 10px;
-	background: #2c3338;
-	border: 1px dashed #3d4246;
-	border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 10px;
+    background: #2c3338;
+    border: 1px dashed #3d4246;
+    border-radius: 4px;
 }
 
 .naano-add-url-form__btns {
-	display: flex;
-	gap: 6px;
+    display: flex;
+    gap: 6px;
 }
 
 /* ============================================================
    LIVE PREVIEW CANVAS
    ============================================================ */
 .naano-vb__canvas {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
-	background: #2c3338;
-	position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #2c3338;
+    position: relative;
 }
 
 .naano-canvas-placeholder {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .naano-canvas-placeholder__inner {
-	text-align: center;
-	color: #50575e;
-	max-width: 400px;
-	padding: 40px;
+    text-align: center;
+    color: #50575e;
+    max-width: 400px;
+    padding: 40px;
 }
 
 .naano-canvas-placeholder__icon {
-	font-size: 64px !important;
-	width: 64px !important;
-	height: 64px !important;
-	display: block;
-	margin: 0 auto 16px;
-	color: #3d4246;
+    font-size: 64px !important;
+    width: 64px !important;
+    height: 64px !important;
+    display: block;
+    margin: 0 auto 16px;
+    color: #3d4246;
 }
 
 .naano-canvas-placeholder__inner h2 {
-	color: #a7aaad;
-	font-size: 18px;
-	margin: 0 0 10px;
+    color: #a7aaad;
+    font-size: 18px;
+    margin: 0 0 10px;
 }
 
 .naano-canvas-placeholder__inner p {
-	font-size: 13px;
-	line-height: 1.6;
-	margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
 }
 
 /* Live iframe wrapper */
 .naano-live-iframe-wrap {
-	flex: 1;
-	display: flex;
-	justify-content: center;
-	align-items: flex-start;
-	overflow: auto;
-	padding: 20px;
-	box-sizing: border-box;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: auto;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .naano-live-iframe {
-	background: #fff;
-	border: 0;
-	border-radius: 4px;
-	box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-	width: 100%;
-	max-width: 100%;
-	height: calc(100vh - 32px - 48px - 40px); /* vp - adminbar - toolbar - padding */
-	transition: width 0.3s ease, max-width 0.3s ease;
-	display: block;
+    background: #fff;
+    border: 0;
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 100%;
+    height: calc(
+        100vh - 32px - 48px - 40px
+    ); /* vp - adminbar - toolbar - padding */
+    transition:
+        width 0.3s ease,
+        max-width 0.3s ease;
+    display: block;
 }
 
 /* ============================================================
    TOAST NOTIFICATIONS
    ============================================================ */
 .naano-toast {
-	position: fixed;
-	bottom: 30px;
-	right: 30px;
-	z-index: 99999;
-	background: #23282d;
-	color: #fff;
-	padding: 12px 20px;
-	border-radius: 6px;
-	font-size: 13px;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-	opacity: 0;
-	transform: translateY(12px);
-	transition: opacity 0.25s ease, transform 0.25s ease;
-	max-width: 400px;
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 99999;
+    background: #23282d;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+    max-width: 400px;
 }
 
 .naano-toast a {
-	color: #7ec8e3;
+    color: #7ec8e3;
 }
 
 .naano-toast--visible {
-	opacity: 1;
-	transform: translateY(0);
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .naano-toast--success {
-	background: #1e7e34;
+    background: #1e7e34;
 }
 
 .naano-toast--error {
-	background: #b91c1c;
+    background: #b91c1c;
 }
 
 /* ============================================================
    TEST CONNECTION RESULT  (settings page)
    ============================================================ */
 .naano-test-connection-row {
-	margin-top: 16px;
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	flex-wrap: wrap;
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .naano-test-result {
-	padding: 8px 14px;
-	border-radius: 5px;
-	font-size: 13px;
-	background: #f8f9fa;
-	border: 1px solid #e8e8e8;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-size: 13px;
+    background: #f8f9fa;
+    border: 1px solid #e8e8e8;
 }
 
-.naano-success { color: #1e7e34; font-weight: 600; }
-.naano-error   { color: #b91c1c; font-weight: 600; }
+.naano-success {
+    color: #1e7e34;
+    font-weight: 600;
+}
+.naano-error {
+    color: #b91c1c;
+    font-weight: 600;
+}
 
 /* ============================================================
    GENERIC MODAL (publish page, etc.)
    ============================================================ */
 .naano-modal-backdrop {
-	position: fixed;
-	inset: 0;
-	z-index: 999990;
-	background: rgba(0, 0, 0, 0.72);
-	display: flex;
-	align-items: center;
-	justify-content: center;
+    position: fixed;
+    inset: 0;
+    z-index: 999990;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .naano-modal {
-	background: #23282d;
-	border: 1px solid #3d4246;
-	border-radius: 8px;
-	padding: 28px;
-	width: 420px;
-	max-width: calc(100vw - 40px);
-	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    background: #23282d;
+    border: 1px solid #3d4246;
+    border-radius: 8px;
+    padding: 28px;
+    width: 420px;
+    max-width: calc(100vw - 40px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
 }
 
 .naano-modal__title {
-	margin: 0 0 8px;
-	font-size: 15px;
-	font-weight: 600;
-	color: #fff;
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
 }
 
 .naano-modal__desc {
-	margin: 0 0 20px;
-	font-size: 12px;
-	color: #a7aaad;
-	line-height: 1.6;
+    margin: 0 0 20px;
+    font-size: 12px;
+    color: #a7aaad;
+    line-height: 1.6;
 }
 
 .naano-modal__actions {
-	display: flex;
-	gap: 10px;
-	justify-content: flex-end;
-	margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
 }
 
 /* ============================================================
    PREVIEW MODAL
    ============================================================ */
 .naano-preview-modal {
-	position: fixed;
-	inset: 0;
-	z-index: 999999;
-	background: rgba(0, 0, 0, 0.88);
-	display: flex;
-	flex-direction: column;
-	opacity: 0;
-	transition: opacity 0.25s ease;
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.25s ease;
 }
 
 .naano-preview-modal--open {
-	opacity: 1;
+    opacity: 1;
 }
 
 .naano-preview-toolbar {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 10px 20px;
-	background: #1d2327;
-	border-bottom: 1px solid #333;
-	flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: #1d2327;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
 }
 
 .naano-preview-toolbar__viewports {
-	display: flex;
-	gap: 8px;
+    display: flex;
+    gap: 8px;
 }
 
 .naano-preview-toolbar .naano-viewport-btn {
-	background: #2c3338;
-	border: 1px solid #444;
-	color: #ccc;
-	padding: 6px 14px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 13px;
-	transition: background 0.15s, color 0.15s;
-	display: flex;
-	align-items: center;
-	gap: 5px;
+    background: #2c3338;
+    border: 1px solid #444;
+    color: #ccc;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition:
+        background 0.15s,
+        color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .naano-preview-toolbar .naano-viewport-btn:hover,
 .naano-preview-toolbar .naano-viewport-btn--active {
-	background: #2271b1;
-	color: #fff;
-	border-color: #1a5c96;
+    background: #2271b1;
+    color: #fff;
+    border-color: #1a5c96;
 }
 
 .naano-preview-close {
-	background: #c0392b;
-	border: none;
-	color: #fff;
-	padding: 6px 16px;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 13px;
-	transition: background 0.15s;
+    background: #c0392b;
+    border: none;
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
 }
 
 .naano-preview-close:hover {
-	background: #a93226;
+    background: #a93226;
 }
 
 .naano-preview-frame-wrap {
-	flex: 1;
-	overflow: auto;
-	display: flex;
-	justify-content: center;
-	padding: 20px;
-	background: #2c3338;
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    background: #2c3338;
 }
 
 .naano-preview-iframe {
-	width: 100%;
-	height: 100%;
-	border: 0;
-	background: #fff;
-	border-radius: 4px;
-	box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
-	transition: width 0.3s ease;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+    transition: width 0.3s ease;
 }
 
 /* ============================================================
@@ -1142,43 +1175,43 @@ body.naano-fullscreen #wpbody-content > .wrap {
    ============================================================ */
 .naano-builder-wrap .form-table input[type="password"],
 .naano-builder-wrap .form-table input[type="text"] {
-	width: 100%;
-	max-width: 400px;
+    width: 100%;
+    max-width: 400px;
 }
 
 #naano-variables-tbody tr td {
-	padding: 5px 8px 5px 0;
-	vertical-align: middle;
-	border: none;
+    padding: 5px 8px 5px 0;
+    vertical-align: middle;
+    border: none;
 }
 
 #naano-variables-tbody tr td input {
-	width: 100%;
-	max-width: 260px;
+    width: 100%;
+    max-width: 260px;
 }
 
 /* ============================================================
    RESPONSIVE — hide label text on smaller screens
    ============================================================ */
 @media screen and (max-width: 1100px) {
-	.naano-tb-btn__label {
-		display: none;
-	}
+    .naano-tb-btn__label {
+        display: none;
+    }
 
-	.naano-vb__drawer {
-		width: 320px;
-		min-width: 320px;
-	}
+    .naano-vb__drawer {
+        width: 320px;
+        min-width: 320px;
+    }
 }
 
 @media screen and (max-width: 800px) {
-	.naano-vb__brand span:last-child {
-		display: none;
-	}
+    .naano-vb__brand span:last-child {
+        display: none;
+    }
 
-	.naano-vb__page-name {
-		max-width: 100px;
-	}
+    .naano-vb__page-name {
+        max-width: 100px;
+    }
 }
 
 /* ============================================================
@@ -1187,572 +1220,1011 @@ body.naano-fullscreen #wpbody-content > .wrap {
 
 /* Full-canvas code-generation loading overlay */
 .naano-canvas-loading-overlay {
-	display: none;
-	position: absolute;
-	inset: 0;
-	z-index: 50;
-	background: #080c10;
-	overflow: hidden;
-	font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    background: #080c10;
+    overflow: hidden;
+    font-family: "JetBrains Mono", "Courier New", Consolas, monospace;
 }
 
 .naano-canvas-loading-overlay::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background-image:
-		linear-gradient( rgba(0,229,255,0.03) 1px, transparent 1px ),
-		linear-gradient( 90deg, rgba(0,229,255,0.03) 1px, transparent 1px );
-	background-size: 40px 40px;
-	pointer-events: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
 }
 
 .naano-canvas-loading-overlay--visible {
-	display: block;
+    display: block;
 }
 
 .naano-cla-rain {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	opacity: 0.07;
-	pointer-events: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.07;
+    pointer-events: none;
 }
 
 .naano-cla-scanline {
-	position: absolute;
-	inset: 0;
-	z-index: 3;
-	pointer-events: none;
-	background: repeating-linear-gradient(
-		0deg,
-		transparent, transparent 2px,
-		rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px
-	);
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.06) 2px,
+        rgba(0, 0, 0, 0.06) 4px
+    );
 }
 
 .naano-cla-wrapper {
-	position: relative;
-	z-index: 1;
-	height: 100%;
-	display: grid;
-	place-items: center;
-	overflow-y: auto;
-	padding: 24px 0;
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    padding: 24px 0;
 }
 
 .naano-cla-card {
-	width: min(720px, 92%);
-	background: #0d1117;
-	border: 1px solid #1e2733;
-	border-radius: 16px;
-	overflow: hidden;
-	color: #c9d1d9;
-	box-shadow:
-		0 0 0 1px rgba(0,229,255,0.07),
-		0 32px 80px rgba(0,0,0,0.6),
-		inset 0 1px 0 rgba(255,255,255,0.04);
+    width: min(720px, 92%);
+    background: #0d1117;
+    border: 1px solid #1e2733;
+    border-radius: 16px;
+    overflow: hidden;
+    color: #c9d1d9;
+    box-shadow:
+        0 0 0 1px rgba(0, 229, 255, 0.07),
+        0 32px 80px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* ── Title bar ── */
 .naano-cla-titlebar {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 14px 20px;
-	background: rgba(255,255,255,0.02);
-	border-bottom: 1px solid #1e2733;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid #1e2733;
 }
 
-.naano-cla-dots { display: flex; gap: 7px; }
+.naano-cla-dots {
+    display: flex;
+    gap: 7px;
+}
 
 .naano-cla-dot {
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	background: #30363d;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #30363d;
 }
-.naano-cla-dot:nth-child(1) { background: #ff5f57; }
-.naano-cla-dot:nth-child(2) { background: #febc2e; }
-.naano-cla-dot:nth-child(3) { background: #28c840; }
+.naano-cla-dot:nth-child(1) {
+    background: #ff5f57;
+}
+.naano-cla-dot:nth-child(2) {
+    background: #febc2e;
+}
+.naano-cla-dot:nth-child(3) {
+    background: #28c840;
+}
 
 .naano-cla-title-label {
-	flex: 1;
-	text-align: center;
-	font-size: 11px;
-	letter-spacing: 0.12em;
-	color: #4a5568;
-	text-transform: uppercase;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: #4a5568;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .naano-cla-badge {
-	font-size: 10px;
-	letter-spacing: 0.06em;
-	color: #00e5ff;
-	background: rgba(0,229,255,0.08);
-	border: 1px solid rgba(0,229,255,0.2);
-	padding: 3px 10px;
-	border-radius: 20px;
-	flex-shrink: 0;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: #00e5ff;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    padding: 3px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
 }
 
 /* ── Status row ── */
 .naano-cla-status-row {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 18px 24px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px 10px;
 }
 
 .naano-cla-pulse {
-	position: relative;
-	width: 18px;
-	height: 18px;
-	flex-shrink: 0;
+    position: relative;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
 .naano-cla-pulse::before,
 .naano-cla-pulse::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: 50%;
-	border: 2px solid #00e5ff;
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid #00e5ff;
 }
-.naano-cla-pulse::before { animation: naano-cla-pulseRing 1.6s ease-out infinite; }
-.naano-cla-pulse::after  { background: #00e5ff; transform: scale(0.45); }
+.naano-cla-pulse::before {
+    animation: naano-cla-pulseRing 1.6s ease-out infinite;
+}
+.naano-cla-pulse::after {
+    background: #00e5ff;
+    transform: scale(0.45);
+}
 
 @keyframes naano-cla-pulseRing {
-	0%   { transform: scale(0.45); opacity: 1; }
-	100% { transform: scale(2);    opacity: 0; }
+    0% {
+        transform: scale(0.45);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
 }
 
 .naano-cla-status-text {
-	font-size: 13px;
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	color: #00e5ff;
-	text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #00e5ff;
+    text-transform: uppercase;
 }
 
 .naano-cla-ellipsis span {
-	animation: naano-cla-blink 1.2s step-end infinite;
-	opacity: 0;
+    animation: naano-cla-blink 1.2s step-end infinite;
+    opacity: 0;
 }
-.naano-cla-ellipsis span:nth-child(2) { animation-delay: 0.2s; }
-.naano-cla-ellipsis span:nth-child(3) { animation-delay: 0.4s; }
+.naano-cla-ellipsis span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.naano-cla-ellipsis span:nth-child(3) {
+    animation-delay: 0.4s;
+}
 
 @keyframes naano-cla-blink {
-	0%, 60%, 100% { opacity: 0; }
-	20%, 40%      { opacity: 1; }
+    0%,
+    60%,
+    100% {
+        opacity: 0;
+    }
+    20%,
+    40% {
+        opacity: 1;
+    }
 }
 
 .naano-cla-token-count {
-	margin-left: auto;
-	font-size: 10px;
-	color: #4a5568;
-	letter-spacing: 0.05em;
+    margin-left: auto;
+    font-size: 10px;
+    color: #4a5568;
+    letter-spacing: 0.05em;
 }
-.naano-cla-token-count span { color: #10b981; font-weight: 500; }
+.naano-cla-token-count span {
+    color: #10b981;
+    font-weight: 500;
+}
 
 /* ── Progress bar ── */
-.naano-cla-progress-wrap { padding: 0 24px 16px; }
+.naano-cla-progress-wrap {
+    padding: 0 24px 16px;
+}
 
 .naano-cla-progress-track {
-	height: 3px;
-	background: #1e2733;
-	border-radius: 2px;
-	overflow: hidden;
-	position: relative;
+    height: 3px;
+    background: #1e2733;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
 }
 
 .naano-cla-progress-fill {
-	height: 100%;
-	background: linear-gradient(90deg, #7c3aed, #00e5ff);
-	border-radius: 2px;
-	box-shadow: 0 0 12px #00e5ff;
-	animation: naano-cla-progressGrow 4s cubic-bezier(0.4,0,0.2,1) infinite;
-	position: relative;
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #00e5ff);
+    border-radius: 2px;
+    box-shadow: 0 0 12px #00e5ff;
+    animation: naano-cla-progressGrow 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    position: relative;
 }
 
 .naano-cla-progress-fill::after {
-	content: '';
-	position: absolute;
-	right: 0;
-	top: -4px;
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	background: #00e5ff;
-	box-shadow: 0 0 40px rgba(0,229,255,0.5);
-	animation: naano-cla-headDot 4s cubic-bezier(0.4,0,0.2,1) infinite;
+    content: "";
+    position: absolute;
+    right: 0;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00e5ff;
+    box-shadow: 0 0 40px rgba(0, 229, 255, 0.5);
+    animation: naano-cla-headDot 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes naano-cla-progressGrow {
-	0%   { width: 0%; }
-	80%  { width: 92%; }
-	100% { width: 100%; }
+    0% {
+        width: 0%;
+    }
+    80% {
+        width: 92%;
+    }
+    100% {
+        width: 100%;
+    }
 }
 
 @keyframes naano-cla-headDot {
-	0%   { opacity: 0; }
-	5%   { opacity: 1; }
-	95%  { opacity: 1; }
-	100% { opacity: 0; }
+    0% {
+        opacity: 0;
+    }
+    5% {
+        opacity: 1;
+    }
+    95% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
 }
 
 /* ── Code area ── */
 .naano-cla-code-area {
-	margin: 0 16px 16px;
-	background: #060a0f;
-	border: 1px solid #1e2733;
-	border-radius: 10px;
-	overflow: hidden;
+    margin: 0 16px 16px;
+    background: #060a0f;
+    border: 1px solid #1e2733;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 .naano-cla-code-header {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 8px 14px;
-	background: rgba(255,255,255,0.02);
-	border-bottom: 1px solid #1e2733;
-	font-size: 11px;
-	color: #4a5568;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid #1e2733;
+    font-size: 11px;
+    color: #4a5568;
 }
 
 .naano-cla-lang-tag {
-	font-size: 10px;
-	color: #a78bfa;
-	background: rgba(124,58,237,0.1);
-	border: 1px solid rgba(124,58,237,0.3);
-	padding: 2px 8px;
-	border-radius: 4px;
-	letter-spacing: 0.06em;
+    font-size: 10px;
+    color: #a78bfa;
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
 }
 
-.naano-cla-line-count { margin-left: auto; }
+.naano-cla-line-count {
+    margin-left: auto;
+}
 
 .naano-cla-code-scroll {
-	height: 200px;
-	overflow: hidden;
-	position: relative;
-	padding: 14px 0;
-	-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 75%, transparent 100%);
-	mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 75%, transparent 100%);
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    padding: 14px 0;
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 10%,
+        black 75%,
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 10%,
+        black 75%,
+        transparent 100%
+    );
 }
 
 .naano-cla-code-lines {
-	position: absolute;
-	bottom: 40px;
-	left: 0;
-	right: 0;
+    position: absolute;
+    bottom: 40px;
+    left: 0;
+    right: 0;
 }
 
 .naano-cla-code-line {
-	display: flex;
-	padding: 1.5px 16px;
-	font-size: 12px;
-	line-height: 1.7;
-	opacity: 0;
-	transform: translateY(8px);
-	animation: naano-cla-lineReveal 0.3s ease forwards;
+    display: flex;
+    padding: 1.5px 16px;
+    font-size: 12px;
+    line-height: 1.7;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: naano-cla-lineReveal 0.3s ease forwards;
 }
 
 @keyframes naano-cla-lineReveal {
-	to { opacity: 1; transform: translateY(0); }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .naano-cla-ln {
-	color: #4a5568;
-	min-width: 36px;
-	user-select: none;
-	font-size: 11px;
-	padding-top: 1px;
+    color: #4a5568;
+    min-width: 36px;
+    user-select: none;
+    font-size: 11px;
+    padding-top: 1px;
 }
 
 /* Syntax colours */
-.naano-cla-k { color: #ff7b72; }
-.naano-cla-f { color: #d2a8ff; }
-.naano-cla-s { color: #a5d6ff; }
-.naano-cla-n { color: #ffa657; }
-.naano-cla-c { color: #4a5568; font-style: italic; }
-.naano-cla-t { color: #7ee787; }
-.naano-cla-a { color: #79c0ff; }
-.naano-cla-p { color: #c9d1d9; }
+.naano-cla-k {
+    color: #ff7b72;
+}
+.naano-cla-f {
+    color: #d2a8ff;
+}
+.naano-cla-s {
+    color: #a5d6ff;
+}
+.naano-cla-n {
+    color: #ffa657;
+}
+.naano-cla-c {
+    color: #4a5568;
+    font-style: italic;
+}
+.naano-cla-t {
+    color: #7ee787;
+}
+.naano-cla-a {
+    color: #79c0ff;
+}
+.naano-cla-p {
+    color: #c9d1d9;
+}
 
 /* Cursor */
 .naano-cla-cursor {
-	display: inline-block;
-	width: 7px;
-	height: 14px;
-	background: #00e5ff;
-	margin-left: 2px;
-	vertical-align: text-bottom;
-	border-radius: 1px;
-	animation: naano-cla-cursorBlink 0.8s step-end infinite;
-	box-shadow: 0 0 8px #00e5ff;
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    background: #00e5ff;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    border-radius: 1px;
+    animation: naano-cla-cursorBlink 0.8s step-end infinite;
+    box-shadow: 0 0 8px #00e5ff;
 }
 
 @keyframes naano-cla-cursorBlink {
-	0%, 100% { opacity: 1; }
-	50%      { opacity: 0; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
 }
 
 /* ── Meta row ── */
 .naano-cla-meta-row {
-	display: flex;
-	border-top: 1px solid #1e2733;
-	padding: 12px 24px;
+    display: flex;
+    border-top: 1px solid #1e2733;
+    padding: 12px 24px;
 }
 
 .naano-cla-meta-item {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	align-items: center;
-	font-size: 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    font-size: 10px;
 }
-.naano-cla-meta-item + .naano-cla-meta-item { border-left: 1px solid #1e2733; }
+.naano-cla-meta-item + .naano-cla-meta-item {
+    border-left: 1px solid #1e2733;
+}
 
 .naano-cla-meta-label {
-	color: #4a5568;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
+    color: #4a5568;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .naano-cla-meta-value {
-	font-size: 16px;
-	font-weight: 500;
-	color: #c9d1d9;
-	font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    font-weight: 500;
+    color: #c9d1d9;
+    font-variant-numeric: tabular-nums;
 }
 
-.naano-cla-meta-value--cyan   { color: #00e5ff; }
-.naano-cla-meta-value--purple { color: #a78bfa; font-size: 10px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
-.naano-cla-meta-value--green  { color: #10b981; }
+.naano-cla-meta-value--cyan {
+    color: #00e5ff;
+}
+.naano-cla-meta-value--purple {
+    color: #a78bfa;
+    font-size: 10px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 140px;
+}
+.naano-cla-meta-value--green {
+    color: #10b981;
+}
 
 /* Iframe canvas dimming overlay — shown while a section update is in progress */
 .naano-live-iframe-wrap--loading {
-	position: relative;
+    position: relative;
 }
 
 .naano-live-iframe-wrap--loading::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background: rgba(0, 0, 0, 0.35);
-	border-radius: 4px;
-	z-index: 10;
-	pointer-events: none;
-	animation: naano-overlay-fade-in 0.2s ease;
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+    z-index: 10;
+    pointer-events: none;
+    animation: naano-overlay-fade-in 0.2s ease;
 }
 
 @keyframes naano-overlay-fade-in {
-	from { opacity: 0; }
-	to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 /* =============================================================================
    Element Inspector — Inspect Toggle Button
    ============================================================================= */
 
 #naano-inspect-toggle-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        width: 100%;
-        justify-content: center;
-}
-
-/* Scroll style panel into view when it becomes visible */
-.naano-element-style-panel.naano-drawer__field {
-        margin-top: 8px;
-        overflow-y: auto;
-        max-height: 60vh;
-}
-
-#naano-inspect-toggle-btn.naano-inspect-mode-active {
-        background: #f59e0b;
-        border-color: #d97706;
-        color: #1a1a1a;
-}
-
-#naano-inspect-toggle-btn.naano-inspect-mode-active .dashicons {
-        color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    justify-content: center;
 }
 
 /* =============================================================================
-   Element Style Panel (.naano-element-style-panel)
-   ============================================================================= */
+   Element Style Panel — floating top-right (Elementor-style), LIGHT theme
+   =============================================================================
+   The panel was previously a dark, cramped block inside the left drawer.
+   It's now a free-floating panel anchored to the top-right of the canvas,
+   in a light theme so the form controls (text inputs, native <select>
+   dropdowns, color pickers) render with normal OS contrast — the previous
+   dark theme caused unreadable native select option text on light OS.
+*/
 
-.naano-element-style-panel {
-        border: 1px solid rgba(245,158,11,0.35);
-        border-radius: 6px;
-        padding: 10px 12px 12px;
-        background: rgba(245,158,11,0.05);
+.naano-element-style-panel.naano-esp--floating {
+    position: fixed;
+    top: 76px; /* below the toolbar (~64px) + breathing room */
+    right: 16px;
+    width: 340px;
+    max-height: calc(100vh - 100px);
+    z-index: 100050; /* above iframe, below modals */
+    background: #ffffff;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.18),
+        0 2px 6px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: naano-esp-slide-in 0.18s ease-out;
 }
 
-.naano-esp-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: #c9d1d9;
-        margin-bottom: 10px !important;
+@keyframes naano-esp-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
-.naano-esp-breadcrumb {
-        font-size: 10px;
-        font-weight: 400;
-        text-transform: none;
-        letter-spacing: 0;
-        color: #f59e0b;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 200px;
+/* Header: tag chip + breadcrumb + close button */
+.naano-esp__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+}
+
+.naano-esp__header-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.naano-esp__header-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #d97706;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 4px;
+    text-transform: lowercase;
+    letter-spacing: 0;
+}
+
+.naano-element-style-panel .naano-esp-breadcrumb {
+    font-size: 11px;
+    font-weight: 400;
+    color: #6b7280;
+    text-transform: none;
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.naano-esp__close {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #6b7280;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background 0.12s,
+        color 0.12s,
+        border-color 0.12s;
+}
+.naano-esp__close:hover {
+    background: #f3f4f6;
+    color: #111827;
+    border-color: #e5e7eb;
+}
+.naano-esp__close .dashicons {
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Inline-edit hint */
+.naano-esp__hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 11.5px;
+    color: #4b5563;
+    background: #fffbeb;
+    border-bottom: 1px solid #fef3c7;
+}
+.naano-esp__hint .dashicons {
+    font-size: 14px;
+    line-height: 1;
+    color: #d97706;
 }
 
 /* Tabs */
-.naano-esp-tabs {
-        display: flex;
-        gap: 4px;
-        margin-bottom: 10px;
+.naano-element-style-panel .naano-esp-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 8px;
+    margin: 0;
+    border-bottom: 1px solid #e5e7eb;
+    background: #ffffff;
+    flex-shrink: 0;
+}
+.naano-element-style-panel .naano-esp-tab {
+    flex: 1;
+    padding: 9px 4px;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition:
+        color 0.12s,
+        border-color 0.12s;
+}
+.naano-element-style-panel .naano-esp-tab:hover {
+    color: #111827;
+    background: transparent;
+}
+.naano-element-style-panel .naano-esp-tab--active {
+    color: #d97706;
+    border-bottom-color: #f59e0b;
+    background: transparent;
 }
 
-.naano-esp-tab {
-        flex: 1;
-        padding: 4px 8px;
-        font-size: 11px;
-        font-weight: 500;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 4px;
-        background: transparent;
-        color: #8b949e;
-        cursor: pointer;
-        transition: background 0.15s, color 0.15s;
-}
-
-.naano-esp-tab:hover {
-        background: rgba(255,255,255,0.06);
-        color: #c9d1d9;
-}
-
-.naano-esp-tab--active {
-        background: rgba(245,158,11,0.2);
-        border-color: #f59e0b;
-        color: #f59e0b;
+/* Body wraps the active tab pane and is scrollable */
+.naano-esp__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
 }
 
 /* Style groups */
-.naano-esp-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+.naano-element-style-panel .naano-esp-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.naano-element-style-panel .naano-esp-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.naano-element-style-panel .naano-esp-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f3f4f6;
 }
 
-.naano-esp-group {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
+.naano-element-style-panel .naano-esp-row {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    align-items: center;
+    gap: 8px;
+}
+.naano-element-style-panel .naano-esp-row > label {
+    font-size: 11.5px;
+    color: #4b5563;
+    margin: 0 !important;
+    white-space: nowrap;
 }
 
-.naano-esp-group-label {
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: #6e7681;
-        padding-bottom: 3px;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+.naano-element-style-panel .naano-esp-4col {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
 }
 
-/* Row: label + input side by side */
-.naano-esp-row {
-        display: grid;
-        grid-template-columns: 72px 1fr;
-        align-items: center;
-        gap: 6px;
+/* Inputs — LIGHT theme so native dropdown options render readable on every OS.
+   This explicitly fixes the "select text invisible on white background" bug
+   reported in the previous build (panel was dark, but native option lists
+   inherit OS-level styling and were unreadable). */
+.naano-element-style-panel .naano-esp-text-input,
+.naano-element-style-panel .naano-esp-select {
+    width: 100%;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    color: #111827;
+    box-sizing: border-box;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+    font-family: inherit;
+}
+.naano-element-style-panel .naano-esp-text-input:focus,
+.naano-element-style-panel .naano-esp-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+.naano-element-style-panel .naano-esp-text-input::placeholder {
+    color: #9ca3af;
+}
+.naano-element-style-panel .naano-esp-4col .naano-esp-text-input {
+    text-align: center;
+    padding: 0 4px;
+}
+/* Belt-and-suspenders for dropdown option colors — applies to the popup
+   list which on some browsers ignores the parent background color. */
+.naano-element-style-panel .naano-esp-select option {
+    background: #ffffff;
+    color: #111827;
 }
 
-.naano-esp-row > label {
-        font-size: 11px;
-        color: #8b949e;
-        margin: 0 !important;
-        white-space: nowrap;
+.naano-element-style-panel .naano-esp-color-input {
+    width: 100%;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.naano-element-style-panel .naano-esp-color-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
 }
 
-/* 4-column grid for padding/margin */
-.naano-esp-4col {
-        display: grid;
-        grid-template-columns: repeat(4,1fr);
-        gap: 4px;
+.naano-element-style-panel .naano-input,
+.naano-element-style-panel .naano-textarea {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    color: #111827;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 4px;
+}
+.naano-element-style-panel .naano-input:focus,
+.naano-element-style-panel .naano-textarea:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+.naano-element-style-panel .naano-field-help {
+    font-size: 11px;
+    color: #6b7280;
+    margin: 0 0 6px;
+    line-height: 1.4;
 }
 
-/* Inputs */
-.naano-esp-text-input,
-.naano-esp-select {
-        width: 100%;
-        height: 26px;
-        padding: 0 6px;
-        font-size: 11px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 4px;
-        color: #c9d1d9;
-        box-sizing: border-box;
-        transition: border-color 0.15s;
+/* Footer with action buttons split left (destructive/AI) / right (close/apply) */
+.naano-esp__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid #e5e7eb;
+    background: #fafafa;
+    flex-shrink: 0;
+}
+.naano-esp__footer-left,
+.naano-esp__footer-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.naano-esp-text-input:focus,
-.naano-esp-select:focus {
-        outline: none;
-        border-color: #f59e0b;
+.naano-element-style-panel .naano-btn-ghost {
+    padding: 6px 10px;
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #4b5563;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition:
+        background 0.12s,
+        color 0.12s,
+        border-color 0.12s;
+}
+.naano-element-style-panel .naano-btn-ghost:hover {
+    background: #ffffff;
+    color: #111827;
+    border-color: #e5e7eb;
+}
+.naano-element-style-panel .naano-btn-ghost .dashicons {
+    font-size: 15px;
+    line-height: 1;
+}
+.naano-element-style-panel .naano-esp__danger {
+    color: #b91c1c;
+}
+.naano-element-style-panel .naano-esp__danger:hover {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+.naano-element-style-panel .naano-btn-generate {
+    font-size: 12px;
+    padding: 7px 14px !important;
 }
 
-.naano-esp-text-input::placeholder {
-        color: #3d4451;
+/* Save changes button — appears in toolbar only when there are unsaved
+   manual edits. Orange, with a counter badge. */
+.naano-tb-btn--save-changes {
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+    color: #ffffff !important;
+    border-color: #d97706 !important;
+    position: relative;
+}
+.naano-tb-btn--save-changes:hover {
+    background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+}
+.naano-tb-btn--save-changes .dashicons {
+    color: #ffffff !important;
+}
+.naano-tb-btn__counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 9px;
 }
 
-.naano-esp-4col .naano-esp-text-input {
-        padding: 0 4px;
+/* Inline contenteditable highlight (set in iframe via injected styles too,
+   but kept here in case the parent ever needs to mirror the look). */
+
+/* Inspect mode active button (kept for backwards compat) */
+#naano-inspect-toggle-btn.naano-inspect-mode-active {
+    background: #f59e0b;
+    border-color: #d97706;
+    color: #1a1a1a;
+}
+#naano-inspect-toggle-btn.naano-inspect-mode-active .dashicons {
+    color: #1a1a1a;
 }
 
-.naano-esp-color-input {
-        width: 100%;
-        height: 26px;
-        padding: 0 2px;
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 4px;
-        background: rgba(255,255,255,0.05);
-        cursor: pointer;
-        box-sizing: border-box;
+/* =============================================================================
+   Drawer additions: Global CSS textarea + Failed sections list
+   ============================================================================= */
+
+.naano-global-css-field {
+    margin-top: 14px;
+}
+.naano-global-css-textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    tab-size: 2;
+    background: #0f1419;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+}
+.naano-global-css-textarea:focus {
+    border-color: #f59e0b;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
 }
 
-.naano-esp-color-input:focus {
-        outline: none;
-        border-color: #f59e0b;
+/* Failed sections drawer field */
+.naano-failed-sections-field {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: rgba(217, 119, 6, 0.06);
+    border: 1px solid rgba(217, 119, 6, 0.3);
+    border-radius: 6px;
+}
+.naano-failed-sections-field > label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px !important;
+}
+.naano-failed-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #fff;
+    background: #d97706;
+    border-radius: 9px;
+}
+.naano-failed-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.naano-failed-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px 8px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+    border-radius: 5px;
+}
+.naano-failed-name {
+    grid-column: 1;
+    grid-row: 1;
+    font-weight: 600;
+    font-size: 12px;
+    color: #f3f4f6;
+    text-transform: capitalize;
+}
+.naano-failed-reason {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 10.5px;
+    color: #9ca3af;
+    line-height: 1.3;
+    max-height: 28px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.naano-failed-retry {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    padding: 5px 9px !important;
+    font-size: 11px !important;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.naano-failed-retry .dashicons {
+    font-size: 13px;
+    line-height: 1;
 }
 
-/* Actions row */
-.naano-esp-actions {
-        display: flex;
-        gap: 6px;
-        margin-top: 10px;
+/* Link tab tweaks — the Anchor select wraps a long list of section ids
+   and benefits from a slightly larger control. */
+.naano-element-style-panel #naano-esp-pane-link .naano-esp-row > label {
+    font-size: 11.5px;
+    font-weight: 500;
+}
+.naano-element-style-panel #naano-esp-anchor-select {
+    height: 30px;
 }
 
-.naano-esp-actions .naano-btn-secondary,
-.naano-esp-actions .naano-btn-ghost {
-        flex: 1;
-        font-size: 11px;
-        padding: 5px 8px;
+overlapping it. */ @media (max-width: 900px) {
+    .naano-element-style-panel.naano-esp--floating {
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: auto;
+        max-height: 50vh;
+        border-radius: 10px 10px 0 0;
+    }
 }
 
 /* =============================================================================
@@ -1760,70 +2232,73 @@ body.naano-fullscreen #wpbody-content > .wrap {
    ============================================================================= */
 
 .naano-import-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #naano-import-list {
-        margin-top: 8px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .naano-import-page {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 6px;
-        padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 8px 10px;
 }
 
 .naano-import-page-name {
-        display: block;
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: #ffffff;
-        margin-bottom: 6px;
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #ffffff;
+    margin-bottom: 6px;
 }
 
 .naano-import-btns {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .naano-import-section-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        font-size: 11px;
-        font-weight: 500;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 4px;
-        color: #8b949e;
-        cursor: pointer;
-        transition: background 0.15s, border-color 0.15s, color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: #8b949e;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s,
+        color 0.15s;
 }
 
 .naano-import-section-btn:hover {
-        background: rgba(255,255,255,0.1);
-        color: #c9d1d9;
+    background: rgba(255, 255, 255, 0.1);
+    color: #c9d1d9;
 }
 
 .naano-import-section-btn--selected {
-        background: rgba(34,113,177,0.2);
-        border-color: #2271b1;
-        color: #58a6ff;
+    background: rgba(34, 113, 177, 0.2);
+    border-color: #2271b1;
+    color: #58a6ff;
 }
 
 .naano-import-section-btn .naano-import-check {
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
-        color: #58a6ff;
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    color: #58a6ff;
 }

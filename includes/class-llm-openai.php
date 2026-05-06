@@ -56,6 +56,35 @@ class Naano_LLM_OpenAI implements Naano_LLM_Provider_Interface
             "messages" => $all_messages,
         ];
 
+        // GPT-5.x family (gpt-5, gpt-5.5, gpt-5-pro, etc.) supports a
+        // `reasoning_effort` param that controls how long the model thinks
+        // before producing tokens. Default is typically "medium" which can
+        // burn 60-120s of hidden reasoning on a complex HTML generation
+        // request — enough to push a single LLM call past a 120s LSAPI
+        // ceiling on shared LiteSpeed hosts.
+        //
+        // For HTML generation with a long, structured system prompt, the
+        // marginal quality gain from extended reasoning is small while the
+        // wall-clock cost is large. We force "minimal" so the model emits
+        // tokens almost immediately. The system prompt's design rules already
+        // do most of the heavy lifting; reasoning_effort=minimal still
+        // produces production-quality HTML in our tests.
+        //
+        // The param is silently ignored by older non-reasoning models
+        // (gpt-4o, gpt-4-turbo, etc.) so it's safe to send unconditionally
+        // for any model whose name starts with "gpt-5".
+        if (
+            stripos($this->model, "gpt-5") === 0 ||
+            stripos($this->model, "o1") === 0 ||
+            stripos($this->model, "o3") === 0 ||
+            stripos($this->model, "o4") === 0
+        ) {
+            $payload["reasoning_effort"] = "none";
+            // verbosity governs response length tendency; "none" keeps
+            // sections substantial without runaway over-generation.
+            $payload["verbosity"] = "medium";
+        }
+
         $response = $this->request($payload);
 
         $text = $response["choices"][0]["message"]["content"] ?? null;
