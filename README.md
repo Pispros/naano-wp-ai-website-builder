@@ -1,6 +1,6 @@
 # Naano AI Website Builder
 
-> An AI-powered, section-by-section WordPress website builder using Claude, Gemini, or Kimi — pure PHP, no external backend needed.
+> An AI-powered, section-by-section WordPress website builder using Claude, Gemini, Kimi Or ChatGpt — pure PHP, no external backend needed.
 
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?logo=php)
@@ -292,6 +292,7 @@ Custom variables are injected into every system prompt as a structured list. The
 | Claude | `api.anthropic.com/v1/messages` | `x-api-key` header | Base64 inline | `claude-sonnet-4-20250514` |
 | Gemini | `generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | URL query param `?key=` | `inlineData` base64 | `gemini-2.5-flash` |
 | Kimi | `api.moonshot.cn/v1/chat/completions` | `Authorization: Bearer` | Via text note | `kimi-k2-0711-preview` |
+| OpenAI | `api.openai.com/v1/chat/completions` | `Authorization: Bearer` | `image_url` base64 | `gpt-5.5` |
 
 All adapters implement `Naano_LLM_Provider_Interface` — adding a new provider is straightforward.
 
@@ -434,4 +435,3 @@ Pull requests are welcome! Please open an issue first for significant changes.
 ## License
 
 GPL-2.0-or-later © Naano
-

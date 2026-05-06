@@ -1,6 +1,6 @@
 <?php
 /**
- * Kimi (Moonshot) LLM Adapter
+ * OpenAI LLM Adapter
  *
  * @package NaanoAIWebsiteBuilder
  */
@@ -10,12 +10,12 @@ if (!defined("ABSPATH")) {
 }
 
 /**
- * Adapter for Moonshot Kimi API (OpenAI-compatible format).
+ * Adapter for OpenAI API (chat/completions).
  */
-class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
+class Naano_LLM_OpenAI implements Naano_LLM_Provider_Interface
 {
-    private const API_ENDPOINT = "https://api.moonshot.cn/v1/chat/completions";
-    private const DEFAULT_MODEL = "kimi-k2.5";
+    private const API_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+    private const DEFAULT_MODEL = "gpt-5.5";
     private const MAX_TOKENS = 40000;
     private const TIMEOUT_SECONDS = 600;
 
@@ -25,7 +25,7 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
     /**
      * Constructor.
      *
-     * @param string $api_key Moonshot API key.
+     * @param string $api_key OpenAI API key.
      * @param string $model   Override model string.
      */
     public function __construct(string $api_key, string $model = "")
@@ -46,26 +46,22 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
 
         $all_messages = array_merge(
             [["role" => "system", "content" => $system_prompt]],
-            $this->convert_messages($messages, $images),
+            $this->build_messages($messages, $images),
         );
 
         $payload = [
             "model" => $this->model,
             "max_completion_tokens" => self::MAX_TOKENS,
+            "temperature" => 1,
             "messages" => $all_messages,
         ];
-
-        // kimi-k2.5 does not allow modifying temperature.
-        if (stripos($this->model, "kimi-k2.5") === false) {
-            $payload["temperature"] = 0.6;
-        }
 
         $response = $this->request($payload);
 
         $text = $response["choices"][0]["message"]["content"] ?? null;
         if (null === $text) {
             throw new RuntimeException(
-                "Unexpected Kimi response structure: " .
+                "Unexpected OpenAI response structure: " .
                     wp_json_encode($response),
             );
         }
@@ -104,50 +100,72 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
     // -------------------------------------------------------------------------
 
     /**
-     * Convert messages; Kimi supports text-only in standard OpenAI format.
-     * Images are appended as text description notes since Kimi is text-first.
+     * Build messages with image support via OpenAI Vision format.
+     *
+     * Images are injected into the last user message as content parts
+     * using the `image_url` type with base64-encoded data URIs.
      *
      * @param array $messages Conversation messages.
-     * @param array $images   Image data arrays (used as context note).
+     * @param array $images   Image data arrays.
      * @return array
      */
-    private function convert_messages(array $messages, array $images): array
+    private function build_messages(array $messages, array $images): array
     {
-        $converted = [];
-        foreach ($messages as $index => $msg) {
-            $content = $msg["content"];
+        if (empty($images)) {
+            return $messages;
+        }
 
-            // For the last user message, note attached images if any.
+        $built = [];
+        foreach ($messages as $index => $msg) {
             if (
                 $index === array_key_last($messages) &&
-                $msg["role"] === "user" &&
-                !empty($images)
+                $msg["role"] === "user"
             ) {
-                $count = count($images);
-                $content .= "\n\n[Note: {$count} reference image(s) are attached. Please consider their style and layout in your design.]";
-            }
+                $content = [];
 
-            $converted[] = [
-                "role" => $msg["role"],
-                "content" => $content,
-            ];
+                // Add text first (OpenAI recommends text after images, but either works).
+                $content[] = [
+                    "type" => "text",
+                    "text" => $msg["content"],
+                ];
+
+                // Attach images as base64 data URIs.
+                foreach ($images as $img) {
+                    $mime = $img["mime_type"] ?? "image/jpeg";
+                    $content[] = [
+                        "type" => "image_url",
+                        "image_url" => [
+                            "url" =>
+                                "data:" . $mime . ";base64," . $img["data"],
+                            "detail" => "high",
+                        ],
+                    ];
+                }
+
+                $built[] = [
+                    "role" => "user",
+                    "content" => $content,
+                ];
+            } else {
+                $built[] = $msg;
+            }
         }
-        return $converted;
+        return $built;
     }
 
     /**
      * Execute the cURL request.
      *
      * @param array $payload JSON payload.
-     * @return array Decoded response.
-     * @throws RuntimeException On error.
+     * @return array Decoded response array.
+     * @throws RuntimeException On cURL or HTTP error.
      */
     private function request(array $payload): array
     {
         $json_body = wp_json_encode($payload);
         if ($json_body === false) {
             throw new RuntimeException(
-                "Kimi request: failed to encode payload as JSON (" .
+                "OpenAI request: failed to encode payload as JSON (" .
                     json_last_error_msg() .
                     ").",
             );
@@ -155,8 +173,12 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
 
         $ch = curl_init(self::API_ENDPOINT);
 
-        // Set RETURNTRANSFER FIRST, individually. See class-llm-openai.php
-        // for the full rationale.
+        // Set RETURNTRANSFER FIRST, individually. curl_setopt_array() stops
+        // processing on the first failed option without warning, so we must
+        // never put a critical option (like RETURNTRANSFER) anywhere except
+        // first. Without it, curl_exec() returns bool(true) on success, which
+        // then becomes (string)"1" → json_decode = int(1) → (array)[1], and
+        // the caller throws "Unexpected response structure: [1]".
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
         curl_setopt_array(
@@ -178,12 +200,15 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
         curl_close($ch);
 
         if ($errno !== CURLE_OK) {
-            throw new RuntimeException("Kimi cURL error: " . $error);
+            throw new RuntimeException("OpenAI cURL error: " . $error);
         }
 
+        // Defensive: if curl_exec returns anything other than a string, it
+        // means RETURNTRANSFER was silently dropped by curl_setopt_array.
+        // Surface the real cause instead of the cryptic "[1]" downstream.
         if (!is_string($body)) {
             throw new RuntimeException(
-                "Kimi cURL: curl_exec returned non-string (" .
+                "OpenAI cURL: curl_exec returned non-string (" .
                     gettype($body) .
                     "). CURLOPT_RETURNTRANSFER was likely rejected by curl_setopt_array.",
             );
@@ -193,7 +218,24 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
 
         if ($code !== 200) {
             $msg = $data["error"]["message"] ?? $body;
-            throw new RuntimeException("Kimi API error (HTTP {$code}): {$msg}");
+
+            // Provide clear guidance for common OpenAI errors.
+            if ($code === 429) {
+                throw new RuntimeException(
+                    "OpenAI rate limit reached. Please wait a moment and try again. " .
+                        "Check your usage at https://platform.openai.com/usage.",
+                );
+            }
+
+            if ($code === 401) {
+                throw new RuntimeException(
+                    "OpenAI authentication failed. Please verify your API key at https://platform.openai.com/api-keys.",
+                );
+            }
+
+            throw new RuntimeException(
+                "OpenAI API error (HTTP {$code}): {$msg}",
+            );
         }
 
         return (array) $data;
