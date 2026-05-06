@@ -3,7 +3,7 @@
  * Plugin Name: Naano AI Website Builder
  * Plugin URI:  https://github.com/Pispros/naano-ai-website-builder
  * Description: AI-powered section-by-section website builder using Claude, Gemini, or Kimi. Pure PHP — no external backend needed.
- * Version:     1.2.0
+ * Version:     2.0.0
  * Author:      Naano
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,7 +17,7 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-define("NAANO_VERSION", "1.5.0");
+define("NAANO_VERSION", "2.0.0");
 define("NAANO_PLUGIN_DIR", plugin_dir_path(__FILE__));
 define("NAANO_PLUGIN_URL", plugin_dir_url(__FILE__));
 define("NAANO_PLUGIN_BASENAME", plugin_basename(__FILE__));
@@ -133,6 +133,23 @@ require_once NAANO_PLUGIN_DIR . "includes/jobs/class-job-manager.php";
 require_once NAANO_PLUGIN_DIR . "includes/jobs/class-job-runner.php";
 require_once NAANO_PLUGIN_DIR . "includes/class-ajax-handler.php";
 require_once NAANO_PLUGIN_DIR . "includes/class-admin-page.php";
+
+/**
+ * Load the plugin's translation files. Hooks on `init` so WP's locale
+ * (set in Settings ➔ General) is fully resolved before we look up the
+ * matching .mo. Translations live in /languages — the FR build ships
+ * inside the plugin so French users get a translated UI out of the box
+ * without needing translate.wordpress.org coverage.
+ */
+function naano_load_textdomain(): void
+{
+    load_plugin_textdomain(
+        "naano-ai-website-builder",
+        false,
+        dirname(NAANO_PLUGIN_BASENAME) . "/languages",
+    );
+}
+add_action("init", "naano_load_textdomain");
 
 /**
  * Bootstrap the plugin.

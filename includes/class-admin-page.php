@@ -1057,6 +1057,175 @@ class Naano_Admin_Page
                     "— click a section in the preview —",
                     "naano-ai-website-builder",
                 ),
+
+                // — Strings used dynamically inside builder.js. Anything the
+                // user can see at runtime that isn't already in the templates
+                // belongs here so it goes through the WP translation
+                // pipeline instead of being hard-coded English.
+                "sections_selected" => __(
+                    "%d sections selected",
+                    "naano-ai-website-builder",
+                ),
+                "update_section" => __(
+                    "Update Section",
+                    "naano-ai-website-builder",
+                ),
+                "update_n_sections" => __(
+                    "Update %d Sections",
+                    "naano-ai-website-builder",
+                ),
+                "show" => __("Show", "naano-ai-website-builder"),
+                "hide" => __("Hide", "naano-ai-website-builder"),
+                "edit" => __("Edit", "naano-ai-website-builder"),
+                "delete" => __("Delete", "naano-ai-website-builder"),
+                "remove" => __("Remove", "naano-ai-website-builder"),
+                "drag_to_reorder" => __(
+                    "Drag to reorder",
+                    "naano-ai-website-builder",
+                ),
+                "applied" => __("Applied", "naano-ai-website-builder"),
+                "section_deleted" => __(
+                    "Section deleted.",
+                    "naano-ai-website-builder",
+                ),
+                "screenshot_added" => __(
+                    "Screenshot added! 🖼️",
+                    "naano-ai-website-builder",
+                ),
+                "url_added" => __(
+                    "URL reference added! 🔗",
+                    "naano-ai-website-builder",
+                ),
+                "html_copied" => __(
+                    "HTML copied to clipboard! 📋",
+                    "naano-ai-website-builder",
+                ),
+                "set_homepage" => __(
+                    "Set as homepage!",
+                    "naano-ai-website-builder",
+                ),
+                "enter_url" => __(
+                    "Please enter a URL.",
+                    "naano-ai-website-builder",
+                ),
+                "enter_page_title" => __(
+                    "Please enter a page title.",
+                    "naano-ai-website-builder",
+                ),
+                "enter_section_name" => __(
+                    "Please enter a section name.",
+                    "naano-ai-website-builder",
+                ),
+                "save_failed" => __(
+                    "Save failed.",
+                    "naano-ai-website-builder",
+                ),
+                "save_failed_network" => __(
+                    "Save failed (network).",
+                    "naano-ai-website-builder",
+                ),
+                "saved_n_sections" => __(
+                    "Saved %d section",
+                    "naano-ai-website-builder",
+                ),
+                "saved_n_sections_plural" => __(
+                    "Saved %d sections",
+                    "naano-ai-website-builder",
+                ),
+                "and_global_css" => __(
+                    " + global CSS",
+                    "naano-ai-website-builder",
+                ),
+                "section_updated" => __(
+                    "Section updated! ✨",
+                    "naano-ai-website-builder",
+                ),
+                "n_sections_updated" => __(
+                    "%d sections updated! ✨",
+                    "naano-ai-website-builder",
+                ),
+                "section_added" => __(
+                    'Section "%s" added! ✨',
+                    "naano-ai-website-builder",
+                ),
+                "site_generated" => __(
+                    "Website generated successfully! 🎉",
+                    "naano-ai-website-builder",
+                ),
+                "site_generated_partial" => __(
+                    "%1\$d of %2\$d sections generated. ⚠️",
+                    "naano-ai-website-builder",
+                ),
+                "generation_failed" => __(
+                    "Generation failed: %s",
+                    "naano-ai-website-builder",
+                ),
+                "unknown_error_check_settings" => __(
+                    "unknown error — check API settings.",
+                    "naano-ai-website-builder",
+                ),
+                "unknown_error" => __(
+                    "unknown error",
+                    "naano-ai-website-builder",
+                ),
+                "site_generated_with_skips" => __(
+                    "Website generated, but %1\$d section(s) were skipped due to server timeouts: %2\$s. You can regenerate them individually from the builder.",
+                    "naano-ai-website-builder",
+                ),
+                "generation_in_progress" => __(
+                    "Generation is still in progress on the server. Showing %d section(s) generated so far — refresh in a moment to see more.",
+                    "naano-ai-website-builder",
+                ),
+                "generation_interrupted" => __(
+                    "Generation interrupted: %1\$s Showing %2\$d section(s) that were saved before the error.",
+                    "naano-ai-website-builder",
+                ),
+                "prompt_enhanced_sections" => __(
+                    "Prompt enhanced & sections suggested!",
+                    "naano-ai-website-builder",
+                ),
+                "instruction_enhanced" => __(
+                    "Instruction enhanced!",
+                    "naano-ai-website-builder",
+                ),
+                "page_published_html" => __(
+                    'Page published! <a href="%1$s" target="_blank">View it</a> · <a href="%2$s" target="_blank">Edit in WP</a>',
+                    "naano-ai-website-builder",
+                ),
+                "retrying_section" => __(
+                    "Retrying section: %s…",
+                    "naano-ai-website-builder",
+                ),
+                "section_recovered" => __(
+                    "Section recovered: %s ✓",
+                    "naano-ai-website-builder",
+                ),
+                "retry_failed" => __(
+                    "Retry failed: %s",
+                    "naano-ai-website-builder",
+                ),
+                "retry" => __("Retry", "naano-ai-website-builder"),
+                "failed_label" => __("(failed)", "naano-ai-website-builder"),
+                "asset_added" => __(
+                    "Asset added!",
+                    "naano-ai-website-builder",
+                ),
+                "select_asset" => __(
+                    "Select Asset",
+                    "naano-ai-website-builder",
+                ),
+                "use_this_file" => __(
+                    "Use this file",
+                    "naano-ai-website-builder",
+                ),
+                "delete_element_confirm" => __(
+                    "Delete this element? You can undo by hitting Ctrl+Z in the iframe (or by regenerating the section).",
+                    "naano-ai-website-builder",
+                ),
+                "unsaved_warning" => __(
+                    "You have unsaved manual edits. Click \u201cSave changes\u201d before leaving.",
+                    "naano-ai-website-builder",
+                ),
             ],
         ]);
 

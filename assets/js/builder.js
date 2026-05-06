@@ -71,6 +71,38 @@
     _failedSections: [],
 
     /**
+     * Tiny sprintf-style helper for translated strings that contain
+     * positional placeholders like %s, %d, %1$s, %2$d. Lets us keep all
+     * user-visible text in PHP-translated `data.strings` while still
+     * substituting runtime values (counts, names) on the JS side.
+     *
+     * Supported tokens: %s, %d (sequential), %1$s, %2$d, ... %9$s (positional).
+     * Anything else is left untouched.
+     *
+     * @param {string} key    Lookup key inside data.strings. If missing the
+     *                        key itself is used as the format string so the
+     *                        caller can pass a literal English fallback.
+     * @param {...*}   args   Values to substitute for the placeholders.
+     * @return {string}
+     */
+    _i18n: function (key) {
+      var fmt =
+        (data.strings && data.strings[key] != null && data.strings[key] !== "")
+          ? data.strings[key]
+          : key;
+      var args = Array.prototype.slice.call(arguments, 1);
+      var seq = 0;
+      return String(fmt).replace(
+        /%(?:(\d+)\$)?([sd])/g,
+        function (_match, posStr, _type) {
+          var idx = posStr ? parseInt(posStr, 10) - 1 : seq++;
+          var v = args[idx];
+          return v == null ? "" : String(v);
+        },
+      );
+    },
+
+    /**
      * Initialise the builder.
      */
     init: function () {
@@ -268,7 +300,7 @@
                     $("<button>", {
                       type: "button",
                       class: "naano-remove-custom-section",
-                      title: "Remove",
+                      title: NaanoBuilder._i18n("remove"),
                     }).text("\u00d7"),
                   );
                   $("#naano-section-checkboxes").append($label);
@@ -278,8 +310,8 @@
 
             NaanoBuilder._toast(
               isInitial
-                ? "Prompt enhanced & sections suggested!"
-                : "Instruction enhanced!",
+                ? NaanoBuilder._i18n("prompt_enhanced_sections")
+                : NaanoBuilder._i18n("instruction_enhanced"),
               "success",
             );
           } else {
@@ -397,17 +429,17 @@
                 })
                 .join(", ");
               NaanoBuilder._toast(
-                "Website generated, but " +
-                  failed.length +
-                  " section(s) were skipped due to server timeouts: " +
-                  names +
-                  ". You can regenerate them individually from the builder.",
+                NaanoBuilder._i18n(
+                  "site_generated_with_skips",
+                  failed.length,
+                  names,
+                ),
                 "success",
                 10000,
               );
             } else {
               NaanoBuilder._toast(
-                "Website generated successfully! 🎉",
+                NaanoBuilder._i18n("site_generated"),
                 "success",
               );
             }
@@ -418,6 +450,15 @@
               .find(".naano-import-check")
               .hide();
           } else {
+            // Job ended in error OR client polling deadline was hit while
+            // the server was still working. Either way, the runner
+            // persists each section to the DB as soon as it's generated,
+            // so there may already be useful sections to show. The poll
+            // handler attaches them under `data.partial.sections`.
+            //
+            // If we have anything, show it with a warning toast rather
+            // than throwing all that work away with a hard error toast.
+            var errMsg =
             // Job ended in error OR client polling deadline was hit while
             // the server was still working. Either way, the runner
             // persists each section to the DB as soon as it's generated,
@@ -461,14 +502,15 @@
                 (response && response.data && response.data.status) || "error";
               var label =
                 status === "running"
-                  ? "Generation is still in progress on the server. Showing " +
-                    partialSections.length +
-                    " section(s) generated so far — refresh in a moment to see more."
-                  : "Generation interrupted: " +
-                    errMsg +
-                    " Showing " +
-                    partialSections.length +
-                    " section(s) that were saved before the error.";
+                  ? NaanoBuilder._i18n(
+                      "generation_in_progress",
+                      partialSections.length,
+                    )
+                  : NaanoBuilder._i18n(
+                      "generation_interrupted",
+                      errMsg,
+                      partialSections.length,
+                    );
               // Use "success" toast variant when we recovered work — the
               // sections ARE there and visible to the user. The detailed
               // message conveys the nuance that the run was incomplete.
@@ -532,19 +574,23 @@
         if (successCount > 0) {
           var msg =
             successCount === sections.length
-              ? "Website generated successfully! 🎉"
-              : successCount +
-                " of " +
-                sections.length +
-                " sections generated. ⚠️";
+              ? NaanoBuilder._i18n("site_generated")
+              : NaanoBuilder._i18n(
+                  "site_generated_partial",
+                  successCount,
+                  sections.length,
+                );
           NaanoBuilder._toast(
             msg,
             successCount === sections.length ? "success" : "warning",
           );
         } else {
           NaanoBuilder._toast(
-            "Generation failed: " +
-              (lastError || "unknown error — check API settings."),
+            NaanoBuilder._i18n(
+              "generation_failed",
+              lastError ||
+                NaanoBuilder._i18n("unknown_error_check_settings"),
+            ),
             "error",
           );
         }
@@ -685,15 +731,23 @@
             ] || null;
         }
       }
-      NaanoBuilder._updateEditPanelState();
+      // User just picked a section in the sidebar (or via iframe click) —
+      // ask the iframe to scroll to it as well as highlight it.
+      NaanoBuilder._updateEditPanelState({ scroll: true });
     },
 
     /**
      * Sync the edit-panel UI to the current editingSectionIds state.
+     *
+     * @param {Object} [opts]
+     * @param {boolean} [opts.scroll] If true, the iframe will also smooth-scroll
+     *   to the first highlighted section. Default false so passive UI refreshes
+     *   (e.g. after re-renders) don't yank the user's viewport around.
      */
-    _updateEditPanelState: function () {
+    _updateEditPanelState: function (opts) {
       var ids = NaanoBuilder.editingSectionIds;
       var count = ids.length;
+      var scroll = !!(opts && opts.scroll);
 
       // Badge.
       if (count === 0) {
@@ -703,12 +757,16 @@
           NaanoBuilder._displayName(ids[0]),
         );
       } else {
-        $("#naano-editing-section-name").text(count + " sections selected");
+        $("#naano-editing-section-name").text(
+          NaanoBuilder._i18n("sections_selected", count),
+        );
       }
 
       // Update button label & state.
       var btnLabel =
-        count > 1 ? "Update " + count + " Sections" : "Update Section";
+        count > 1
+          ? NaanoBuilder._i18n("update_n_sections", count)
+          : NaanoBuilder._i18n("update_section");
       $("#naano-update-section-btn")
         .find(".naano-update-btn-label")
         .text(btnLabel);
@@ -737,6 +795,7 @@
       NaanoBuilder._iframePost({
         type: "naano-highlight-sections",
         sectionIds: ids,
+        scroll: scroll,
       });
     },
 
@@ -831,8 +890,8 @@
         NaanoBuilder._renderReferenceList([]);
         var msg =
           ids.length === 1
-            ? "Section updated! ✨"
-            : ids.length + " sections updated! ✨";
+            ? NaanoBuilder._i18n("section_updated")
+            : NaanoBuilder._i18n("n_sections_updated", ids.length);
         NaanoBuilder._toast(msg, "success");
         return;
       }
@@ -962,7 +1021,10 @@
             if (NaanoBuilder.editingSectionId === sectionId) {
               NaanoBuilder._renderReferenceList(response.data.references);
             }
-            NaanoBuilder._toast("Screenshot added! 🖼️", "success");
+            NaanoBuilder._toast(
+              NaanoBuilder._i18n("screenshot_added"),
+              "success",
+            );
           } else {
             NaanoBuilder._toast(
               (response.data && response.data.message) ||
@@ -998,7 +1060,7 @@
       var notes = $("#naano-ref-notes").val().trim();
 
       if (!url) {
-        NaanoBuilder._toast("Please enter a URL.", "error");
+        NaanoBuilder._toast(NaanoBuilder._i18n("enter_url"), "error");
         return;
       }
 
@@ -1024,7 +1086,7 @@
             $("#naano-add-url-form").hide();
             $("#naano-ref-url").val("");
             $("#naano-ref-notes").val("");
-            NaanoBuilder._toast("URL reference added! 🔗", "success");
+            NaanoBuilder._toast(NaanoBuilder._i18n("url_added"), "success");
             $(document).trigger("naano:url-ref-saved");
           } else {
             NaanoBuilder._toast(
@@ -1102,7 +1164,7 @@
 
           NaanoBuilder._refreshLivePreview();
           NaanoBuilder._renderSectionsList();
-          NaanoBuilder._toast("Section deleted.", "success");
+          NaanoBuilder._toast(NaanoBuilder._i18n("section_deleted"), "success");
         }
       });
     },
@@ -1174,7 +1236,7 @@
       }).done(function (response) {
         if (response.success) {
           navigator.clipboard.writeText(response.data.html).then(function () {
-            NaanoBuilder._toast("HTML copied to clipboard! 📋", "success");
+            NaanoBuilder._toast(NaanoBuilder._i18n("html_copied"), "success");
           });
         }
       });
@@ -1195,7 +1257,9 @@
     _doPublishPage: function () {
       var title = $("#naano-save-page-title").val().trim();
       if (!title) {
-        $("#naano-save-page-error").text("Please enter a page title.").show();
+        $("#naano-save-page-error")
+          .text(NaanoBuilder._i18n("enter_page_title"))
+          .show();
         $("#naano-save-page-title").focus();
         return;
       }
@@ -1235,11 +1299,11 @@
             $("#naano-current-page-name").text(response.data.title || title);
 
             NaanoBuilder._toast(
-              'Page published! <a href="' +
-                response.data.view_url +
-                '" target="_blank">View it</a> · <a href="' +
-                response.data.edit_url +
-                '" target="_blank">Edit in WP</a>',
+              NaanoBuilder._i18n(
+                "page_published_html",
+                response.data.view_url,
+                response.data.edit_url,
+              ),
               "success",
               6000,
             );
@@ -1252,7 +1316,11 @@
                 page_id: NaanoBuilder.pageId,
               }).done(function (res) {
                 if (res.success) {
-                  NaanoBuilder._toast("Set as homepage!", "success", 3500);
+                  NaanoBuilder._toast(
+                    NaanoBuilder._i18n("set_homepage"),
+                    "success",
+                    3500,
+                  );
                 }
               });
             }
@@ -1292,10 +1360,10 @@
         var $list = $("#naano-import-list");
         if ($list.is(":visible")) {
           $list.slideUp(150);
-          $(this).text("Show");
+          $(this).text(NaanoBuilder._i18n("show"));
         } else {
           $list.slideDown(150);
-          $(this).text("Hide");
+          $(this).text(NaanoBuilder._i18n("hide"));
         }
       });
 
@@ -1412,7 +1480,7 @@
           $("<button>", {
             type: "button",
             class: "naano-remove-custom-section",
-            title: "Remove",
+            title: NaanoBuilder._i18n("remove"),
           }).text("×"),
         );
         $("#naano-section-checkboxes").append($label);
@@ -1448,7 +1516,7 @@
         var notes = $("#naano-initial-ref-notes").val().trim();
 
         if (!url) {
-          NaanoBuilder._toast("Please enter a URL.", "error");
+          NaanoBuilder._toast(NaanoBuilder._i18n("enter_url"), "error");
           return;
         }
 
@@ -1605,7 +1673,7 @@
         var name = $("#naano-new-section-name").val().trim();
         if (!name) {
           $("#naano-new-section-error")
-            .text("Please enter a section name.")
+            .text(NaanoBuilder._i18n("enter_section_name"))
             .show();
           $("#naano-new-section-name").focus();
           return;
@@ -1637,7 +1705,13 @@
      * Bind all element-inspector UI events (inspect toggle, style apply, tabs,
      * delete, classes, link, save changes, retry failed sections).
      */
+    /**
+     * Bind all element-inspector UI events (inspect toggle, style apply, tabs,
+     * delete, classes, link, save changes, retry failed sections).
+     */
     _bindElementInspector: function () {
+      // Legacy toggle button (kept for backward compat — inspect is now on
+      // by default but the button still works as an explicit on/off).
       // Legacy toggle button (kept for backward compat — inspect is now on
       // by default but the button still works as an explicit on/off).
       $(document).on("click", "#naano-inspect-toggle-btn", function () {
@@ -1655,7 +1729,46 @@
           NaanoBuilder._clearElementSelection();
         },
       );
+      $(document).on(
+        "click",
+        "#naano-esp-deselect-btn, #naano-esp-close-btn",
+        function () {
+          NaanoBuilder._clearElementSelection();
+        },
+      );
 
+      $(document).on("click", "#naano-esp-delete-btn", function () {
+        NaanoBuilder._deleteSelectedElement();
+      });
+
+      $(document).on("click", "#naano-esp-edit-section-btn", function () {
+        // Shortcut: jump to AI editor for the section that contains the
+        // currently-selected element. Closes the panel first so the drawer
+        // takes focus.
+        var sid = NaanoBuilder.selectedElSectionId;
+        if (!sid) return;
+        NaanoBuilder._clearElementSelection();
+        if (typeof NaanoBuilder.openEditPanel === "function") {
+          NaanoBuilder.openEditPanel(sid);
+        } else {
+          // Fall back: ask iframe to highlight, then nudge sidebar list.
+          NaanoBuilder._iframePost({
+            type: "naano-highlight-section",
+            sectionId: sid,
+          });
+          $('.naano-sections-list [data-section-id="' + sid + '"]').click();
+        }
+      });
+
+      // Anchor picker auto-fills the URL field when a section is chosen.
+      $(document).on("change", "#naano-esp-anchor-select", function () {
+        var v = $(this).val();
+        if (v) {
+          $("#naano-esp-href-input").val(v);
+        }
+      });
+
+      // Tab switching.
       $(document).on("click", "#naano-esp-delete-btn", function () {
         NaanoBuilder._deleteSelectedElement();
       });
@@ -1701,10 +1814,20 @@
         NaanoBuilder._saveChanges();
       });
 
-      // Mark global CSS as dirty when user types into the textarea.
-      $(document).on("input", "#naano-global-css", function () {
-        NaanoBuilder._dirtyGlobalCss =
-          ($(this).val() || "") !== NaanoBuilder._lastSavedGlobalCss;
+      // Mark global CSS as dirty when user types into either textarea.
+      // Both #naano-global-css (create panel) and #naano-global-css-edit
+      // (edit panel) share the .naano-global-css-textarea class. Typing
+      // into one mirrors the value into the other so the user sees the
+      // same content regardless of which panel is currently active.
+      $(document).on("input", ".naano-global-css-textarea", function () {
+        var val = $(this).val() || "";
+        // Sync sibling textareas without re-triggering the input event.
+        $(".naano-global-css-textarea")
+          .not(this)
+          .each(function () {
+            if (this.value !== val) this.value = val;
+          });
+        NaanoBuilder._dirtyGlobalCss = val !== NaanoBuilder._lastSavedGlobalCss;
         NaanoBuilder._refreshSaveChangesBtn();
         // Live-preview: re-render the iframe with the new global CSS so
         // the user sees their CSS immediately. Throttled to avoid
@@ -1728,12 +1851,15 @@
       // Beforeunload guard: warn if there are unsaved manual edits.
       $(window).on("beforeunload", function () {
         if (NaanoBuilder._hasUnsavedChanges()) {
-          return "You have unsaved manual edits. Click \u201cSave changes\u201d before leaving.";
+          return NaanoBuilder._i18n("unsaved_warning");
         }
       });
     },
 
     /**
+     * Enable or disable element-inspect mode in the iframe. Inspect is on
+     * by default in the new helper script; this is here for the legacy
+     * toggle button only.
      * Enable or disable element-inspect mode in the iframe. Inspect is on
      * by default in the new helper script; this is here for the legacy
      * toggle button only.
@@ -1755,23 +1881,35 @@
     /**
      * Deselect the current element, hide the floating panel, and tell the
      * iframe to drop its contenteditable + outline.
+     * Deselect the current element, hide the floating panel, and tell the
+     * iframe to drop its contenteditable + outline.
      */
     _clearElementSelection: function () {
       NaanoBuilder.selectedElId = null;
       NaanoBuilder.selectedElSectionId = null;
       NaanoBuilder.selectedElTag = null;
       NaanoBuilder.selectedElAiClasses = "";
+      NaanoBuilder.selectedElTag = null;
+      NaanoBuilder.selectedElAiClasses = "";
       $("#naano-element-style-panel").hide();
+      NaanoBuilder._iframePost({ type: "naano-deselect-element" });
       NaanoBuilder._iframePost({ type: "naano-deselect-element" });
     },
 
     /**
      * Populate and show the floating panel from element data returned by
      * the iframe.
+     * Populate and show the floating panel from element data returned by
+     * the iframe.
      *
+     * @param {Object} elData  { breadcrumb, tagName, computed, classes, linkInfo }
      * @param {Object} elData  { breadcrumb, tagName, computed, classes, linkInfo }
      */
     _renderStylePanel: function (elData) {
+      $("#naano-esp-tag").text(elData.tagName || "div");
+      $("#naano-esp-breadcrumb").text(elData.breadcrumb || "");
+
+      // Reset to Style tab on each new selection.
       $("#naano-esp-tag").text(elData.tagName || "div");
       $("#naano-esp-breadcrumb").text(elData.breadcrumb || "");
 
@@ -1783,6 +1921,7 @@
       $("#naano-esp-custom-css").val("");
 
       // Style + spacing inputs.
+      // Style + spacing inputs.
       var computed = elData.computed || {};
       $("#naano-element-style-panel [data-prop]").each(function () {
         var prop = $(this).data("prop");
@@ -1792,6 +1931,32 @@
         }
         $(this).val(val);
       });
+
+      // Classes input — pre-fill with the user-extra classes detected in
+      // the iframe (which excluded internal helper hooks like
+      // .naano-el-selected, but kept everything the AI generated). Keep a
+      // ref so apply can preserve them.
+      var classesStr = elData.classes || "";
+      NaanoBuilder.selectedElAiClasses = classesStr;
+      $("#naano-esp-classes-input").val(classesStr);
+
+      // Link tab: only show + populate when an <a> is selected.
+      var isAnchor = (elData.tagName || "").toLowerCase() === "a";
+      $('.naano-esp-tab[data-tab="link"]').toggle(isAnchor);
+      if (isAnchor) {
+        var li = elData.linkInfo || {};
+        $("#naano-esp-href-input").val(li.href || "");
+        $("#naano-esp-rel-input").val(li.rel || "");
+        $("#naano-esp-target-select").val(li.target || "_self");
+        // Build anchor list from current sections so the user can pick.
+        NaanoBuilder._buildAnchorOptions();
+        // Pre-select the option if href matches a known section anchor.
+        if (li.href && li.href.charAt(0) === "#") {
+          $("#naano-esp-anchor-select").val(li.href);
+        } else {
+          $("#naano-esp-anchor-select").val("");
+        }
+      }
 
       // Classes input — pre-fill with the user-extra classes detected in
       // the iframe (which excluded internal helper hooks like
@@ -1846,6 +2011,29 @@
      *   1. inline styles + custom CSS (.naano-apply-element-style)
      *   2. classes              (.naano-apply-element-classes)
      *   3. link attributes      (.naano-apply-element-link)
+     * Populate the in-page anchor <select> with the current page's section IDs.
+     */
+    _buildAnchorOptions: function () {
+      var $sel = $("#naano-esp-anchor-select");
+      $sel.find("option").not(":first").remove();
+      var seen = {};
+      (NaanoBuilder.sectionsData || []).forEach(function (s) {
+        var id = s && s.id;
+        if (!id || seen[id]) return;
+        seen[id] = true;
+        $sel.append(
+          $("<option>")
+            .val("#" + id)
+            .text("#" + id),
+        );
+      });
+    },
+
+    /**
+     * Read the floating panel and push everything to the iframe:
+     *   1. inline styles + custom CSS (.naano-apply-element-style)
+     *   2. classes              (.naano-apply-element-classes)
+     *   3. link attributes      (.naano-apply-element-link)
      */
     _applyElementStyle: function () {
       if (!NaanoBuilder.selectedElId) {
@@ -1853,15 +2041,20 @@
       }
 
       // 1) Inline styles + custom CSS.
+      // 1) Inline styles + custom CSS.
       var styles = {};
       $("#naano-element-style-panel [data-prop]").each(function () {
+      $("#naano-element-style-panel [data-prop]").each(function () {
         var prop = $(this).data("prop");
+        var raw = $(this).val();
+        var val = raw == null ? "" : String(raw).trim();
         var raw = $(this).val();
         var val = raw == null ? "" : String(raw).trim();
         if (val) {
           styles[prop] = val;
         }
       });
+      var customCss = ($("#naano-esp-custom-css").val() || "").trim();
       var customCss = ($("#naano-esp-custom-css").val() || "").trim();
       NaanoBuilder._iframePost({
         type: "naano-apply-element-style",
@@ -1903,7 +2096,7 @@
         });
       }
 
-      NaanoBuilder._toast("Applied", "success", 1500);
+      NaanoBuilder._toast(NaanoBuilder._i18n("applied"), "success", 1500);
     },
 
     /**
@@ -1912,11 +2105,7 @@
      */
     _deleteSelectedElement: function () {
       if (!NaanoBuilder.selectedElId) return;
-      if (
-        !window.confirm(
-          "Delete this element? You can undo by hitting Ctrl+Z in the iframe (or by regenerating the section).",
-        )
-      ) {
+      if (!window.confirm(NaanoBuilder._i18n("delete_element_confirm"))) {
         return;
       }
       NaanoBuilder._iframePost({
@@ -1982,7 +2171,10 @@
           return { id: s.id, html: s.html || "" };
         });
 
-      var globalCss = $("#naano-global-css").val() || "";
+      // Read global CSS from the first textarea matching the shared class
+      // (both create-panel and edit-panel share the same value via input
+      // sync, so either is fine).
+      var globalCss = $(".naano-global-css-textarea").first().val() || "";
 
       $.post(data.ajaxUrl, {
         action: "naano_save_section_html",
@@ -1998,25 +2190,26 @@
             NaanoBuilder._lastSavedGlobalCss = globalCss;
             NaanoBuilder._refreshSaveChangesBtn();
             var saved = (resp.data && resp.data.saved_count) || 0;
-            NaanoBuilder._toast(
-              "Saved " +
-                saved +
-                " section" +
-                (saved === 1 ? "" : "s") +
-                (resp.data && resp.data.global_css_saved
-                  ? " + global CSS"
-                  : ""),
-              "success",
-            );
+            var savedKey =
+              saved === 1 ? "saved_n_sections" : "saved_n_sections_plural";
+            var savedMsg = NaanoBuilder._i18n(savedKey, saved);
+            if (resp.data && resp.data.global_css_saved) {
+              savedMsg += NaanoBuilder._i18n("and_global_css");
+            }
+            NaanoBuilder._toast(savedMsg, "success");
           } else {
             NaanoBuilder._toast(
-              (resp && resp.data && resp.data.message) || "Save failed.",
+              (resp && resp.data && resp.data.message) ||
+                NaanoBuilder._i18n("save_failed"),
               "error",
             );
           }
         })
         .fail(function () {
-          NaanoBuilder._toast("Save failed (network).", "error");
+          NaanoBuilder._toast(
+            NaanoBuilder._i18n("save_failed_network"),
+            "error",
+          );
         })
         .always(function () {
           $btn.prop("disabled", false);
@@ -2035,7 +2228,10 @@
       })[0];
       var sectionType = (entry && entry.section_type) || sectionId;
 
-      NaanoBuilder._toast("Retrying section: " + sectionType + "…", "success");
+      NaanoBuilder._toast(
+        NaanoBuilder._i18n("retrying_section", sectionType),
+        "success",
+      );
 
       NaanoBuilder._jobAjax({
         action: "naano_update_section",
@@ -2069,7 +2265,7 @@
             NaanoBuilder._renderSectionsList();
           }
           NaanoBuilder._toast(
-            "Section recovered: " + sectionType + " ✓",
+            NaanoBuilder._i18n("section_recovered", sectionType),
             "success",
           );
           // Reload the failed list (server-side mark_section_recovered
@@ -2077,9 +2273,11 @@
           NaanoBuilder._loadFailedSections();
         } else {
           NaanoBuilder._toast(
-            "Retry failed: " +
-              ((response && response.data && response.data.message) ||
-                "unknown error"),
+            NaanoBuilder._i18n(
+              "retry_failed",
+              (response && response.data && response.data.message) ||
+                NaanoBuilder._i18n("unknown_error"),
+            ),
             "error",
           );
         }
@@ -2104,9 +2302,10 @@
         NaanoBuilder._failedSections = failed;
         NaanoBuilder._renderFailedList();
         // Sync global CSS textarea to server state on load (only if user
-        // hasn't already started editing it).
+        // hasn't already started editing it). Apply to both create-panel
+        // and edit-panel textareas via the shared class.
         if (!NaanoBuilder._dirtyGlobalCss) {
-          $("#naano-global-css").val(globalCss);
+          $(".naano-global-css-textarea").val(globalCss);
           NaanoBuilder._lastSavedGlobalCss = globalCss;
         }
       });
@@ -2133,13 +2332,16 @@
           f.section_type || f.section_id,
         );
         var $reason = $('<span class="naano-failed-reason"></span>').text(
-          f.reason || "(failed)",
+          f.reason || NaanoBuilder._i18n("failed_label"),
         );
         var $btn = $(
           '<button type="button" class="naano-btn-secondary naano-failed-retry"></button>',
         )
           .attr("data-section-id", f.section_id)
-          .html('<span class="dashicons dashicons-update"></span> Retry');
+          .html(
+            '<span class="dashicons dashicons-update"></span> ' +
+              NaanoBuilder._i18n("retry"),
+          );
         $li.append($name).append($reason).append($btn);
         $list.append($li);
       });
@@ -2179,7 +2381,11 @@
         // Legacy section-click — kept as a no-op since inspect is now the
         // default mode (the iframe never emits this message anymore unless
         // someone runs an older cached helper).
+        // Legacy section-click — kept as a no-op since inspect is now the
+        // default mode (the iframe never emits this message anymore unless
+        // someone runs an older cached helper).
         if (msg.type === "naano-section-clicked") {
+          // Intentionally ignored.
           // Intentionally ignored.
         }
 
@@ -2187,7 +2393,12 @@
           NaanoBuilder.selectedElId = msg.elId;
           NaanoBuilder.selectedElSectionId = msg.sectionId;
           NaanoBuilder.selectedElTag = (msg.tagName || "").toLowerCase();
+          NaanoBuilder.selectedElTag = (msg.tagName || "").toLowerCase();
           NaanoBuilder._renderStylePanel(msg);
+        }
+
+        if (msg.type === "naano-element-deselected") {
+          NaanoBuilder._clearElementSelection();
         }
 
         if (msg.type === "naano-element-deselected") {
@@ -2197,10 +2408,13 @@
         if (msg.type === "naano-element-html-updated") {
           // Mirror the new HTML into sectionsData and mark the section as
           // dirty so the toolbar's "Save changes" button appears.
+          // Mirror the new HTML into sectionsData and mark the section as
+          // dirty so the toolbar's "Save changes" button appears.
           var idx = NaanoBuilder._findSectionIndex(msg.sectionId);
           if (idx !== -1) {
             NaanoBuilder.sectionsData[idx].html = msg.html;
           }
+          NaanoBuilder._markUnsaved(msg.sectionId);
           NaanoBuilder._markUnsaved(msg.sectionId);
         }
       });
@@ -2244,10 +2458,23 @@
       //   - made contenteditable so the user can type new text in place
       //   - relevant computed styles + class list reported to parent for
       //     the floating editor panel
+      // Inspect mode is now the DEFAULT and only mode — clicking any element
+      // selects it for editing. The previous "naano-section-clicked" path
+      // (whole-section AI editing) is gone from the iframe; the user reaches
+      // the AI editor for a section through the sections list in the parent
+      // sidebar instead.
+      //
+      // Selected element behaviour:
+      //   - outline highlight in orange
+      //   - made contenteditable so the user can type new text in place
+      //   - relevant computed styles + class list reported to parent for
+      //     the floating editor panel
       var helperScript = [
         "(function(){",
         'var s=document.createElement("style");',
         "s.textContent=",
+        // Hide the section-level hover/selection that no longer applies.
+        '"[data-section]{cursor:default;}"',
         // Hide the section-level hover/selection that no longer applies.
         '"[data-section]{cursor:default;}"',
         '+"[data-section].naano-section-loading{position:relative;pointer-events:none;}"',
@@ -2257,6 +2484,11 @@
         // Element-level inspect outlines (now permanent).
         '+".naano-el-hover{outline:2px dashed #f59e0b!important;outline-offset:2px;}"',
         '+".naano-el-selected{outline:2px solid #f59e0b!important;outline-offset:2px;box-shadow:0 0 0 1px rgba(255,255,255,0.6)!important;}"',
+        // Section-level selection (when user picks a section in the
+        // sidebar list to edit it with AI). Same shape as the inspect
+        // mode element selection but uses the WordPress admin blue so
+        // it's visually distinct from the orange element-inspect.
+        '+"[data-section].naano-section-selected{outline:2px solid #2271b1!important;outline-offset:2px;box-shadow:0 0 0 1px rgba(255,255,255,0.6)!important;}"',
         // Contenteditable affordance: subtle inset highlight + caret cursor.
         '+"[contenteditable=\\"true\\"]{cursor:text!important;outline:2px solid #f59e0b!important;outline-offset:2px;background:rgba(255,251,235,0.5);}"',
         // Inspect mode kept for legacy class hooks.
@@ -2266,7 +2498,11 @@
         // Inspect-mode is now ALWAYS active.
         "var inspectActive=true;",
         "document.body.classList.add('naano-inspect-active');",
+        // Inspect-mode is now ALWAYS active.
+        "var inspectActive=true;",
+        "document.body.classList.add('naano-inspect-active');",
         "var elCounter=0;",
+        "var currentSelected=null;",
         "var currentSelected=null;",
 
         "function getOrAssignId(el){",
@@ -2317,6 +2553,25 @@
         "},true);",
 
         // Hover highlight.
+        // Notify parent that the section's HTML changed (called whenever
+        // we mutate the DOM: style, class, delete, text edit).
+        "function notifySectionChanged(el){",
+        '  var sectionEl=el&&el.closest&&el.closest("[data-section]");',
+        "  if(!sectionEl)return;",
+        '  window.parent.postMessage({type:"naano-element-html-updated",',
+        '    sectionId:sectionEl.getAttribute("data-section"),',
+        '    html:sectionEl.innerHTML},"*");',
+        "}",
+
+        // Disable all link navigation inside the iframe so clicks select
+        // instead of opening pages. Capture phase, prevents any lingering
+        // anchor behaviour even if the user clicks an <a> child.
+        'document.addEventListener("click",function(e){',
+        "  var anchor=e.target&&e.target.closest&&e.target.closest('a');",
+        "  if(anchor)e.preventDefault();",
+        "},true);",
+
+        // Hover highlight.
         'document.addEventListener("mouseover",function(e){',
         '  document.querySelectorAll(".naano-el-hover").forEach(function(n){n.classList.remove("naano-el-hover");});',
         "  var el=e.target;",
@@ -2325,10 +2580,23 @@
         // (would make the dashed outline fight with the solid one).
         "  if(el===currentSelected)return;",
         '  el.classList.add("naano-el-hover");',
+        "  if(!el||el===document.body||el===document.documentElement)return;",
+        // Don't show hover outline on the currently-selected element
+        // (would make the dashed outline fight with the solid one).
+        "  if(el===currentSelected)return;",
+        '  el.classList.add("naano-el-hover");',
         "});",
 
         // Click to select an element.
+        // Click to select an element.
         'document.addEventListener("click",function(e){',
+        // If the user clicked inside the currently-selected (and now
+        // contenteditable) element, let them place the caret freely
+        // without re-selecting and resetting state.
+        "  if(currentSelected&&currentSelected.contains(e.target)&&",
+        "     currentSelected.getAttribute('contenteditable')==='true'){",
+        "    return;",
+        "  }",
         // If the user clicked inside the currently-selected (and now
         // contenteditable) element, let them place the caret freely
         // without re-selecting and resetting state.
@@ -2346,6 +2614,13 @@
         '    currentSelected.classList.remove("naano-el-selected");',
         "  }",
 
+
+        // Clear previous selection's contenteditable and outline.
+        "  if(currentSelected){",
+        "    currentSelected.removeAttribute('contenteditable');",
+        '    currentSelected.classList.remove("naano-el-selected");',
+        "  }",
+
         "  var elId=getOrAssignId(el);",
         "  var sectionId=getSectionId(el);",
         "  var cs=window.getComputedStyle(el);",
@@ -2354,8 +2629,24 @@
         '    \"paddingTop\",\"paddingRight\",\"paddingBottom\",\"paddingLeft\",',
         '    \"marginTop\",\"marginRight\",\"marginBottom\",\"marginLeft\",',
         '    \"border\",\"borderRadius\",\"backgroundImage\",\"backgroundSize\"];',
+        '  var styleProps=[\"color\",\"backgroundColor\",\"fontSize\",\"fontWeight\",\"textAlign\",',
+        '    \"width\",\"height\",\"maxWidth\",',
+        '    \"paddingTop\",\"paddingRight\",\"paddingBottom\",\"paddingLeft\",',
+        '    \"marginTop\",\"marginRight\",\"marginBottom\",\"marginLeft\",',
+        '    \"border\",\"borderRadius\",\"backgroundImage\",\"backgroundSize\"];',
         "  var computed={};",
         '  styleProps.forEach(function(p){computed[p]=cs[p]||"";});',
+
+        // Compute the user's "extra" classes — i.e. anything currently on
+        // the element that is NOT one of our internal helper hooks. The
+        // editor will populate the Classes field with this list and any
+        // edit replaces the user's classes (helper hooks are preserved).
+        "  var INTERNAL_CLS=['naano-el-hover','naano-el-selected'];",
+        "  var existingCls=(el.className&&typeof el.className==='string')",
+        "    ?el.className.trim().split(/\\s+/).filter(function(c){",
+        "      return c&&INTERNAL_CLS.indexOf(c)===-1;",
+        "    }):[];",
+
 
         // Compute the user's "extra" classes — i.e. anything currently on
         // the element that is NOT one of our internal helper hooks. The
@@ -2392,7 +2683,39 @@
         "    computed:computed,",
         "    classes:existingCls.join(' '),",
         '    linkInfo:linkInfo},"*");',
+        // Make the element editable in place so the user can type.
+        "  el.setAttribute('contenteditable','true');",
+        "  currentSelected=el;",
+
+        // Anchor-specific info: when the selected element is an <a>, ship
+        // its current href / target / rel so the floating panel's Link tab
+        // can pre-populate.
+        "  var linkInfo=null;",
+        "  if(el.tagName==='A'){",
+        "    linkInfo={",
+        "      href:el.getAttribute('href')||'',",
+        "      target:el.getAttribute('target')||'_self',",
+        "      rel:el.getAttribute('rel')||''",
+        "    };",
+        "  }",
+
+        '  window.parent.postMessage({type:"naano-element-selected",',
+        "    elId:elId,",
+        "    sectionId:sectionId,",
+        "    tagName:el.tagName.toLowerCase(),",
+        "    breadcrumb:buildBreadcrumb(el),",
+        "    computed:computed,",
+        "    classes:existingCls.join(' '),",
+        '    linkInfo:linkInfo},"*");',
         "},true);",
+
+        // Capture text edits inline. Debounced via input event — fires on
+        // every keystroke but the parent only persists on Save.
+        'document.addEventListener("input",function(e){',
+        "  if(!currentSelected)return;",
+        "  if(!currentSelected.contains(e.target)&&e.target!==currentSelected)return;",
+        "  notifySectionChanged(currentSelected);",
+        "});",
 
         // Capture text edits inline. Debounced via input event — fires on
         // every keystroke but the parent only persists on Save.
@@ -2407,11 +2730,14 @@
         "  var m=e.data;if(!m||!m.type)return;",
 
         // Update a specific section's HTML (used after AI regeneration).
+        // Update a specific section's HTML (used after AI regeneration).
         '  if(m.type==="naano-update-section"){',
         "    var el=document.querySelector('[data-section=\"'+m.sectionId+'\"]');",
         "    if(el){",
         '      el.classList.remove("naano-section-loading");',
         "      el.innerHTML=m.html;",
+        // The element we had selected just got replaced — clear our ref.
+        "      if(currentSelected&&!document.body.contains(currentSelected))currentSelected=null;",
         // The element we had selected just got replaced — clear our ref.
         "      if(currentSelected&&!document.body.contains(currentSelected))currentSelected=null;",
         '      el.style.animation="naano-flash 1.5s ease forwards";',
@@ -2420,6 +2746,7 @@
         "  }",
 
         // Highlight a section (e.g. when user picks one in sidebar list).
+        // Highlight a section (e.g. when user picks one in sidebar list).
         '  if(m.type==="naano-highlight-section"){',
         '    document.querySelectorAll(".naano-section-selected").forEach(function(n){n.classList.remove("naano-section-selected");});',
         "    var el=document.querySelector('[data-section=\"'+m.sectionId+'\"]');",
@@ -2427,15 +2754,25 @@
         '      el.classList.add("naano-section-selected");',
         "      el.scrollIntoView({behavior:'smooth',block:'start'});",
         "    }",
+        "    if(el){",
+        '      el.classList.add("naano-section-selected");',
+        "      el.scrollIntoView({behavior:'smooth',block:'start'});",
+        "    }",
         "  }",
 
         // Highlight multiple sections at once (used for multi-select).
+        // Also smooth-scrolls the iframe to the first newly-selected
+        // section so the user immediately sees what they just picked.
         '  if(m.type==="naano-highlight-sections"){',
         '    document.querySelectorAll(".naano-section-selected").forEach(function(n){n.classList.remove("naano-section-selected");});',
+        "    var firstEl=null;",
         "    (m.sectionIds||[]).forEach(function(id){",
         "      var el=document.querySelector('[data-section=\"'+id+'\"]');",
-        '      if(el)el.classList.add("naano-section-selected");',
+        '      if(el){el.classList.add("naano-section-selected");if(!firstEl)firstEl=el;}',
         "    });",
+        "    if(firstEl&&m.scroll!==false){",
+        "      firstEl.scrollIntoView({behavior:'smooth',block:'start'});",
+        "    }",
         "  }",
 
         // Show/hide loading overlay on a section.
@@ -2449,10 +2786,15 @@
 
         // Inspect mode is permanent now; this message is kept for backward
         // compatibility but only toggles the visual class hook.
+        // Inspect mode is permanent now; this message is kept for backward
+        // compatibility but only toggles the visual class hook.
         '  if(m.type==="naano-inspect-mode"){',
         '    document.body.classList.toggle("naano-inspect-active",!!m.active);',
         "  }",
+        '    document.body.classList.toggle("naano-inspect-active",!!m.active);',
+        "  }",
 
+        // Apply inline styles + custom CSS to selected element.
         // Apply inline styles + custom CSS to selected element.
         '  if(m.type==="naano-apply-element-style"){',
         "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
@@ -2518,7 +2860,60 @@
         '  if(m.type==="naano-delete-element"){',
         "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
         "    if(!el)return;",
+        "    notifySectionChanged(el);",
+        "  }",
+
+        // Apply user-provided class names (replaces previous user classes,
+        // preserves any existing AI-generated classes that were already
+        // there before the user's edit since we tracked them as 'extra').
+        '  if(m.type==="naano-apply-element-classes"){',
+        "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
+        "    if(!el)return;",
+        "    var INTERNAL_CLS=['naano-el-hover','naano-el-selected'];",
+        // Strip everything except internal hooks + AI-original classes.
+        // m.aiClasses contains the classes that were on the element when
+        // first selected; m.userClasses is the new user-typed set.
+        "    var aiCls=(m.aiClasses||'').split(/\\s+/).filter(Boolean);",
+        "    var userCls=(m.userClasses||'').split(/\\s+/).filter(Boolean);",
+        "    var keepInternal=(el.className||'').split(/\\s+/).filter(function(c){",
+        "      return INTERNAL_CLS.indexOf(c)!==-1;",
+        "    });",
+        "    var merged=keepInternal.concat(aiCls).concat(userCls);",
+        // Dedupe.
+        "    var seen={};var dedup=[];merged.forEach(function(c){if(c&&!seen[c]){seen[c]=1;dedup.push(c);}});",
+        "    el.className=dedup.join(' ');",
+        "    notifySectionChanged(el);",
+        "  }",
+
+        // Apply link attributes (href, target, rel) to an <a> element.
+        // Empty href removes the attribute outright. Same for rel/target.
+        '  if(m.type==="naano-apply-element-link"){',
+        "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
+        "    if(!el)return;",
+        "    if(el.tagName!=='A')return;",
+        "    if(typeof m.href==='string'){",
+        "      if(m.href)el.setAttribute('href',m.href);",
+        "      else el.removeAttribute('href');",
+        "    }",
+        "    if(typeof m.target==='string'){",
+        "      if(m.target&&m.target!=='_self')el.setAttribute('target',m.target);",
+        "      else el.removeAttribute('target');",
+        "    }",
+        "    if(typeof m.rel==='string'){",
+        "      if(m.rel)el.setAttribute('rel',m.rel);",
+        "      else el.removeAttribute('rel');",
+        "    }",
+        "    notifySectionChanged(el);",
+        "  }",
+
+        // Delete the selected element from its parent.
+        '  if(m.type==="naano-delete-element"){',
+        "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
+        "    if(!el)return;",
         '    var sectionEl=el.closest("[data-section]");',
+        "    if(el===sectionEl)return;", // Don't allow deleting the section wrapper itself.
+        "    el.remove();",
+        "    if(currentSelected===el)currentSelected=null;",
         "    if(el===sectionEl)return;", // Don't allow deleting the section wrapper itself.
         "    el.remove();",
         "    if(currentSelected===el)currentSelected=null;",
@@ -2528,6 +2923,24 @@
         "    }",
         "  }",
 
+        // Parent asks us to deselect (panel closed by user).
+        '  if(m.type==="naano-deselect-element"){',
+        "    if(currentSelected){",
+        "      currentSelected.removeAttribute('contenteditable');",
+        '      currentSelected.classList.remove("naano-el-selected");',
+        "    }",
+        '    document.querySelectorAll(".naano-el-hover").forEach(function(n){n.classList.remove("naano-el-hover");});',
+        "    currentSelected=null;",
+        "  }",
+        "});",
+
+        // Escape key inside iframe deselects.
+        'document.addEventListener("keydown",function(e){',
+        '  if(e.key==="Escape"&&currentSelected){',
+        "    currentSelected.removeAttribute('contenteditable');",
+        '    currentSelected.classList.remove("naano-el-selected");',
+        "    currentSelected=null;",
+        '    window.parent.postMessage({type:"naano-element-deselected"},"*");',
         // Parent asks us to deselect (panel closed by user).
         '  if(m.type==="naano-deselect-element"){',
         "    if(currentSelected){",
@@ -2563,10 +2976,27 @@
         "body{box-sizing:border-box;}" +
         "*,*::before,*::after{box-sizing:inherit;}";
 
+      // Read the user's "Global CSS" textarea so the live preview matches
+      // the published page (same CSS will be injected server-side at
+      // assembly time). Also reset the default 8px body margin every
+      // browser ships with so sections sit flush against the page edges.
+      var userGlobalCss = "";
+      var $gcss = $("#naano-global-css");
+      if ($gcss.length) userGlobalCss = $gcss.val() || "";
+      var baseReset =
+        "html,body{margin:0;padding:0;}" +
+        "body{box-sizing:border-box;}" +
+        "*,*::before,*::after{box-sizing:inherit;}";
+
       return (
         "<!DOCTYPE html><html><head>" +
         '<meta charset="utf-8">' +
         '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+        "<style>" +
+        baseReset +
+        "\n" +
+        userGlobalCss +
+        "</style>" +
         "<style>" +
         baseReset +
         "\n" +
@@ -2614,17 +3044,23 @@
         });
 
         $item.html(
-          '<span class="naano-sections-list__handle" title="Drag to reorder">⠿</span>' +
+          '<span class="naano-sections-list__handle" title="' +
+            NaanoBuilder._i18n("drag_to_reorder") +
+            '">⠿</span>' +
             '<span class="naano-sections-list__name">' +
             $("<span>").text(displayName).html() +
             "</span>" +
             '<span class="naano-sections-list__actions">' +
             '<button type="button" class="naano-sections-list__btn" data-action="edit" data-id="' +
             sec.id +
-            '" title="Edit">✏️</button>' +
+            '" title="' +
+            NaanoBuilder._i18n("edit") +
+            '">✏️</button>' +
             '<button type="button" class="naano-sections-list__btn naano-sections-list__btn--delete" data-action="delete" data-id="' +
             sec.id +
-            '" title="Delete">🗑️</button>' +
+            '" title="' +
+            NaanoBuilder._i18n("delete") +
+            '">🗑️</button>' +
             "</span>",
         );
 
@@ -2761,7 +3197,7 @@
             NaanoBuilder._refreshLivePreview();
             NaanoBuilder._renderSectionsList();
             NaanoBuilder._toast(
-              'Section "' + sectionName + '" added! ✨',
+              NaanoBuilder._i18n("section_added", sectionName),
               "success",
             );
           } else {
@@ -2808,8 +3244,16 @@
       // (~1 min between ticks if spawn_cron is throttled). 60 min gives a
       // healthy margin without the UI giving up on a healthy slow job.
       var pollDeadline = Date.now() + 60 * 60 * 1000;
+      // Deadline must comfortably cover the worst case: 38+ cron ticks for a
+      // 12-section site, with the cPanel cron OS as the slowest backstop
+      // (~1 min between ticks if spawn_cron is throttled). 60 min gives a
+      // healthy margin without the UI giving up on a healthy slow job.
+      var pollDeadline = Date.now() + 60 * 60 * 1000;
       var debugTag = "[Naano " + (startParams.action || "?") + "]";
       var pollCount = 0;
+      // Most recent successful poll payload — kept so we can forward any
+      // `partial` data even when the final outcome is an error or timeout.
+      var lastPollData = null;
       // Most recent successful poll payload — kept so we can forward any
       // `partial` data even when the final outcome is an error or timeout.
       var lastPollData = null;
@@ -2844,6 +3288,12 @@
                   partial: (lastPollData && lastPollData.partial) || null,
                   status: (lastPollData && lastPollData.status) || "running",
                   log: (lastPollData && lastPollData.log) || null,
+                  // Forward the most recent partial state we know about so
+                  // the caller can still show whatever sections persisted
+                  // before the deadline.
+                  partial: (lastPollData && lastPollData.partial) || null,
+                  status: (lastPollData && lastPollData.status) || "running",
+                  log: (lastPollData && lastPollData.log) || null,
                 },
               });
               return;
@@ -2869,6 +3319,7 @@
                 }
 
                 lastPollData = pollResp.data;
+                lastPollData = pollResp.data;
                 var status = pollResp.data.status;
 
                 if (status === "done") {
@@ -2878,6 +3329,9 @@
                   deferred.resolve({
                     success: true,
                     data: pollResp.data.data || {},
+                    // Surface partial alongside the success path too, so
+                    // call sites have a consistent shape to read from.
+                    partial: pollResp.data.partial || null,
                     // Surface partial alongside the success path too, so
                     // call sites have a consistent shape to read from.
                     partial: pollResp.data.partial || null,
@@ -2893,6 +3347,12 @@
                     success: false,
                     data: {
                       message: pollResp.data.error || "Generation failed.",
+                      // Sections that successfully persisted before the
+                      // failing tick. The caller decides whether to show
+                      // them — see naano_generate_site .done() below.
+                      partial: pollResp.data.partial || null,
+                      status: "error",
+                      log: pollResp.data.log || null,
                       // Sections that successfully persisted before the
                       // failing tick. The caller decides whether to show
                       // them — see naano_generate_site .done() below.
@@ -2941,6 +3401,10 @@
       $("#naano-drawer-edit").show();
       $("#naano-canvas-placeholder").hide();
       $("#naano-live-iframe-wrap").show();
+      // Pull the per-page state that lives in post meta (failed sections
+      // list + saved global CSS) so the drawer reflects reality even after
+      // a refresh. Safe to call without a pageId — the helper no-ops.
+      NaanoBuilder._loadFailedSections();
       // Pull the per-page state that lives in post meta (failed sections
       // list + saved global CSS) so the drawer reflects reality even after
       // a refresh. Safe to call without a pageId — the helper no-ops.
@@ -3353,8 +3817,8 @@
      */
     addAssetFromMedia: function () {
       var frame = wp.media({
-        title: "Select Asset",
-        button: { text: "Use this file" },
+        title: NaanoBuilder._i18n("select_asset"),
+        button: { text: NaanoBuilder._i18n("use_this_file") },
         multiple: false,
       });
 
@@ -3366,7 +3830,7 @@
         });
         NaanoBuilder._renderAssetList();
         NaanoBuilder._persistAssets();
-        NaanoBuilder._toast("Asset added!", "success");
+        NaanoBuilder._toast(NaanoBuilder._i18n("asset_added"), "success");
       });
 
       frame.open();

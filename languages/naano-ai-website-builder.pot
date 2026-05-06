@@ -1,0 +1,1350 @@
+# Copyright (C) 2025 Naano
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Naano AI Website Builder 1.5.0\n"
+"Report-Msgid-Bugs-To: https://github.com/Pispros/naano-ai-website-builder\n"
+"POT-Creation-Date: 2026-05-06 23:25+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: naano-pot-extractor 1.0\n"
+"X-Domain: naano-ai-website-builder\n"
+
+#: includes/class-admin-page.php:1135
+msgid " + global CSS"
+msgstr ""
+
+#: includes/class-admin-page.php:1155
+msgid "%1$d of %2$d sections generated. ⚠️"
+msgstr ""
+
+#: includes/class-admin-page.php:1065
+msgid "%d sections selected"
+msgstr ""
+
+#: includes/class-admin-page.php:1143
+msgid "%d sections updated! ✨"
+msgstr ""
+
+#: includes/class-admin-page.php:1208
+msgid "(failed)"
+msgstr ""
+
+#: includes/class-admin-page.php:910 templates/admin-pages-list.php:104
+msgid "(no title)"
+msgstr ""
+
+#: templates/builder-page.php:155 templates/frontend-builder.php:281
+msgid "+ Add"
+msgstr ""
+
+#: templates/frontend-builder.php:364 templates/frontend-builder.php:651
+msgid "/* Example */&#10;:root { --brand: #f59e0b; }&#10;a:hover { opacity: 0.8; }"
+msgstr ""
+
+#: includes/class-ajax-handler.php:1001
+msgid "AI Generated Page"
+msgstr ""
+
+#: includes/class-admin-page.php:238 includes/class-admin-page.php:239
+msgid "AI Pages"
+msgstr ""
+
+#: templates/settings-page.php:97
+msgid "API Key"
+msgstr ""
+
+#: includes/class-ajax-handler.php:364 includes/class-ajax-handler.php:398
+msgid "API key cannot be empty."
+msgstr ""
+
+#: includes/class-ajax-handler.php:374
+msgid "API key saved."
+msgstr ""
+
+#: templates/builder-page.php:19 templates/frontend-builder.php:23
+msgid "About"
+msgstr ""
+
+#: templates/admin-pages-list.php:74
+msgid "Actions"
+msgstr ""
+
+#: templates/builder-page.php:186 templates/builder-page.php:375 templates/builder-page.php:406 templates/builder-page.php:440 templates/builder-page.php:475
+#: templates/frontend-builder.php:336 templates/frontend-builder.php:533 templates/frontend-builder.php:573 templates/frontend-builder.php:619 templates/frontend-builder.php:675
+msgid "Add"
+msgstr ""
+
+#: templates/settings-page.php:545
+msgid "Add Language"
+msgstr ""
+
+#: templates/builder-page.php:467 templates/frontend-builder.php:664
+msgid "Add New Section"
+msgstr ""
+
+#: templates/builder-page.php:415 templates/frontend-builder.php:582
+msgid "Add Redirect"
+msgstr ""
+
+#: templates/builder-page.php:424 templates/frontend-builder.php:594
+msgid "Add Screenshot"
+msgstr ""
+
+#: templates/builder-page.php:195 templates/builder-page.php:449 templates/frontend-builder.php:345 templates/frontend-builder.php:628
+msgid "Add URL"
+msgstr ""
+
+#: templates/section-card.php:67
+msgid "Add URL reference"
+msgstr ""
+
+#: templates/settings-page.php:325
+msgid "Add Variable"
+msgstr ""
+
+#: templates/builder-page.php:366 templates/frontend-builder.php:518
+msgid "Add numbered assets to reference in your instructions (e.g. \"use asset #1 as hero image\")."
+msgstr ""
+
+#: templates/builder-page.php:176 templates/frontend-builder.php:317
+msgid "Add reference websites for the AI to study and replicate their design patterns."
+msgstr ""
+
+#: templates/section-card.php:61
+msgid "Add screenshot reference"
+msgstr ""
+
+#: templates/settings-page.php:343
+msgid "Additional Instructions"
+msgstr ""
+
+#: templates/settings-page.php:335
+msgid "Additional instructions appended to every system prompt. Use this to enforce brand tone, content rules, or any site-specific constraints."
+msgstr ""
+
+#: templates/builder-page.php:288 templates/frontend-builder.php:839
+msgid "Align"
+msgstr ""
+
+#: templates/builder-page.php:232
+msgid "All"
+msgstr ""
+
+#: includes/class-admin-page.php:1036
+msgid "An error occurred. Please try again."
+msgstr ""
+
+#: templates/frontend-builder.php:998
+msgid "Anchor"
+msgstr ""
+
+#: includes/class-admin-page.php:1086
+msgid "Applied"
+msgstr ""
+
+#: templates/frontend-builder.php:1068
+msgid "Apply"
+msgstr ""
+
+#: templates/builder-page.php:349
+msgid "Apply Styles"
+msgstr ""
+
+#: includes/class-admin-page.php:1030
+msgid "Are you sure you want to delete this section?"
+msgstr ""
+
+#: includes/class-admin-page.php:1209
+msgid "Asset added!"
+msgstr ""
+
+#: templates/builder-page.php:308 templates/frontend-builder.php:887
+msgid "Auto"
+msgstr ""
+
+#: templates/frontend-builder.php:75
+msgid "Back to Dashboard"
+msgstr ""
+
+#: templates/builder-page.php:299 templates/frontend-builder.php:863
+msgid "Background"
+msgstr ""
+
+#: templates/frontend-builder.php:828
+msgid "Bold"
+msgstr ""
+
+#: templates/builder-page.php:283
+msgid "Bold 700"
+msgstr ""
+
+#: templates/builder-page.php:337 templates/builder-page.php:338 templates/frontend-builder.php:896 templates/frontend-builder.php:901
+msgid "Border"
+msgstr ""
+
+#: templates/builder-page.php:323 templates/builder-page.php:332
+msgid "Bottom"
+msgstr ""
+
+#: templates/admin-pages-list.php:61
+msgid "Build Your First Page"
+msgstr ""
+
+#: includes/class-admin-page.php:212
+msgid "Build with Naano AI"
+msgstr ""
+
+#: templates/frontend-builder.php:968
+msgid "CSS classes"
+msgstr ""
+
+#: templates/admin-pages-list.php:161 templates/builder-page.php:189 templates/builder-page.php:378 templates/builder-page.php:409 templates/builder-page.php:443
+#: templates/builder-page.php:478 templates/builder-page.php:536 templates/frontend-builder.php:339 templates/frontend-builder.php:536 templates/frontend-builder.php:576
+#: templates/frontend-builder.php:622 templates/frontend-builder.php:678 templates/frontend-builder.php:1104
+msgid "Cancel"
+msgstr ""
+
+#: templates/builder-page.php:292 templates/frontend-builder.php:846
+msgid "Center"
+msgstr ""
+
+#: templates/frontend-builder.php:773
+msgid "Classes"
+msgstr ""
+
+#: templates/builder-page.php:350
+msgid "Clear"
+msgstr ""
+
+#: templates/frontend-builder.php:747
+msgid "Close (Esc)"
+msgstr ""
+
+#: templates/frontend-builder.php:748
+msgid "Close element editor"
+msgstr ""
+
+#: templates/builder-page.php:273 templates/builder-page.php:300 templates/frontend-builder.php:801 templates/frontend-builder.php:868
+msgid "Color"
+msgstr ""
+
+#: includes/class-ajax-handler.php:487 templates/settings-page.php:734
+msgid "Connected!"
+msgstr ""
+
+#: templates/builder-page.php:23 templates/frontend-builder.php:27
+msgid "Contact"
+msgstr ""
+
+#: templates/builder-page.php:307 templates/frontend-builder.php:883
+msgid "Contain"
+msgstr ""
+
+#: templates/settings-page.php:173
+msgid "Control how many self-review refinement passes the LLM runs after generation. More passes improve quality but take longer."
+msgstr ""
+
+#: templates/builder-page.php:80 templates/frontend-builder.php:163
+msgid "Copy"
+msgstr ""
+
+#: templates/builder-page.php:78 templates/frontend-builder.php:161
+msgid "Copy HTML"
+msgstr ""
+
+#: templates/builder-page.php:306 templates/frontend-builder.php:879
+msgid "Cover"
+msgstr ""
+
+#: templates/builder-page.php:107 templates/frontend-builder.php:215
+msgid "Create New Page"
+msgstr ""
+
+#: templates/admin-pages-list.php:49
+msgid "Create New Page with AI"
+msgstr ""
+
+#: templates/builder-page.php:266 templates/frontend-builder.php:783
+msgid "Custom CSS"
+msgstr ""
+
+#: templates/settings-page.php:245
+msgid "Custom Design Variables"
+msgstr ""
+
+#: templates/settings-page.php:330
+msgid "Custom System Prompt"
+msgstr ""
+
+#: templates/builder-page.php:153 templates/frontend-builder.php:276
+msgid "Custom section name…"
+msgstr ""
+
+#: includes/class-admin-page.php:699 includes/class-admin-page.php:937 templates/admin-pages-list.php:26
+msgid "Default"
+msgstr ""
+
+#: templates/settings-page.php:460
+msgid "Default Language Label"
+msgstr ""
+
+#: templates/settings-page.php:142
+msgid "Defaults: Claude → claude-sonnet-4-6 | Gemini → gemini-2.5-flash | Kimi → kimi-k2-0711-preview | OpenAI → gpt-5.5"
+msgstr ""
+
+#: templates/builder-page.php:397 templates/frontend-builder.php:558
+msgid "Define named links to use in your instructions (e.g. \"CTA should link to Contact\")."
+msgstr ""
+
+#: templates/settings-page.php:452
+msgid "Define the languages you want to translate your pages into. Each language gets its own URL variant (e.g. /my-page/es/)."
+msgstr ""
+
+#: includes/class-admin-page.php:1080 templates/admin-pages-list.php:199 templates/frontend-builder.php:1052
+msgid "Delete"
+msgstr ""
+
+#: templates/section-card.php:73
+msgid "Delete section"
+msgstr ""
+
+#: templates/frontend-builder.php:1050
+msgid "Delete this element"
+msgstr ""
+
+#: includes/class-admin-page.php:1221
+msgid "Delete this element? You can undo by hitting Ctrl+Z in the iframe (or by regenerating the section)."
+msgstr ""
+
+#: templates/builder-page.php:245 templates/frontend-builder.php:482
+msgid "Describe what you want to change…"
+msgstr ""
+
+#: templates/builder-page.php:124 templates/frontend-builder.php:238
+msgid "Describe your business, product, service, tone, target audience…"
+msgstr ""
+
+#: templates/builder-page.php:108 templates/frontend-builder.php:216
+msgid "Describe your site and choose which sections to generate."
+msgstr ""
+
+#: templates/builder-page.php:372 templates/frontend-builder.php:527
+msgid "Description (optional)"
+msgstr ""
+
+#: templates/builder-page.php:52 templates/frontend-builder.php:120
+msgid "Desktop"
+msgstr ""
+
+#: templates/frontend-builder.php:1065
+msgid "Done"
+msgstr ""
+
+#: includes/class-admin-page.php:1082 templates/section-card.php:35
+msgid "Drag to reorder"
+msgstr ""
+
+#: templates/admin-pages-list.php:157
+msgid "Duplicate &amp; Translate"
+msgstr ""
+
+#: includes/class-admin-page.php:1079
+msgid "Edit"
+msgstr ""
+
+#: templates/builder-page.php:221 templates/frontend-builder.php:457
+msgid "Edit Section"
+msgstr ""
+
+#: templates/section-card.php:55
+msgid "Edit section"
+msgstr ""
+
+#: templates/frontend-builder.php:1060
+msgid "Edit section with AI"
+msgstr ""
+
+#: includes/class-admin-page.php:187
+msgid "Edit with Naano AI"
+msgstr ""
+
+#: templates/builder-page.php:260
+msgid "Element Style"
+msgstr ""
+
+#: templates/frontend-builder.php:736
+msgid "Element editor"
+msgstr ""
+
+#: templates/builder-page.php:131 templates/builder-page.php:249 templates/frontend-builder.php:251 templates/frontend-builder.php:489
+msgid "Enhance with AI"
+msgstr ""
+
+#: templates/builder-page.php:135 templates/builder-page.php:253 templates/frontend-builder.php:255 templates/frontend-builder.php:493
+msgid "Enhancing…"
+msgstr ""
+
+#: templates/builder-page.php:528 templates/frontend-builder.php:1093
+msgid "Enter a page title&hellip;"
+msgstr ""
+
+#: templates/settings-page.php:254
+msgid "Examples: primary_color, secondary_color, brand_name, font_family, tone, industry, target_audience."
+msgstr ""
+
+#: templates/builder-page.php:75 templates/frontend-builder.php:155
+msgid "Export"
+msgstr ""
+
+#: templates/builder-page.php:73 templates/frontend-builder.php:153
+msgid "Export HTML"
+msgstr ""
+
+#: templates/frontend-builder.php:832
+msgid "Extra-bold"
+msgstr ""
+
+#: templates/builder-page.php:284
+msgid "ExtraBold 800"
+msgstr ""
+
+#: templates/frontend-builder.php:378
+msgid "Failed sections"
+msgstr ""
+
+#: templates/builder-page.php:18 templates/frontend-builder.php:22
+msgid "Features"
+msgstr ""
+
+#: templates/builder-page.php:500 templates/frontend-builder.php:703
+msgid "Fill in the form on the left and click \"Generate Full Website\" to get started."
+msgstr ""
+
+#: templates/settings-page.php:401
+msgid "Firecrawl API Key"
+msgstr ""
+
+#: includes/class-ajax-handler.php:408
+msgid "Firecrawl API key saved."
+msgstr ""
+
+#: templates/settings-page.php:378
+msgid "Firecrawl turns any website URL into clean, structured HTML that the AI can actually read."
+msgstr ""
+
+#: templates/settings-page.php:373
+msgid "Firecrawl — Web Scraping"
+msgstr ""
+
+#: templates/builder-page.php:274
+msgid "Font Size"
+msgstr ""
+
+#: templates/builder-page.php:24 templates/frontend-builder.php:28
+msgid "Footer"
+msgstr ""
+
+#: includes/class-ajax-handler.php:299
+msgid "Forbidden."
+msgstr ""
+
+#: templates/builder-page.php:389 templates/frontend-builder.php:547
+msgid "From URL"
+msgstr ""
+
+#: templates/builder-page.php:206 templates/frontend-builder.php:442
+msgid "Generate Full Website"
+msgstr ""
+
+#: templates/builder-page.php:210 templates/frontend-builder.php:446
+msgid "Generating your website…"
+msgstr ""
+
+#: includes/class-admin-page.php:1034
+msgid "Generating…"
+msgstr ""
+
+#: includes/class-admin-page.php:1159
+msgid "Generation failed: %s"
+msgstr ""
+
+#: includes/class-admin-page.php:1179
+msgid "Generation interrupted: %1$s Showing %2$d section(s) that were saved before the error."
+msgstr ""
+
+#: includes/class-admin-page.php:1175
+msgid "Generation is still in progress on the server. Showing %d section(s) generated so far — refresh in a moment to see more."
+msgstr ""
+
+#: templates/settings-page.php:390
+msgid "Get your free API key at %s (500 credits/month on the free plan)."
+msgstr ""
+
+#: templates/frontend-builder.php:355 templates/frontend-builder.php:642
+msgid "Global CSS"
+msgstr ""
+
+#: templates/settings-page.php:168
+msgid "Global Configuration"
+msgstr ""
+
+#: templates/settings-page.php:45
+msgid "Global Configurations"
+msgstr ""
+
+#: includes/class-ajax-handler.php:522
+msgid "Global config saved."
+msgstr ""
+
+#: templates/admin-pages-list.php:119
+msgid "Go to original page"
+msgstr ""
+
+#: includes/class-admin-page.php:1099
+msgid "HTML copied to clipboard! 📋"
+msgstr ""
+
+#: templates/builder-page.php:16 templates/frontend-builder.php:20
+msgid "Header / Navigation"
+msgstr ""
+
+#: templates/builder-page.php:315 templates/frontend-builder.php:927
+msgid "Height"
+msgstr ""
+
+#: templates/builder-page.php:17 templates/frontend-builder.php:21
+msgid "Hero / Banner"
+msgstr ""
+
+#: includes/class-admin-page.php:1078
+msgid "Hide"
+msgstr ""
+
+#: templates/admin-pages-list.php:185
+msgid "Homepage"
+msgstr ""
+
+#: templates/frontend-builder.php:872
+msgid "Image"
+msgstr ""
+
+#: templates/builder-page.php:301
+msgid "Image URL"
+msgstr ""
+
+#: templates/frontend-builder.php:393
+msgid "Import from Existing Pages"
+msgstr ""
+
+#: templates/settings-page.php:182
+msgid "Initial Generation Refinements"
+msgstr ""
+
+#: templates/builder-page.php:202 templates/frontend-builder.php:435
+msgid "Initial generation may take a while depending on the number of sections and refinement passes configured in settings."
+msgstr ""
+
+#: templates/builder-page.php:242 templates/frontend-builder.php:479
+msgid "Instruction"
+msgstr ""
+
+#: includes/class-admin-page.php:1187
+msgid "Instruction enhanced!"
+msgstr ""
+
+#: includes/class-ajax-handler.php:109
+msgid "Insufficient permissions to create pages."
+msgstr ""
+
+#: includes/class-ajax-handler.php:859 includes/class-ajax-handler.php:948 includes/class-ajax-handler.php:981 includes/class-ajax-handler.php:1074
+msgid "Insufficient permissions."
+msgstr ""
+
+#: includes/class-ajax-handler.php:469
+msgid "Invalid API key."
+msgstr ""
+
+#: includes/class-ajax-handler.php:888
+msgid "Invalid sections payload."
+msgstr ""
+
+#: includes/class-ajax-handler.php:290
+msgid "Job not found or expired."
+msgstr ""
+
+#: templates/builder-page.php:294 templates/frontend-builder.php:854
+msgid "Justify"
+msgstr ""
+
+#: templates/settings-page.php:37 templates/settings-page.php:67
+msgid "LLM Provider"
+msgstr ""
+
+#: templates/builder-page.php:401 templates/frontend-builder.php:565
+msgid "Label (e.g. Contact)"
+msgstr ""
+
+#: templates/settings-page.php:474
+msgid "Label shown for the original (default) language in language switchers. Leave blank to show &ldquo;Default&rdquo;."
+msgstr ""
+
+#: templates/admin-pages-list.php:71 templates/frontend-builder.php:98
+msgid "Language"
+msgstr ""
+
+#: templates/settings-page.php:485
+msgid "Language Code"
+msgstr ""
+
+#: templates/settings-page.php:486
+msgid "Language Label"
+msgstr ""
+
+#: templates/admin-pages-list.php:73
+msgid "Last Modified"
+msgstr ""
+
+#: templates/settings-page.php:137
+msgid "Leave blank for default model"
+msgstr ""
+
+#: templates/builder-page.php:291 templates/builder-page.php:324 templates/builder-page.php:333 templates/frontend-builder.php:842
+msgid "Left"
+msgstr ""
+
+#: templates/frontend-builder.php:812
+msgid "Light"
+msgstr ""
+
+#: templates/builder-page.php:279
+msgid "Light 300"
+msgstr ""
+
+#: templates/frontend-builder.php:779
+msgid "Link"
+msgstr ""
+
+#: templates/frontend-builder.php:987
+msgid "Link target"
+msgstr ""
+
+#: templates/builder-page.php:511 templates/frontend-builder.php:717
+msgid "Live page preview"
+msgstr ""
+
+#: templates/builder-page.php:328 templates/frontend-builder.php:950
+msgid "Margin"
+msgstr ""
+
+#: templates/builder-page.php:316
+msgid "Max Width"
+msgstr ""
+
+#: templates/frontend-builder.php:931
+msgid "Max width"
+msgstr ""
+
+#: templates/builder-page.php:385 templates/frontend-builder.php:543
+msgid "Media Library"
+msgstr ""
+
+#: templates/frontend-builder.php:820
+msgid "Medium"
+msgstr ""
+
+#: templates/builder-page.php:281
+msgid "Medium 500"
+msgstr ""
+
+#: includes/class-ajax-handler.php:283
+msgid "Missing job_id."
+msgstr ""
+
+#: includes/class-ajax-handler.php:615 includes/class-ajax-handler.php:653
+msgid "Missing page ID."
+msgstr ""
+
+#: includes/class-ajax-handler.php:822 includes/class-ajax-handler.php:869 includes/class-ajax-handler.php:958 includes/class-ajax-handler.php:993 includes/class-ajax-handler.php:1085
+msgid "Missing page_id."
+msgstr ""
+
+#: includes/class-admin-page.php:410
+msgid "Missing parameters."
+msgstr ""
+
+#: includes/class-ajax-handler.php:98 includes/class-ajax-handler.php:247 includes/class-ajax-handler.php:698 includes/class-ajax-handler.php:735 includes/class-ajax-handler.php:766
+#: includes/class-ajax-handler.php:796
+msgid "Missing required fields."
+msgstr ""
+
+#: templates/builder-page.php:60 templates/frontend-builder.php:134
+msgid "Mobile"
+msgstr ""
+
+#: templates/settings-page.php:126
+msgid "Model Override"
+msgstr ""
+
+#: templates/admin-pages-list.php:192
+msgid "Move this page to trash?"
+msgstr ""
+
+#: templates/builder-page.php:41 templates/frontend-builder.php:87
+msgid "Naano AI"
+msgstr ""
+
+#: includes/class-admin-page.php:227 includes/class-admin-page.php:228 templates/frontend-builder.php:44
+msgid "Naano AI Builder"
+msgstr ""
+
+#: templates/admin-pages-list.php:36
+msgid "Naano AI Builder — Pages"
+msgstr ""
+
+#: templates/settings-page.php:31
+msgid "Naano AI Builder — Settings"
+msgstr ""
+
+#: naano-ai-website-builder.php:102
+msgid "Naano AI Website Builder could not be activated:"
+msgstr ""
+
+#: naano-ai-website-builder.php:35
+msgid "Naano AI Website Builder requires PHP 8.1 or higher. You are running PHP %s."
+msgstr ""
+
+#: naano-ai-website-builder.php:47
+msgid "Naano AI Website Builder requires WordPress 6.0 or higher. You are running WordPress %s."
+msgstr ""
+
+#: naano-ai-website-builder.php:60
+msgid "Naano AI Website Builder requires the PHP extension: %s."
+msgstr ""
+
+#: templates/builder-page.php:167 templates/builder-page.php:356 templates/frontend-builder.php:296 templates/frontend-builder.php:499
+msgid "Navigation Menu"
+msgstr ""
+
+#: templates/builder-page.php:45 templates/frontend-builder.php:93
+msgid "New Page"
+msgstr ""
+
+#: includes/class-admin-page.php:1052
+msgid "New section name (e.g. \"Team\", \"Gallery\"):"
+msgstr ""
+
+#: templates/frontend-builder.php:1017
+msgid "New tab"
+msgstr ""
+
+#: includes/jobs/class-job-runner.php:1394
+msgid "No API key configured. Please visit Naano AI Builder → Settings."
+msgstr ""
+
+#: templates/admin-pages-list.php:57
+msgid "No pages built with Naano AI yet."
+msgstr ""
+
+#: templates/builder-page.php:234
+msgid "None"
+msgstr ""
+
+#: templates/frontend-builder.php:816
+msgid "Normal"
+msgstr ""
+
+#: templates/builder-page.php:183 templates/builder-page.php:437 templates/frontend-builder.php:330 templates/frontend-builder.php:613
+msgid "Notes (optional)"
+msgstr ""
+
+#: templates/settings-page.php:196
+msgid "Number of refinement passes when generating a new site. Each pass adds one extra LLM call per section. (Default: 1)"
+msgstr ""
+
+#: templates/settings-page.php:219
+msgid "Number of refinement passes when updating an existing section. Each pass adds one extra LLM call. (Default: 1)"
+msgstr ""
+
+#: templates/admin-pages-list.php:173
+msgid "Open Builder"
+msgstr ""
+
+#: templates/frontend-builder.php:1011
+msgid "Open in"
+msgstr ""
+
+#: templates/frontend-builder.php:1055
+msgid "Open this section in the AI editor"
+msgstr ""
+
+#: templates/admin-pages-list.php:120
+msgid "Original"
+msgstr ""
+
+#: includes/class-admin-page.php:431
+msgid "Original page not found."
+msgstr ""
+
+#: templates/builder-page.php:319 templates/frontend-builder.php:937
+msgid "Padding"
+msgstr ""
+
+#: templates/admin-pages-list.php:69
+msgid "Page"
+msgstr ""
+
+#: templates/builder-page.php:365 templates/frontend-builder.php:517
+msgid "Page Assets"
+msgstr ""
+
+#: templates/builder-page.php:113 templates/frontend-builder.php:224
+msgid "Page Name"
+msgstr ""
+
+#: templates/builder-page.php:230 templates/frontend-builder.php:468
+msgid "Page Sections"
+msgstr ""
+
+#: templates/builder-page.php:527 templates/frontend-builder.php:1089
+msgid "Page Title"
+msgstr ""
+
+#: templates/admin-pages-list.php:41
+msgid "Page moved to trash."
+msgstr ""
+
+#: includes/class-admin-page.php:1191
+msgid "Page published! <a href=\"%1$s\" target=\"_blank\">View it</a> · <a href=\"%2$s\" target=\"_blank\">Edit in WP</a>"
+msgstr ""
+
+#: templates/frontend-builder.php:358 templates/frontend-builder.php:645
+msgid "Page-level CSS that applies to the whole site. Persists between AI regenerations. Click \"Save changes\" in the toolbar to commit."
+msgstr ""
+
+#: includes/class-ajax-handler.php:353 includes/class-ajax-handler.php:387 includes/class-ajax-handler.php:424 includes/class-ajax-handler.php:501
+msgid "Permission denied."
+msgstr ""
+
+#: templates/frontend-builder.php:992
+msgid "Pick an in-page anchor or type any URL. Anchors jump the visitor to a section without leaving the page."
+msgstr ""
+
+#: templates/settings-page.php:705
+msgid "Please enter a Model Override before testing."
+msgstr ""
+
+#: includes/class-admin-page.php:1107
+msgid "Please enter a URL."
+msgstr ""
+
+#: includes/class-admin-page.php:1111
+msgid "Please enter a page title."
+msgstr ""
+
+#: includes/class-admin-page.php:1115 templates/builder-page.php:159 templates/frontend-builder.php:285
+msgid "Please enter a section name."
+msgstr ""
+
+#: includes/class-admin-page.php:1044 templates/builder-page.php:126 templates/frontend-builder.php:243
+msgid "Please enter a site description."
+msgstr ""
+
+#: includes/class-ajax-handler.php:434 templates/settings-page.php:807
+msgid "Please enter an API key first."
+msgstr ""
+
+#: templates/settings-page.php:660 templates/settings-page.php:762
+msgid "Please enter an API key."
+msgstr ""
+
+#: includes/class-admin-page.php:1048
+msgid "Please enter an instruction."
+msgstr ""
+
+#: includes/class-ajax-handler.php:546
+msgid "Please enter some text to enhance."
+msgstr ""
+
+#: includes/class-admin-page.php:1040
+msgid "Please select a section first."
+msgstr ""
+
+#: templates/builder-page.php:162 templates/frontend-builder.php:288
+msgid "Please select at least one section."
+msgstr ""
+
+#: templates/builder-page.php:68 templates/builder-page.php:70 templates/frontend-builder.php:145 templates/frontend-builder.php:147
+msgid "Preview"
+msgstr ""
+
+#: templates/section-card.php:85
+msgid "Preview of %s section"
+msgstr ""
+
+#: templates/builder-page.php:21 templates/frontend-builder.php:25
+msgid "Pricing"
+msgstr ""
+
+#: templates/settings-page.php:41
+msgid "Prompt Global Variables"
+msgstr ""
+
+#: includes/class-admin-page.php:1183
+msgid "Prompt enhanced & sections suggested!"
+msgstr ""
+
+#: templates/settings-page.php:72
+msgid "Provider"
+msgstr ""
+
+#: includes/class-ajax-handler.php:581
+msgid "Provider and API key are required."
+msgstr ""
+
+#: templates/frontend-builder.php:190
+msgid "Publish"
+msgstr ""
+
+#: templates/builder-page.php:524 templates/frontend-builder.php:1080
+msgid "Publish Page"
+msgstr ""
+
+#: templates/builder-page.php:537 templates/frontend-builder.php:1108
+msgid "Publish →"
+msgstr ""
+
+#: templates/builder-page.php:339 templates/frontend-builder.php:905
+msgid "Radius"
+msgstr ""
+
+#: templates/frontend-builder.php:1033
+msgid "Raw CSS scoped to this element only."
+msgstr ""
+
+#: templates/settings-page.php:49
+msgid "References / Website Scraping"
+msgstr ""
+
+#: templates/builder-page.php:280
+msgid "Regular 400"
+msgstr ""
+
+#: templates/frontend-builder.php:1024
+msgid "Rel"
+msgstr ""
+
+#: includes/class-admin-page.php:1081 templates/settings-page.php:293 templates/settings-page.php:316 templates/settings-page.php:513 templates/settings-page.php:536
+#: templates/settings-page.php:580 templates/settings-page.php:601
+msgid "Remove"
+msgstr ""
+
+#: templates/settings-page.php:646 templates/settings-page.php:691 templates/settings-page.php:748 templates/settings-page.php:793 templates/settings-page.php:842
+msgid "Request failed."
+msgstr ""
+
+#: includes/class-admin-page.php:1207
+msgid "Retry"
+msgstr ""
+
+#: includes/class-admin-page.php:1203
+msgid "Retry failed: %s"
+msgstr ""
+
+#: includes/class-admin-page.php:1195
+msgid "Retrying section: %s…"
+msgstr ""
+
+#: templates/frontend-builder.php:399
+msgid "Reuse the header or footer from an existing page instead of regenerating it."
+msgstr ""
+
+#: templates/builder-page.php:293 templates/builder-page.php:322 templates/builder-page.php:331 templates/frontend-builder.php:850
+msgid "Right"
+msgstr ""
+
+#: templates/frontend-builder.php:1013
+msgid "Same tab"
+msgstr ""
+
+#: templates/builder-page.php:85
+msgid "Save"
+msgstr ""
+
+#: templates/settings-page.php:230
+msgid "Save Global Config"
+msgstr ""
+
+#: templates/settings-page.php:110 templates/settings-page.php:414
+msgid "Save Key"
+msgstr ""
+
+#: templates/settings-page.php:550
+msgid "Save Settings"
+msgstr ""
+
+#: templates/builder-page.php:83 templates/frontend-builder.php:188
+msgid "Save as WP Page"
+msgstr ""
+
+#: templates/frontend-builder.php:181
+msgid "Save changes"
+msgstr ""
+
+#: includes/class-admin-page.php:1123
+msgid "Save failed (network)."
+msgstr ""
+
+#: includes/class-admin-page.php:1119
+msgid "Save failed."
+msgstr ""
+
+#: templates/frontend-builder.php:175
+msgid "Save manual edits (text, styles, classes) to draft. Does not publish."
+msgstr ""
+
+#: includes/class-admin-page.php:1127
+msgid "Saved %d section"
+msgstr ""
+
+#: includes/class-admin-page.php:1131
+msgid "Saved %d sections"
+msgstr ""
+
+#: templates/builder-page.php:177 templates/builder-page.php:431 templates/frontend-builder.php:321 templates/frontend-builder.php:604
+msgid "Scraping may fail for ThemeForest previews and similar protected platforms — use screenshots instead for best results."
+msgstr ""
+
+#: templates/builder-page.php:420 templates/frontend-builder.php:587
+msgid "Screenshot References"
+msgstr ""
+
+#: includes/class-admin-page.php:1091
+msgid "Screenshot added! 🖼️"
+msgstr ""
+
+#: templates/section-card.php:40
+msgid "Screenshot references"
+msgstr ""
+
+#: includes/class-admin-page.php:1147
+msgid "Section \"%s\" added! ✨"
+msgstr ""
+
+#: templates/settings-page.php:205
+msgid "Section Update Refinements"
+msgstr ""
+
+#: includes/class-admin-page.php:1087
+msgid "Section deleted."
+msgstr ""
+
+#: templates/builder-page.php:471 templates/frontend-builder.php:668
+msgid "Section name, e.g. Team"
+msgstr ""
+
+#: includes/class-admin-page.php:1199
+msgid "Section recovered: %s ✓"
+msgstr ""
+
+#: includes/class-admin-page.php:1139
+msgid "Section updated! ✨"
+msgstr ""
+
+#: templates/admin-pages-list.php:72
+msgid "Sections"
+msgstr ""
+
+#: templates/builder-page.php:141 templates/frontend-builder.php:261
+msgid "Sections to Generate"
+msgstr ""
+
+#: includes/class-admin-page.php:1213
+msgid "Select Asset"
+msgstr ""
+
+#: templates/builder-page.php:464
+msgid "Select Element"
+msgstr ""
+
+#: templates/builder-page.php:168 templates/builder-page.php:357 templates/frontend-builder.php:300 templates/frontend-builder.php:503
+msgid "Select a WordPress menu to inject into header/footer sections."
+msgstr ""
+
+#: templates/frontend-builder.php:824
+msgid "Semi-bold"
+msgstr ""
+
+#: templates/builder-page.php:282
+msgid "Semibold 600"
+msgstr ""
+
+#: templates/builder-page.php:20 templates/frontend-builder.php:24
+msgid "Services"
+msgstr ""
+
+#: templates/builder-page.php:533 templates/frontend-builder.php:1101
+msgid "Set as WordPress homepage"
+msgstr ""
+
+#: includes/class-admin-page.php:1103
+msgid "Set as homepage!"
+msgstr ""
+
+#: includes/class-admin-page.php:247 includes/class-admin-page.php:248
+msgid "Settings"
+msgstr ""
+
+#: includes/class-admin-page.php:1077 templates/frontend-builder.php:394
+msgid "Show"
+msgstr ""
+
+#: templates/builder-page.php:121 templates/frontend-builder.php:235
+msgid "Site Description"
+msgstr ""
+
+#: templates/builder-page.php:303 templates/builder-page.php:313 templates/frontend-builder.php:805 templates/frontend-builder.php:876 templates/frontend-builder.php:918
+msgid "Size"
+msgstr ""
+
+#: templates/frontend-builder.php:973
+msgid "Space-separated class names. They will be applied to the selected element. Existing classes generated by the AI are preserved."
+msgstr ""
+
+#: templates/frontend-builder.php:769
+msgid "Spacing"
+msgstr ""
+
+#: templates/admin-pages-list.php:70
+msgid "Status"
+msgstr ""
+
+#: templates/builder-page.php:265 templates/frontend-builder.php:765
+msgid "Style"
+msgstr ""
+
+#: templates/builder-page.php:56 templates/frontend-builder.php:127
+msgid "Tablet"
+msgstr ""
+
+#: templates/settings-page.php:153 templates/settings-page.php:432
+msgid "Test Connection"
+msgstr ""
+
+#: templates/builder-page.php:22 templates/frontend-builder.php:26
+msgid "Testimonials"
+msgstr ""
+
+#: templates/settings-page.php:358
+msgid "These instructions are appended to the system prompt for every LLM call. You can also modify the full assembled prompt programmatically via the naano_system_prompt WordPress filter."
+msgstr ""
+
+#: templates/frontend-builder.php:382
+msgid "These sections were skipped during generation due to host timeouts or errors. Click \"Retry\" to regenerate one. They disappear from this list as they succeed."
+msgstr ""
+
+#: templates/settings-page.php:250
+msgid "These variables are injected into every AI prompt to ensure brand consistency."
+msgstr ""
+
+#: includes/class-ajax-handler.php:1034
+msgid "This page was generated by Naano AI Website Builder."
+msgstr ""
+
+#: templates/frontend-builder.php:758
+msgid "Tip: click directly on text in the preview to edit it inline."
+msgstr ""
+
+#: templates/builder-page.php:36 templates/frontend-builder.php:82
+msgid "Toggle Panel"
+msgstr ""
+
+#: templates/builder-page.php:321 templates/builder-page.php:330
+msgid "Top"
+msgstr ""
+
+#: templates/admin-pages-list.php:138
+msgid "Translate"
+msgstr ""
+
+#: templates/settings-page.php:53
+msgid "Translation"
+msgstr ""
+
+#: templates/settings-page.php:447
+msgid "Translation Languages"
+msgstr ""
+
+#: templates/builder-page.php:272 templates/frontend-builder.php:796
+msgid "Typography"
+msgstr ""
+
+#: templates/frontend-builder.php:1007
+msgid "URL"
+msgstr ""
+
+#: templates/builder-page.php:396 templates/frontend-builder.php:554
+msgid "URL Redirections"
+msgstr ""
+
+#: templates/builder-page.php:175 templates/builder-page.php:430 templates/frontend-builder.php:313 templates/frontend-builder.php:600
+msgid "URL References"
+msgstr ""
+
+#: includes/class-admin-page.php:1095
+msgid "URL reference added! 🔗"
+msgstr ""
+
+#: templates/section-card.php:45
+msgid "URL references"
+msgstr ""
+
+#: includes/class-ajax-handler.php:482
+msgid "Unknown error."
+msgstr ""
+
+#: includes/class-ajax-handler.php:118
+msgid "Untitled"
+msgstr ""
+
+#: includes/class-admin-page.php:1073
+msgid "Update %d Sections"
+msgstr ""
+
+#: includes/class-admin-page.php:1069 templates/builder-page.php:456 templates/frontend-builder.php:657
+msgid "Update Section"
+msgstr ""
+
+#: includes/class-admin-page.php:1035 templates/builder-page.php:460 templates/frontend-builder.php:661
+msgid "Updating…"
+msgstr ""
+
+#: includes/class-admin-page.php:1217
+msgid "Use this file"
+msgstr ""
+
+#: templates/settings-page.php:264
+msgid "Value"
+msgstr ""
+
+#: templates/settings-page.php:263
+msgid "Variable Name"
+msgstr ""
+
+#: templates/admin-pages-list.php:178
+msgid "View"
+msgstr ""
+
+#: includes/class-admin-page.php:1151
+msgid "Website generated successfully! 🎉"
+msgstr ""
+
+#: includes/class-admin-page.php:1171
+msgid "Website generated, but %1$d section(s) were skipped due to server timeouts: %2$s. You can regenerate them individually from the builder."
+msgstr ""
+
+#: templates/builder-page.php:276 templates/frontend-builder.php:809
+msgid "Weight"
+msgstr ""
+
+#: templates/settings-page.php:421
+msgid "When set, URL references will be scraped with Firecrawl instead of the basic built-in fetcher. Results are cached so the same URL is never scraped twice."
+msgstr ""
+
+#: templates/settings-page.php:382
+msgid "When you add a URL reference to a section, the built-in scraper only grabs basic text. Firecrawl renders JavaScript, handles SPAs, and returns rich HTML — giving the AI much better context about layouts, components, and design patterns from the reference site."
+msgstr ""
+
+#: templates/builder-page.php:314 templates/frontend-builder.php:923
+msgid "Width"
+msgstr ""
+
+#: includes/class-ajax-handler.php:877
+msgid "You cannot edit this page."
+msgstr ""
+
+#: includes/class-admin-page.php:416
+msgid "You do not have permission to create pages."
+msgstr ""
+
+#: includes/class-admin-page.php:120
+msgid "You do not have permission to delete this page."
+msgstr ""
+
+#: includes/class-admin-page.php:1225
+msgid "You have unsaved manual edits. Click u201cSave changesu201d before leaving."
+msgstr ""
+
+#: templates/settings-page.php:117
+msgid "Your API key is stored in the WordPress options table. Use a read-only key when possible."
+msgstr ""
+
+#: templates/builder-page.php:499 templates/frontend-builder.php:699
+msgid "Your page preview will appear here"
+msgstr ""
+
+#: templates/builder-page.php:525 templates/frontend-builder.php:1084
+msgid "Your page will be published as a standalone WordPress page with no theme wrapping."
+msgstr ""
+
+#: templates/frontend-builder.php:1039
+msgid "color: red;\nfont-size: 18px;"
+msgstr ""
+
+#: templates/settings-page.php:286 templates/settings-page.php:309 templates/settings-page.php:577
+msgid "e.g. #3B82F6"
+msgstr ""
+
+#: templates/settings-page.php:354
+msgid "e.g. Always write copy in a friendly, conversational tone. Avoid formal language. The brand voice is warm and approachable."
+msgstr ""
+
+#: templates/settings-page.php:470
+msgid "e.g. English"
+msgstr ""
+
+#: templates/builder-page.php:116 templates/frontend-builder.php:227
+msgid "e.g. My Awesome Product"
+msgstr ""
+
+#: templates/settings-page.php:506 templates/settings-page.php:529 templates/settings-page.php:598
+msgid "e.g. Spanish"
+msgstr ""
+
+#: templates/settings-page.php:498 templates/settings-page.php:522 templates/settings-page.php:595
+msgid "e.g. es"
+msgstr ""
+
+#: templates/settings-page.php:276 templates/settings-page.php:302 templates/settings-page.php:574
+msgid "e.g. primary_color"
+msgstr ""
+
+#: templates/frontend-builder.php:1000
+msgid "pick a section…"
+msgstr ""
+
+#: includes/class-admin-page.php:1167
+msgid "unknown error"
+msgstr ""
+
+#: includes/class-admin-page.php:1163
+msgid "unknown error — check API settings."
+msgstr ""
+
+#: templates/builder-page.php:170 templates/builder-page.php:359 templates/frontend-builder.php:305 templates/frontend-builder.php:508
+msgid "— None —"
+msgstr ""
+
+#: includes/class-admin-page.php:1056 templates/builder-page.php:223 templates/frontend-builder.php:459
+msgid "— click a section in the preview —"
+msgstr ""
+
+#: templates/admin-pages-list.php:212
+msgid "⚙ Settings"
+msgstr ""
+
