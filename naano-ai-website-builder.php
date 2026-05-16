@@ -3,7 +3,7 @@
  * Plugin Name: Naano AI Website Builder
  * Plugin URI:  https://github.com/Pispros/naano-ai-website-builder
  * Description: AI-powered section-by-section website builder using Claude, Gemini, or Kimi. Pure PHP — no external backend needed.
- * Version:     2.0.0
+ * Version:     2.1.0
  * Author:      Naano
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,7 +17,7 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-define("NAANO_VERSION", "2.0.0");
+define("NAANO_VERSION", "2.1.0");
 define("NAANO_PLUGIN_DIR", plugin_dir_path(__FILE__));
 define("NAANO_PLUGIN_URL", plugin_dir_url(__FILE__));
 define("NAANO_PLUGIN_BASENAME", plugin_basename(__FILE__));

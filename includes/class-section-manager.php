@@ -48,6 +48,74 @@ class Naano_Section_Manager
     }
 
     /**
+     * Insert a new section directly before an existing one.
+     *
+     * Used by the "Insert custom HTML" feature where the user picks a
+     * section in the sidebar and asks for a raw-HTML block to be added
+     * just above it. If $before_section_id is empty (or not found), the
+     * new section is appended at the end so the call always succeeds.
+     *
+     * The order field is rebuilt from scratch for every section so the
+     * caller doesn't have to worry about colliding sequence numbers.
+     *
+     * @param int    $page_id           WordPress post ID.
+     * @param string $before_section_id Section the new one must precede,
+     *                                  or "" to append at the end.
+     * @param array  $new_section       Section data: must include id, html;
+     *                                  may include type, plus any other keys
+     *                                  callers want to persist verbatim.
+     * @return void
+     */
+    public function insert_section_before(
+        int $page_id,
+        string $before_section_id,
+        array $new_section,
+    ): void {
+        if (!isset($new_section["id"], $new_section["html"])) {
+            return;
+        }
+        $defaults = [
+            "type" => $new_section["id"],
+            "created" => time(),
+            "updated" => time(),
+        ];
+        $new_section = array_merge($defaults, $new_section);
+
+        $sections = $this->get_sections($page_id);
+        $rebuilt = [];
+        $inserted = false;
+
+        foreach ($sections as $section) {
+            // Skip a duplicate id if it somehow already exists — the
+            // caller is responsible for picking unique IDs but be
+            // defensive in case of a retry.
+            if (($section["id"] ?? "") === ($new_section["id"] ?? "__nope")) {
+                continue;
+            }
+            if (
+                !$inserted &&
+                $before_section_id !== "" &&
+                ($section["id"] ?? "") === $before_section_id
+            ) {
+                $rebuilt[] = $new_section;
+                $inserted = true;
+            }
+            $rebuilt[] = $section;
+        }
+        if (!$inserted) {
+            $rebuilt[] = $new_section;
+        }
+
+        // Renumber order fields to match the final position.
+        foreach ($rebuilt as $i => &$s) {
+            $s["order"] = $i;
+        }
+        unset($s);
+
+        $this->save_sections($page_id, $rebuilt);
+    }
+
+    /**
      * Add or update a section.
      *
      * @param int    $page_id    WordPress post ID.

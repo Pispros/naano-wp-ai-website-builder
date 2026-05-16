@@ -1682,6 +1682,52 @@
           $("#naano-cancel-new-section-btn").trigger("click");
         }
       });
+
+      // ── Custom-HTML widget editor (floating panel) ────────────────────
+      // The widget is INSERTED via the "+" hover button injected into the
+      // iframe (see helperScript below) — that path immediately calls
+      // _addCustomHtmlSection with empty HTML, then auto-opens this
+      // editor so the user can paste their content. The editor is also
+      // re-opened any time the user clicks an existing custom-html
+      // widget in inspect mode.
+      $(document).on(
+        "click",
+        "#naano-custom-html-editor-cancel-btn, #naano-custom-html-editor-close-btn",
+        function () {
+          NaanoBuilder._closeCustomHtmlEditor();
+        },
+      );
+
+      $(document).on(
+        "click",
+        "#naano-custom-html-editor-save-btn",
+        function () {
+          var html = $("#naano-custom-html-editor-input").val() || "";
+          var sid = NaanoBuilder._customHtmlEditingId;
+          if (!sid) return;
+          // Empty save is allowed — the iframe will fall back to the
+          // placeholder and the user can come back later.
+          NaanoBuilder._updateCustomHtmlSection(sid, html);
+          NaanoBuilder._closeCustomHtmlEditor();
+        },
+      );
+
+      // Esc closes the editor; Ctrl/Cmd+Enter triggers Save so power
+      // users can stay on the keyboard.
+      $(document).on(
+        "keydown",
+        "#naano-custom-html-editor-input",
+        function (e) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            NaanoBuilder._closeCustomHtmlEditor();
+          }
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            $("#naano-custom-html-editor-save-btn").trigger("click");
+          }
+        },
+      );
     },
 
     // =====================================================================
@@ -1706,6 +1752,33 @@
         NaanoBuilder._applyElementStyle();
       });
 
+      // ── Clear background color ──────────────────────────────────────
+      // Color <input>s always have a value — they don't have a "blank"
+      // state — so the only way for the user to UNSET a bg-color is via
+      // a dedicated button. We:
+      //   1. Reset the visible color input so the next Apply doesn't
+      //      re-add the previous color.
+      //   2. Send a one-off naano-apply-element-style with the special
+      //      "__remove__" sentinel for backgroundColor, which the iframe
+      //      handler turns into removeProperty('background-color').
+      //   3. Re-flow the section's persistence pipeline so the cleared
+      //      style sticks across saves and refreshes.
+      $(document).on("click", "#naano-esp-clear-bg-btn", function () {
+        if (!NaanoBuilder.selectedElId) return;
+        $('#naano-element-style-panel [data-prop="backgroundColor"]').val(
+          "#ffffff",
+        );
+        // No customCss field on this payload — the iframe handler only
+        // touches the scoped <style> tag when m.customCss is a string,
+        // so the user's existing custom CSS survives a bg-color clear.
+        NaanoBuilder._iframePost({
+          type: "naano-apply-element-style",
+          elId: NaanoBuilder.selectedElId,
+          styles: { backgroundColor: "__remove__" },
+        });
+        NaanoBuilder._toast(NaanoBuilder._i18n("applied"), "success", 1200);
+      });
+
       $(document).on(
         "click",
         "#naano-esp-deselect-btn, #naano-esp-close-btn",
@@ -1719,12 +1792,20 @@
       });
 
       $(document).on("click", "#naano-esp-edit-section-btn", function () {
-        // Shortcut: jump to AI editor for the section that contains the
-        // currently-selected element. Closes the panel first so the drawer
-        // takes focus.
+        // Shortcut: jump to the editor for the section that contains
+        // the currently-selected element. Two paths:
+        //   - Custom-HTML widget → open the raw-HTML editor pre-filled
+        //     with the section's current HTML, so the user can paste a
+        //     new version. There is no AI prompt for these.
+        //   - Anything else (AI section) → open the AI editor panel.
         var sid = NaanoBuilder.selectedElSectionId;
         if (!sid) return;
+        var isCustom = NaanoBuilder.selectedIsCustomHtml;
         NaanoBuilder._clearElementSelection();
+        if (isCustom) {
+          NaanoBuilder._openCustomHtmlEditor(sid);
+          return;
+        }
         if (typeof NaanoBuilder.openEditPanel === "function") {
           NaanoBuilder.openEditPanel(sid);
         } else {
@@ -1848,17 +1929,41 @@
       $('.naano-esp-tab[data-tab="style"]').addClass("naano-esp-tab--active");
       $(".naano-esp-tab-pane").hide();
       $("#naano-esp-pane-style").show();
-      $("#naano-esp-custom-css").val("");
+      // Pre-populate custom CSS with whatever the iframe extracted from
+      // the element's stable <style data-naano-cust=...> tag, so the
+      // user can edit existing rules instead of rewriting from scratch.
+      $("#naano-esp-custom-css").val(elData.customCss || "");
 
       // Style + spacing inputs.
+      // CRITICAL: we ALSO snapshot each input's NORMALISED value AFTER
+      // setting it, into data('naano-initial-val'). _applyElementStyle
+      // uses this snapshot to detect which fields the user actually
+      // edited and only forwards THOSE to the iframe. Without this,
+      // every Apply re-pushes every computed value as a forced inline
+      // style — most notoriously, an <input type=\"color\"> for an
+      // element with a transparent background gets _rgbToHex(\"rgba(0,
+      // 0, 0, 0)\") = null, the browser silently falls back to its
+      // default #000000, and the Apply path then writes
+      // style=\"background-color:#000000\" onto the element, painting
+      // it BLACK out of nowhere. Snapshotting + diffing makes Apply
+      // a no-op for untouched fields, so custom CSS rules win and
+      // nothing gets a black background by accident.
       var computed = elData.computed || {};
       $("#naano-element-style-panel [data-prop]").each(function () {
         var prop = $(this).data("prop");
         var val = computed[prop] || "";
         if ($(this).is("input[type=color]") && val) {
-          val = NaanoBuilder._rgbToHex(val) || val;
+          // _rgbToHex returns null for rgba()/transparent/named-color
+          // strings. In that case the color picker will display its
+          // browser-default (#000000 in every browser we tested) — we
+          // capture that exact default below as the initial value so
+          // we can detect "user didn't touch this field" on Apply.
+          val = NaanoBuilder._rgbToHex(val) || "";
         }
         $(this).val(val);
+        // Snapshot the post-set value (which may have been normalised
+        // or clamped by the browser, especially for color inputs).
+        $(this).data("naano-initial-val", String($(this).val() || ""));
       });
 
       // Classes input — pre-fill with the user-extra classes detected in
@@ -1921,12 +2026,26 @@
       }
 
       // 1) Inline styles + custom CSS.
+      // We diff each input against its snapshot from _renderStylePanel
+      // (data('naano-initial-val')). Only fields the user ACTUALLY
+      // edited are forwarded as inline-style overrides. Untouched
+      // fields are skipped entirely — preserving custom CSS rules
+      // that would otherwise lose specificity to a redundant inline
+      // style, and (critically) preventing the bg-color color-picker
+      // default #000000 from ever leaking onto elements whose
+      // computed background was transparent. See the matching
+      // comment block in _renderStylePanel for the full rationale.
       var styles = {};
       $("#naano-element-style-panel [data-prop]").each(function () {
         var prop = $(this).data("prop");
         var raw = $(this).val();
         var val = raw == null ? "" : String(raw).trim();
-        if (val) {
+        var initial = $(this).data("naano-initial-val");
+        if (typeof initial !== "string") initial = "";
+        // Only push the prop if the user changed the field. Empty
+        // strings are also skipped — an empty input means "leave
+        // alone", not "force empty style".
+        if (val && val !== initial) {
           styles[prop] = val;
         }
       });
@@ -2264,11 +2383,30 @@
           NaanoBuilder.selectedElId = msg.elId;
           NaanoBuilder.selectedElSectionId = msg.sectionId;
           NaanoBuilder.selectedElTag = (msg.tagName || "").toLowerCase();
-          NaanoBuilder._renderStylePanel(msg);
+          NaanoBuilder.selectedIsCustomHtml = !!msg.isCustomHtml;
+          // For custom-html widgets we ALWAYS want the editor to feel
+          // like Elementor's: clicking the widget pops up the HTML
+          // textarea right next to it. Skip the regular style panel
+          // entirely — its tabs (typography, spacing, etc.) don't make
+          // sense for a raw HTML block.
+          if (msg.isCustomHtml && msg.sectionId) {
+            NaanoBuilder._openCustomHtmlEditor(msg.sectionId);
+          } else {
+            NaanoBuilder._renderStylePanel(msg);
+          }
         }
 
         if (msg.type === "naano-element-deselected") {
           NaanoBuilder._clearElementSelection();
+        }
+
+        // The "+" button injected into the iframe was clicked on a
+        // hovered section. Insert a fresh custom-html widget directly
+        // above it (server side handles ordering + sanitizing).
+        if (msg.type === "naano-insert-custom-html-above") {
+          if (msg.sectionId) {
+            NaanoBuilder._addCustomHtmlSection("", msg.sectionId);
+          }
         }
 
         if (msg.type === "naano-element-html-updated") {
@@ -2302,11 +2440,51 @@
      */
     _buildIframeSrcdoc: function () {
       var sectionsHtml = "";
+      // Empty placeholder shown for fresh custom-html widgets so the
+      // user actually SEES something in the preview the moment they
+      // click "+". Plain text inside a div with the same class our
+      // helperScript styles below — visible blue dashed border, big
+      // hint text, fully click-targetable.
+      var emptyCustomHtmlPlaceholder =
+        '<div class="naano-custom-html-empty">📝&nbsp;' +
+        NaanoBuilder._i18n("custom_html_empty_hint") +
+        "</div>";
       NaanoBuilder.sectionsData.forEach(function (sec) {
         // Wrap each section so [data-section] is always present in the iframe
         // for click detection, highlight, loading overlay and live HTML updates.
+        // For custom-html sections (the Elementor-style raw-HTML widget),
+        // an extra data-naano-custom-html flag tells the inspect helper
+        // script to treat the wrapper as a single selectable block — clicks
+        // inside don't drill into children, contenteditable is disabled, so
+        // the user-pasted markup stays exactly as they wrote it.
+        var isCustom = sec.type === "custom-html";
+        var customAttr = isCustom ? ' data-naano-custom-html="1"' : "";
+        // Pick the body. Three states count as "empty" and trigger the
+        // visible placeholder so the user can SEE and CLICK the widget:
+        //   1. Stored html is literally empty / whitespace only
+        //   2. Stored html is just our server-side marker comment
+        //   3. Stored html has tags but no visible content (e.g. <p></p>)
+        // We deliberately don't strip media tags from the visibility
+        // check — an <img> alone IS visible content.
+        var body = sec.html || "";
+        var bodyTrimmed = body.trim();
+        var isEmpty =
+          isCustom &&
+          (!bodyTrimmed ||
+            bodyTrimmed === "<!-- naano:custom-html:empty -->" ||
+            (!body.replace(/<[^>]*>/g, "").trim() &&
+              !/<img|<iframe|<svg|<video|<canvas|<picture|<embed/i.test(body)));
+        if (isEmpty) {
+          body = emptyCustomHtmlPlaceholder;
+        }
         sectionsHtml +=
-          '<div data-section="' + sec.id + '">' + sec.html + "</div>";
+          '<div data-section="' +
+          sec.id +
+          '"' +
+          customAttr +
+          ">" +
+          body +
+          "</div>";
       });
 
       // Interaction helper script injected into the iframe.
@@ -2350,8 +2528,64 @@
         // Contenteditable affordance: subtle inset highlight + caret cursor.
         '+"[contenteditable=\\"true\\"]{cursor:text!important;outline:2px solid #f59e0b!important;outline-offset:2px;background:rgba(255,251,235,0.5);}"',
         // Inspect mode kept for legacy class hooks.
-        '+"body.naano-inspect-active{cursor:default;}";',
+        '+"body.naano-inspect-active{cursor:default;}"',
+        // Empty-state placeholder for fresh custom-html widgets. We
+        // render this client-side when the section's stored HTML is
+        // blank so the widget actually OCCUPIES SPACE in the preview
+        // — otherwise a 0px tall section is impossible to click.
+        '+".naano-custom-html-empty{display:flex;align-items:center;justify-content:center;min-height:90px;padding:32px 20px;margin:0;border:2px dashed #2271b1;background:linear-gradient(135deg,rgba(34,113,177,0.05),rgba(34,113,177,0.12));color:#2271b1;font:600 15px/1.4 -apple-system,BlinkMacSystemFont,\\"Segoe UI\\",Roboto,sans-serif;text-align:center;cursor:pointer;}"',
+        // Floating "+" button that follows the hovered section. Big
+        // enough to click comfortably, half-overlapping the top edge
+        // of its target so it visually reads as "insert above this".
+        '+".naano-section-add-btn{position:absolute;width:34px;height:34px;border-radius:50%;background:#2271b1;color:#fff;border:2px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,0.35);cursor:pointer;font:700 22px/1 system-ui,-apple-system,sans-serif;display:none;align-items:center;justify-content:center;z-index:2147483646;transform:translate(-50%,-50%);padding:0;user-select:none;}"',
+        '+".naano-section-add-btn:hover{background:#135e96;transform:translate(-50%,-50%) scale(1.1);}"',
+        '+".naano-section-add-btn span{display:block;line-height:1;margin-top:-2px;};";',
         "document.head.appendChild(s);",
+
+        // ── Floating "+" hover button (Elementor-style insert) ─────────
+        // A single absolutely-positioned button that the mouseover
+        // handler repositions as the user moves between sections. On
+        // click it postMessages the current hover-section id up to the
+        // parent, which inserts a new custom-html widget directly
+        // above it. We keep ONE button in the DOM (instead of one per
+        // section) so we don't pollute the iframe's DOM and so empty
+        // pages can still get a "+" once they have their first section.
+        'var addBtn=document.createElement("button");',
+        'addBtn.type="button";',
+        'addBtn.className="naano-section-add-btn";',
+        'addBtn.setAttribute("aria-label","Insert custom HTML above");',
+        'addBtn.innerHTML="<span>+</span>";',
+        "var hoverSectionEl=null;",
+        // Update position. Called from mouseover on sections + on a
+        // scroll/resize observer so the button stays glued to its
+        // target if the user scrolls the iframe.
+        "function positionAddBtn(){",
+        "  if(!hoverSectionEl||!hoverSectionEl.isConnected){",
+        '    addBtn.style.display="none";return;',
+        "  }",
+        "  var r=hoverSectionEl.getBoundingClientRect();",
+        "  var x=r.left+r.width/2+(window.scrollX||0);",
+        "  var y=r.top+(window.scrollY||0);",
+        '  addBtn.style.left=x+"px";',
+        '  addBtn.style.top=y+"px";',
+        '  addBtn.style.display="flex";',
+        "}",
+        "window.addEventListener('scroll',positionAddBtn,{passive:true});",
+        "window.addEventListener('resize',positionAddBtn,{passive:true});",
+        // Click handler: bubble id up to parent, do NOT let the click
+        // also reach the body's click handler (which would try to
+        // select the button itself).
+        "addBtn.addEventListener('click',function(e){",
+        "  e.stopPropagation();e.preventDefault();",
+        "  if(!hoverSectionEl)return;",
+        '  var sid=hoverSectionEl.getAttribute("data-section");',
+        "  if(!sid)return;",
+        '  window.parent.postMessage({type:"naano-insert-custom-html-above",sectionId:sid},"*");',
+        "},true);",
+        // Don't let hover events on the button trigger the section's
+        // hover state — the button isn't part of the section visually.
+        "addBtn.addEventListener('mouseenter',function(e){e.stopPropagation();});",
+        "document.body.appendChild(addBtn);",
 
         // Inspect-mode is now ALWAYS active.
         "var inspectActive=true;",
@@ -2388,14 +2622,130 @@
         '  return parts.join(" \\u203a ");',
         "}",
 
+        // Convert camelCase JS style property names ("backgroundColor")
+        // back to kebab-case CSS names ("background-color") for the
+        // CSSStyleDeclaration.removeProperty() API, which only knows
+        // the kebab form. Used by the "remove style" path triggered by
+        // the bg-color clear button (and any future similar buttons).
+        "function _dashCase(s){return String(s).replace(/[A-Z]/g,function(m){return '-'+m.toLowerCase();});}",
+
+        // Rebuild a section's generated <style data-naano-cust-styles>
+        // block from every [data-naano-cust-css] attribute it contains.
+        // The element's data-naano-cust-css attribute is the SINGLE
+        // SOURCE OF TRUTH for user-applied custom CSS — this function
+        // is the only place that emits the actual <style> rules. It
+        // always wipes the previous block first, so callers can simply
+        // mutate attributes and trigger a regenerate without worrying
+        // about stale rules accumulating.
+        //
+        // Called from:
+        //   1. naano-apply-element-style after an attribute changes
+        //   2. The IIFE bottom (on every iframe srcdoc load), so a
+        //      fresh document with persisted attributes immediately
+        //      gets its visual rules back even before the user
+        //      interacts.
+        "function regenerateSectionCustomCss(sec){",
+        "  if(!sec)return;",
+        // Migration: older builds stored the source CSS inside
+        // <style data-naano-cust=\"cXXX\"> tags rather than on the
+        // element's data-naano-cust-css attribute. Walk those tags
+        // FIRST, find their target element by id, and copy the
+        // extracted CSS body onto the new attribute. After this loop
+        // the data-naano-cust-css attribute is always the source of
+        // truth, even for pages saved with the old code.
+        "  var legacy=sec.querySelectorAll('style[data-naano-cust]');",
+        "  for(var lg=0;lg<legacy.length;lg++){",
+        "    var lgTag=legacy[lg];",
+        "    var lgId=lgTag.getAttribute('data-naano-cust');",
+        "    if(!lgId)continue;",
+        "    var lgTarget=sec.querySelector('[data-naano-cust-id=\"'+lgId+'\"]');",
+        "    if(lgTarget&&!lgTarget.hasAttribute('data-naano-cust-css')){",
+        "      var lgRaw=lgTag.textContent||'';",
+        "      var lgMatch=lgRaw.match(/\\{([\\s\\S]*)\\}/);",
+        "      if(lgMatch)lgTarget.setAttribute('data-naano-cust-css',lgMatch[1].trim());",
+        "    }",
+        "  }",
+        // Drop any previous generated block(s). We tolerate multiple
+        // since older saved markup might have leftover legacy
+        // <style data-naano-cust=\"…\"> tags.
+        "  var olds=sec.querySelectorAll('style[data-naano-cust-styles],style[data-naano-cust]');",
+        "  for(var i=0;i<olds.length;i++)olds[i].parentNode.removeChild(olds[i]);",
+        // Walk the section for every element with a CSS attribute.
+        // Build one rule per element scoped through its stable id.
+        // Elements without an id get one assigned now (cheap, idempotent).
+        "  var nodes=sec.querySelectorAll('[data-naano-cust-css]');",
+        "  if(!nodes.length)return;",
+        "  var rules=[];",
+        "  for(var j=0;j<nodes.length;j++){",
+        "    var n=nodes[j];",
+        "    var css=n.getAttribute('data-naano-cust-css')||'';",
+        "    if(!css.trim())continue;",
+        "    var id=n.getAttribute('data-naano-cust-id');",
+        "    if(!id){id='c'+Math.random().toString(36).slice(2,9);n.setAttribute('data-naano-cust-id',id);}",
+        "    rules.push('[data-naano-cust-id=\"'+id+'\"]{'+css+'}');",
+        "  }",
+        "  if(!rules.length)return;",
+        "  var tag=document.createElement('style');",
+        "  tag.setAttribute('data-naano-cust-styles','1');",
+        "  tag.textContent=rules.join('\\n');",
+        "  sec.insertBefore(tag,sec.firstChild);",
+        "}",
+
         // Notify parent that the section's HTML changed (called whenever
-        // we mutate the DOM: style, class, delete, text edit).
+        // we mutate the DOM: style, class, delete, text edit). Critical:
+        // we MUST strip transient inspect-mode artifacts (naano-el-hover,
+        // naano-el-selected, contenteditable="true", data-naano-el="...")
+        // before reporting the HTML upstream — otherwise those attributes
+        // get baked into sectionsData, persisted to the DB, and reappear
+        // on every subsequent render. That's what made sections suddenly
+        // sprout orange outlines and yellow backgrounds with no user
+        // input: the previous selection state was being saved as content.
+        // Persistent attributes like data-naano-cust-id are KEPT so that
+        // user-applied custom CSS keeps targeting the right element.
         "function notifySectionChanged(el){",
         '  var sectionEl=el&&el.closest&&el.closest("[data-section]");',
         "  if(!sectionEl)return;",
+        "  var clone=sectionEl.cloneNode(true);",
+        "  function stripInternal(node){",
+        "    if(node.nodeType!==1)return;",
+        "    if(node.hasAttribute){",
+        "      if(node.hasAttribute('contenteditable'))node.removeAttribute('contenteditable');",
+        "      if(node.hasAttribute('data-naano-el'))node.removeAttribute('data-naano-el');",
+        "    }",
+        "    var cls=node.className;",
+        "    if(typeof cls==='string'&&cls){",
+        "      var keep=cls.split(/\\s+/).filter(function(c){",
+        "        return c&&c!=='naano-el-hover'&&c!=='naano-el-selected'&&c!=='naano-section-selected'&&c!=='naano-section-loading';",
+        "      });",
+        "      var newCls=keep.join(' ');",
+        "      if(newCls!==cls){",
+        "        if(newCls)node.className=newCls;",
+        "        else if(node.removeAttribute)node.removeAttribute('class');",
+        "      }",
+        "    }",
+        "    var children=node.children;",
+        "    for(var i=0;i<children.length;i++)stripInternal(children[i]);",
+        "  }",
+        "  stripInternal(clone);",
         '  window.parent.postMessage({type:"naano-element-html-updated",',
         '    sectionId:sectionEl.getAttribute("data-section"),',
-        '    html:sectionEl.innerHTML},"*");',
+        '    html:clone.innerHTML},"*");',
+        "}",
+
+        // For raw-HTML "custom" sections we want the WHOLE block to
+        // behave like one Elementor-style widget: hovers, clicks, and
+        // contenteditable should all target the wrapper, never its
+        // children. This helper walks up from any node and, if it lives
+        // inside a [data-naano-custom-html], returns that ancestor; else
+        // returns the original node so AI sections work as before.
+        "function resolveCustomTarget(el){",
+        "  if(!el||el.nodeType!==1)return el;",
+        "  var cur=el;",
+        "  while(cur&&cur!==document.body){",
+        "    if(cur.hasAttribute&&cur.hasAttribute('data-naano-custom-html'))return cur;",
+        "    cur=cur.parentElement;",
+        "  }",
+        "  return el;",
         "}",
 
         // Disable all link navigation inside the iframe so clicks select
@@ -2408,8 +2758,28 @@
 
         // Hover highlight.
         'document.addEventListener("mouseover",function(e){',
+        // CRITICAL: ignore mouseover events whose target is the floating
+        // "+" button itself (or its inner <span>). The button is
+        // appended to <body> and lives OUTSIDE any [data-section], so
+        // without this guard the next two lines would set
+        // hoverSectionEl=null and immediately hide the button as soon
+        // as the user moves their mouse onto it — making it physically
+        // impossible to click. The user's click would then fall
+        // through to the section underneath and open the floating
+        // editor panel instead of inserting a new custom-HTML widget,
+        // which is exactly the bug the user reported. We freeze the
+        // current hover state while the cursor is over the button.
+        "  if(e.target&&(e.target===addBtn||addBtn.contains(e.target)))return;",
         '  document.querySelectorAll(".naano-el-hover").forEach(function(n){n.classList.remove("naano-el-hover");});',
-        "  var el=e.target;",
+        // Update the floating "+" button position to follow whichever
+        // section the user is hovering. We walk up to the nearest
+        // [data-section] (which is always the outer wrapper this
+        // builder injected) so the button targets sections, not the
+        // children. If we're not over any section, hide the button.
+        "  var hoverSec=e.target&&e.target.closest&&e.target.closest('[data-section]');",
+        "  if(hoverSec){hoverSectionEl=hoverSec;positionAddBtn();}",
+        "  else{hoverSectionEl=null;addBtn.style.display='none';}",
+        "  var el=resolveCustomTarget(e.target);",
         "  if(!el||el===document.body||el===document.documentElement)return;",
         // Don't show hover outline on the currently-selected element
         // (would make the dashed outline fight with the solid one).
@@ -2419,6 +2789,13 @@
 
         // Click to select an element.
         'document.addEventListener("click",function(e){',
+        // Defensive guard: never treat a click on the floating "+"
+        // button as an element-selection click. The addBtn's own click
+        // handler already calls stopPropagation in capture phase, but
+        // if anything ever gets that listener detached or out of order
+        // we still don't want clicks on the button to fall through
+        // here and pop the wrong panel.
+        "  if(e.target&&(e.target===addBtn||addBtn.contains(e.target)))return;",
         // If the user clicked inside the currently-selected (and now
         // contenteditable) element, let them place the caret freely
         // without re-selecting and resetting state.
@@ -2427,8 +2804,11 @@
         "    return;",
         "  }",
         "  e.stopImmediatePropagation();e.preventDefault();",
-        "  var el=e.target;",
+        // Walk up to the custom-html wrapper if we're inside one. AI
+        // sections fall through to the original click target.
+        "  var el=resolveCustomTarget(e.target);",
         "  if(!el||el===document.body||el===document.documentElement)return;",
+        "  var isCustomHtml=el.hasAttribute&&el.hasAttribute('data-naano-custom-html');",
 
         // Clear previous selection's contenteditable and outline.
         "  if(currentSelected){",
@@ -2459,7 +2839,15 @@
 
         '  el.classList.add("naano-el-selected");',
         // Make the element editable in place so the user can type.
-        "  el.setAttribute('contenteditable','true');",
+        // For custom-HTML widgets we explicitly DO NOT enable
+        // contenteditable: the user pasted HTML they want preserved
+        // verbatim, so editing should go through the dedicated "Edit
+        // custom HTML" textarea in the sidebar (triggered via the
+        // "Edit section" button on the floating panel) instead of
+        // letting them type directly into rendered output.
+        "  if(!isCustomHtml){",
+        "    el.setAttribute('contenteditable','true');",
+        "  }",
         "  currentSelected=el;",
 
         // Anchor-specific info: when the selected element is an <a>, ship
@@ -2474,6 +2862,37 @@
         "    };",
         "  }",
 
+        // Pre-populate the Custom CSS textarea with whatever the user
+        // previously applied to this element. The single source of
+        // truth is the data-naano-cust-css attribute on the element
+        // itself — atomic, escape-safe, and always present in
+        // serialized HTML. Older builds stored the source in a sibling
+        // <style data-naano-cust=\"…\"> tag; the second branch below
+        // handles that case for one-time backwards compatibility so
+        // pages saved with the previous code still load their CSS.
+        "  var savedCustomCss='';",
+        "  var savedCssAttr=el.getAttribute('data-naano-cust-css');",
+        "  if(savedCssAttr!==null){",
+        "    savedCustomCss=savedCssAttr;",
+        "  }else{",
+        "    var custIdRead=el.getAttribute('data-naano-cust-id');",
+        "    if(custIdRead){",
+        "      var sectionRead=el.closest('[data-section]');",
+        "      var styleRead=sectionRead&&sectionRead.querySelector('style[data-naano-cust=\"'+custIdRead+'\"]');",
+        "      if(styleRead){",
+        "        var raw=styleRead.textContent||'';",
+        "        var braceMatch=raw.match(/\\{([\\s\\S]*)\\}/);",
+        "        if(braceMatch){",
+        "          savedCustomCss=braceMatch[1].trim();",
+        // Migrate legacy storage to the attribute model so the rest
+        // of the system has a single source from now on. Next save
+        // will persist the attribute, future loads skip this branch.
+        "          el.setAttribute('data-naano-cust-css',savedCustomCss);",
+        "        }",
+        "      }",
+        "    }",
+        "  }",
+
         '  window.parent.postMessage({type:"naano-element-selected",',
         "    elId:elId,",
         "    sectionId:sectionId,",
@@ -2481,6 +2900,8 @@
         "    breadcrumb:buildBreadcrumb(el),",
         "    computed:computed,",
         "    classes:existingCls.join(' '),",
+        "    isCustomHtml:isCustomHtml,",
+        "    customCss:savedCustomCss,",
         '    linkInfo:linkInfo},"*");',
         "},true);",
 
@@ -2497,11 +2918,29 @@
         "  var m=e.data;if(!m||!m.type)return;",
 
         // Update a specific section's HTML (used after AI regeneration).
+        //
+        // IMPORTANT: innerHTML inserts <script> tags as inert nodes — the
+        // browser will NOT execute them. That silently hides bugs in the
+        // AI-generated JS (e.g. a mobile nav that opens itself on load):
+        // the section LOOKS correct after the update, but the moment the
+        // iframe srcdoc is rebuilt (a fresh load), scripts run for real
+        // and the bug "reappears". To make the live preview faithful to
+        // what a real page load would do, we re-create every <script> in
+        // the freshly injected HTML so it actually executes here too.
         '  if(m.type==="naano-update-section"){',
         "    var el=document.querySelector('[data-section=\"'+m.sectionId+'\"]');",
         "    if(el){",
         '      el.classList.remove("naano-section-loading");',
         "      el.innerHTML=m.html;",
+        "      el.querySelectorAll('script').forEach(function(oldS){",
+        "        var s=document.createElement('script');",
+        "        for(var i=0;i<oldS.attributes.length;i++){",
+        "          var a=oldS.attributes[i];",
+        "          s.setAttribute(a.name,a.value);",
+        "        }",
+        "        s.text=oldS.textContent;",
+        "        oldS.parentNode.replaceChild(s,oldS);",
+        "      });",
         // The element we had selected just got replaced — clear our ref.
         "      if(currentSelected&&!document.body.contains(currentSelected))currentSelected=null;",
         '      el.style.animation="naano-flash 1.5s ease forwards";',
@@ -2550,19 +2989,78 @@
         "  }",
 
         // Apply inline styles + custom CSS to selected element.
+        // Custom CSS is injected via a <style> tag INSIDE the section
+        // (not in document.head) and scoped through a stable
+        // data-naano-cust-id attribute on the element. Both the style
+        // tag and the attribute are part of section.innerHTML, so when
+        // notifySectionChanged captures the section they get persisted
+        // to sectionsData → DB → next render. Earlier code put the
+        // style tag in document.head with a [data-naano-el="nel-N"]
+        // selector that the next-render counter never matched, which
+        // is why custom CSS didn't survive a refresh.
+        // Apply inline styles + custom CSS to selected element.
+        // Custom CSS persistence model (Bulletproof v2):
+        //   - Source of truth = data-naano-cust-css ATTRIBUTE on the
+        //     element itself. HTML attributes are atomic with the
+        //     element, naturally HTML-escape on serialization, and are
+        //     ALWAYS captured by innerHTML. Storing the rule on the
+        //     element instead of in a sibling <style> tag means the
+        //     two can never go out of sync.
+        //   - Each element with custom CSS also gets a stable
+        //     data-naano-cust-id so the generated rule has a unique,
+        //     non-counter-based selector.
+        //   - The actual <style> block is REGENERATED from those
+        //     attributes whenever (a) the user applies CSS and (b) a
+        //     new iframe srcdoc loads (see regenerateSectionCustomCss
+        //     calls below). The block is tagged data-naano-cust-styles
+        //     and lives at the very top of each section. Any prior
+        //     instance is removed before the new one is inserted, so
+        //     repeated applies never accumulate stale rules.
+        //   - Server-side rendering of the published page emits an
+        //     equivalent <style> block by walking the same attributes
+        //     (see Naano_Section_Manager::regenerate_custom_css),
+        //     guaranteeing identical visual results in the iframe and
+        //     on the live page.
         '  if(m.type==="naano-apply-element-style"){',
         "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
         "    if(!el)return;",
         "    var props=m.styles||{};",
-        '    Object.keys(props).forEach(function(p){if(props[p]!=="")el.style[p]=props[p];});',
-        "    if(m.customCss&&m.customCss.trim()){",
-        '      var styleId="naano-custom-"+m.elId;',
-        "      var existing=document.getElementById(styleId);",
-        "      if(existing)existing.remove();",
-        '      var tag=document.createElement("style");',
-        "      tag.id=styleId;",
-        "      tag.textContent='[data-naano-el=\"'+m.elId+'\"]{'+ m.customCss +'}';",
-        "      document.head.appendChild(tag);",
+        "    Object.keys(props).forEach(function(p){",
+        '      if(props[p]==="__remove__"){el.style.removeProperty(_dashCase(p));el.style[p]="";}',
+        '      else if(props[p]!=="")el.style[p]=props[p];',
+        "    });",
+        // Custom CSS is only touched when explicitly provided as a
+        // string. Callers that just want to update inline styles (like
+        // the bg-color clear button) omit the field and the existing
+        // custom-CSS scoped <style> tag stays intact.
+        "    if(typeof m.customCss==='string'){",
+        "      var custCss=m.customCss;",
+        "      var custTrim=custCss.trim();",
+        "      if(custTrim){",
+        // Ensure a stable id so the generated selector is unique.
+        "        var custId=el.getAttribute('data-naano-cust-id');",
+        "        if(!custId){",
+        "          custId='c'+Math.random().toString(36).slice(2,9);",
+        "          el.setAttribute('data-naano-cust-id',custId);",
+        "        }",
+        // Store the raw CSS source as an attribute. Browsers
+        // automatically HTML-escape special chars when serialising
+        // attributes via innerHTML/outerHTML, and unescape when
+        // parsing back, so no manual encoding is needed.
+        "        el.setAttribute('data-naano-cust-css',custCss);",
+        "      }else{",
+        // Empty CSS string = user cleared the rule. Drop both the
+        // source-of-truth attribute and the now-orphaned id so we
+        // don't leave dangling metadata on the element.
+        "        el.removeAttribute('data-naano-cust-css');",
+        "        el.removeAttribute('data-naano-cust-id');",
+        "      }",
+        // Rebuild the section's <style data-naano-cust-styles> block
+        // from scratch using all elements that currently have a CSS
+        // attribute. This is the ONE function that owns generated
+        // <style> tags — the apply handler never writes them directly.
+        "      var sec=el.closest('[data-section]');",
+        "      if(sec)regenerateSectionCustomCss(sec);",
         "    }",
         "    notifySectionChanged(el);",
         "  }",
@@ -2644,6 +3142,18 @@
         '    window.parent.postMessage({type:"naano-element-deselected"},"*");',
         "  }",
         "});",
+
+        // Bulletproof boot step: as soon as the helper script runs in
+        // a freshly-loaded iframe, walk every section and regenerate
+        // its <style data-naano-cust-styles> block from the persisted
+        // data-naano-cust-css attributes. This is what makes user
+        // custom CSS survive a srcdoc rebuild — the attributes are
+        // still on the elements (innerHTML round-trip preserves
+        // them), and this call materialises them back into actual
+        // CSS rules. Without this, a refresh would leave the
+        // attributes intact but no <style> emitting their effect.
+        "document.querySelectorAll('[data-section]').forEach(function(s){regenerateSectionCustomCss(s);});",
+
         "}());",
       ].join("");
 
@@ -2881,6 +3391,154 @@
             false,
           );
           NaanoBuilder._hideCanvasLoading();
+          NaanoBuilder._toast(data.strings.error_generic, "error");
+        });
+    },
+
+    /**
+     * Insert a raw-HTML widget (Elementor-style HTML block) above an
+     * existing section. Triggered by the floating "+" button injected
+     * into the iframe — the user clicks it on a hovered section, and
+     * we POST that section's id as `before_section_id` so the new
+     * widget lands directly above it.
+     *
+     * The default HTML payload is empty so the textbox is blank when
+     * the editor opens; the iframe falls back to a visible placeholder
+     * div for empty custom-html sections (see _buildIframeSrcdoc).
+     *
+     * On success the new section is auto-selected (highlighted +
+     * scrolled into view) and the floating HTML editor is opened
+     * straight away — same UX as Elementor: drop a widget, edit it.
+     *
+     * @param {string} html      Raw HTML to embed (may be empty).
+     * @param {string} beforeId  Section id this widget should precede
+     *                           (empty = append at end).
+     */
+    _addCustomHtmlSection: function (html, beforeId) {
+      $.post(data.ajaxUrl, {
+        action: "naano_add_custom_html_section",
+        nonce: data.nonce,
+        page_id: NaanoBuilder.pageId,
+        before_section_id: beforeId || "",
+        // The server requires non-empty HTML (so it can't accidentally
+        // create empty rows). For an empty insert from the "+" button
+        // we ship a single newline as a minimal payload — the iframe
+        // renderer detects this as "effectively empty" and shows the
+        // placeholder instead.
+        html: html && html.trim() ? html : "\n",
+      })
+        .done(function (response) {
+          if (response && response.success) {
+            // Server returns the full reordered list — replace our
+            // in-memory copy wholesale rather than splicing, so the
+            // type field on every section is up to date.
+            if (response.data && Array.isArray(response.data.sections)) {
+              NaanoBuilder.sectionsData = response.data.sections.slice();
+            }
+            NaanoBuilder._refreshLivePreview();
+            NaanoBuilder._renderSectionsList();
+            NaanoBuilder._toast(
+              NaanoBuilder._i18n("custom_html_inserted"),
+              "success",
+            );
+            // Auto-select + auto-edit. The iframe needs a moment to
+            // re-render before its scrollIntoView call has anything
+            // to target, so highlight + open editor on a tiny delay.
+            if (response.data && response.data.section_id) {
+              var newId = response.data.section_id;
+              setTimeout(function () {
+                NaanoBuilder.openEditPanel(newId, true);
+                NaanoBuilder._openCustomHtmlEditor(newId);
+              }, 120);
+            }
+          } else {
+            NaanoBuilder._toast(
+              (response && response.data && response.data.message) ||
+                data.strings.error_generic,
+              "error",
+            );
+          }
+        })
+        .fail(function () {
+          NaanoBuilder._toast(data.strings.error_generic, "error");
+        });
+    },
+
+    /**
+     * Open the floating Custom-HTML editor for a section. Pre-fills
+     * the textarea with the section's current HTML (empty for fresh
+     * inserts) and remembers the section id in _customHtmlEditingId
+     * so the Save button knows which section to update.
+     *
+     * @param {string} sectionId Must be a custom-html section.
+     */
+    _openCustomHtmlEditor: function (sectionId) {
+      var idx = NaanoBuilder._findSectionIndex(sectionId);
+      if (idx === -1) return;
+      var current = NaanoBuilder.sectionsData[idx].html || "";
+      // Treat anything that's whitespace-only OR our server-side empty
+      // marker comment as a truly blank textarea — the user shouldn't
+      // see "<!-- naano:custom-html:empty -->" in the box.
+      if (
+        !current.trim() ||
+        current.trim() === "<!-- naano:custom-html:empty -->"
+      ) {
+        current = "";
+      }
+      NaanoBuilder._customHtmlEditingId = sectionId;
+      $("#naano-custom-html-editor-input").val(current);
+      $("#naano-custom-html-editor-panel").show();
+      // Defer focus so the show() animation doesn't fight with it.
+      setTimeout(function () {
+        $("#naano-custom-html-editor-input").focus();
+      }, 50);
+    },
+
+    /**
+     * Hide the floating editor and clear its editing-id state.
+     */
+    _closeCustomHtmlEditor: function () {
+      NaanoBuilder._customHtmlEditingId = null;
+      $("#naano-custom-html-editor-panel").hide();
+    },
+
+    /**
+     * Push updated raw HTML for a custom-html section to the server,
+     * then re-render the iframe with the sanitized result.
+     *
+     * @param {string} sectionId
+     * @param {string} html
+     */
+    _updateCustomHtmlSection: function (sectionId, html) {
+      $.post(data.ajaxUrl, {
+        action: "naano_update_custom_html_section",
+        nonce: data.nonce,
+        page_id: NaanoBuilder.pageId,
+        section_id: sectionId,
+        html: html,
+      })
+        .done(function (response) {
+          if (response && response.success) {
+            var idx = NaanoBuilder._findSectionIndex(sectionId);
+            if (idx !== -1) {
+              NaanoBuilder.sectionsData[idx].html =
+                response.data.section_html || html;
+            }
+            NaanoBuilder._refreshLivePreview();
+            NaanoBuilder._renderSectionsList();
+            NaanoBuilder._toast(
+              NaanoBuilder._i18n("custom_html_updated"),
+              "success",
+            );
+          } else {
+            NaanoBuilder._toast(
+              (response && response.data && response.data.message) ||
+                data.strings.error_generic,
+              "error",
+            );
+          }
+        })
+        .fail(function () {
           NaanoBuilder._toast(data.strings.error_generic, "error");
         });
     },

@@ -31,7 +31,7 @@ class Naano_Prompt_Builder
 
     /** @var string Base system prompt template. */
     private string $base_system_prompt = <<<'PROMPT'
-    	You are an elite UI/UX designer, award-winning digital art director, and senior front-end engineer.
+    You are an elite UI/UX designer, award-winning digital art director, and senior front-end engineer.
 
     Your work must resemble a premium production website created by a top-tier agency.
 
@@ -78,11 +78,12 @@ class Naano_Prompt_Builder
       font-family:
         system-ui,
         -apple-system,
-        Segoe UI,
+        "Segoe UI",
         Roboto,
         sans-serif;
 
       color:var(--color-text);
+      background:var(--color-bg);
     }
 
     .section-SECTION_ID *{
@@ -90,15 +91,15 @@ class Naano_Prompt_Builder
     }
 
     .section-SECTION_ID img{
-      max-width:100%;
       display:block;
+      max-width:100%;
     }
 
     .section-SECTION_ID .container{
       width:100%;
       max-width:var(--container);
-      margin:auto;
-      padding:0 24px;
+      margin-inline:auto;
+      padding-inline:24px;
     }
 
     </style>
@@ -106,6 +107,7 @@ class Naano_Prompt_Builder
     <!-- Section content -->
 
     </section>
+
     <!-- END:SECTION_ID -->
 
     ════════════════════════════════
@@ -143,9 +145,9 @@ class Naano_Prompt_Builder
 
     * generic templates
     * flat layouts
-    * overly centered walls of text
     * bootstrap-like appearance
     * crowded UI
+    * overly centered walls of text
     * harsh black (#000000)
 
     Prefer:
@@ -167,8 +169,8 @@ class Naano_Prompt_Builder
     * mobile-first responsive design
     * clean DOM hierarchy
     * production-quality CSS
+    * scoped CSS per section
     * no inline styles
-    * no JavaScript
     * no external frameworks
 
     Use ONLY:
@@ -180,6 +182,139 @@ class Naano_Prompt_Builder
 
     * floats
     * table layouts
+    * absolute positioning for major layouts
+    * random z-index stacking
+    * oversized blur effects
+    * hardcoded viewport heights unless necessary
+
+    ════════════════════════════════
+    JAVASCRIPT POLICY
+    ════════════════════════════════
+
+    JavaScript is FORBIDDEN by default.
+
+    Use JavaScript ONLY when it is genuinely required
+    for essential interaction that cannot be achieved
+    properly with semantic HTML and CSS alone.
+
+    JavaScript IS allowed for:
+
+    * mobile navigation toggles
+    * accordion or collapsible content
+    * accessible tabs
+    * dropdown menus
+    * modal open and close behavior
+    * explicitly requested interactions
+    * accessibility-critical interaction handling
+
+    JavaScript is NOT allowed for:
+
+    * decorative effects
+    * hover animations
+    * visual polish achievable with CSS
+    * layout manipulation
+    * unnecessary carousels
+    * counters
+    * autoplay behavior
+    * fake interactivity
+    * unnecessary DOM manipulation
+    * state management systems
+    * frontend frameworks
+
+    Before adding JavaScript, determine whether the
+    same result can be achieved using:
+
+    * semantic HTML
+    * CSS transitions
+    * CSS transforms
+    * :hover
+    * :focus-visible
+    * :focus-within
+    * <details> and <summary>
+    * scroll-behavior
+    * position: sticky
+
+    If those approaches are sufficient,
+    DO NOT generate JavaScript.
+
+    When JavaScript is necessary:
+
+    * use vanilla JavaScript ONLY
+    * keep code concise and production-quality
+    * use a single scoped <script> block
+    * avoid global variables
+    * avoid inline event handlers
+    * avoid unnecessary event listeners
+    * preserve accessibility
+    * preserve keyboard navigation
+    * preserve reduced-motion compatibility
+
+    Avoid:
+
+    * React-style patterns
+    * hydration concepts
+    * virtual DOM logic
+    * excessive event handling
+    * animation libraries
+    * external dependencies
+    * complex abstractions
+
+    Do not generate JavaScript unless the lack of
+    JavaScript would create a real usability
+    or accessibility issue.
+
+    The final output must remain primarily HTML and CSS.
+
+    ════════════════════════════════
+    MOBILE NAVIGATION REQUIREMENTS (strict)
+    ════════════════════════════════
+
+    These rules are MANDATORY whenever a mobile menu,
+    drawer, off-canvas nav, or hamburger toggle is generated.
+    They are not stylistic preferences — violating them
+    produces a broken site where the menu opens itself
+    on every page load.
+
+    Initial state:
+
+    * the mobile menu MUST be CLOSED on initial page load
+    * the closed state MUST be expressed in the initial
+      HTML and CSS — never produced by JavaScript at load time
+    * if a "hidden" / "is-closed" / "menu--closed" class
+      controls visibility, that class MUST be present
+      in the static HTML output
+    * the toggle button MUST start with aria-expanded="false"
+    * never apply the `checked` attribute to a toggle
+      checkbox by default
+    * never use a :target pattern that depends on a URL
+      hash being present on initial load
+    * never rely on `display: block` (or any visible state)
+      as the default for the mobile menu container —
+      the default must be hidden/closed
+
+    JavaScript behavior:
+
+    * JS may ONLY change the menu state in response to
+      a user event (click, keydown, touch)
+    * NEVER attach open/close logic to DOMContentLoaded,
+      load, readystatechange, or any auto-firing event
+    * NEVER call .click(), .focus(), or .toggle() on the
+      menu during initialization
+    * the script must be idempotent: running it twice
+      must not leave the menu open
+
+    Verification checklist (apply mentally before output):
+
+    1. If JavaScript were disabled, would the mobile menu
+       be CLOSED on first paint? It MUST be yes.
+    2. Does any code path open the menu without an explicit
+       user gesture? It MUST be no.
+    3. Is the closed state visible in the raw HTML/CSS,
+       independent of any script execution? It MUST be yes.
+
+    Apply these rules to ALL collapsible UI:
+    accordions, dropdowns, drawers, modals, off-canvas panels.
+    Default state is CLOSED, opened only by user action.
 
     ════════════════════════════════
     TYPOGRAPHY
@@ -189,68 +324,85 @@ class Naano_Prompt_Builder
 
     Recommended scale:
 
-    * hero titles: 56–72px
-    * section titles: 32–40px
-    * subtitles: 20–24px
-    * body text: 16–18px
+    * hero titles: 56px–72px
+    * section titles: 32px–40px
+    * subtitles: 20px–24px
+    * body text: 16px–18px
 
     Large headings should use:
 
     * tight letter spacing
     * strong line wrapping
-    * balanced widths
+    * balanced text widths
 
-    Paragraphs should remain readable:
+    Paragraphs should remain readable with:
 
-    * max-width around 60–70ch
+    * max-width around 60ch–70ch
     * comfortable line-height
+    * balanced spacing rhythm
+
+    Avoid:
+
+    * giant unreadable paragraphs
+    * weak heading hierarchy
+    * inconsistent spacing
+    * centered body copy across full sections
 
     ════════════════════════════════
     RESPONSIVE QUALITY
     ════════════════════════════════
 
     Layouts must remain visually excellent from:
-    320px → 1920px.
+    320px to 1920px.
 
     Responsive behavior must feel intentional,
     not merely stacked.
 
     Prioritize:
 
-    * spacing adaptation
-    * readable typography scaling
+    * adaptive spacing
+    * typography scaling
     * balanced grids
     * strong mobile hierarchy
+    * touch-friendly spacing
+    * stable visual rhythm
+
+    Mobile layouts should feel thoughtfully designed,
+    not desktop layouts forced into a smaller screen.
 
     ════════════════════════════════
     COMPONENT QUALITY
     ════════════════════════════════
 
-    Buttons:
+    Buttons must have:
 
-    * visually polished
-    * minimum height 44px
-    * refined hover transitions
+    * polished visual styling
+    * minimum height of 44px
     * accessible contrast
+    * refined hover transitions
+    * strong focus states
 
-    Cards:
+    Cards should feature:
 
     * layered surfaces
-    * soft shadows
-    * subtle hover lift
-    * premium spacing
+    * subtle depth
+    * premium internal spacing
+    * tasteful hover lift
+    * clean borders or soft shadows
 
-    Forms:
+    Forms must include:
 
     * accessible labels
-    * strong focus states
-    * clean visual hierarchy
+    * visible focus states
+    * clear spacing hierarchy
+    * comfortable input sizing
 
-    Images:
+    Images should use:
 
     * responsive containers
-    * object-fit:cover
+    * object-fit:cover when appropriate
     * elegant framing
+    * balanced cropping
 
     ════════════════════════════════
     ANIMATION
@@ -258,20 +410,27 @@ class Naano_Prompt_Builder
 
     Use subtle motion only.
 
-    Allowed:
+    Allowed motion:
 
-    * fade-in
     * opacity transitions
     * small translate transforms
-    * hover transitions
+    * refined hover transitions
+    * soft fade-ins
 
     Motion should feel:
 
     * smooth
     * restrained
     * premium
+    * purposeful
 
-    Avoid excessive animation.
+    Avoid:
+
+    * excessive animation
+    * large bouncing effects
+    * distracting motion
+    * aggressive parallax
+    * overdesigned transitions
 
     ════════════════════════════════
     IMPORTANT
@@ -279,8 +438,18 @@ class Naano_Prompt_Builder
 
     Always return complete valid HTML.
 
+    Interactive behavior should default to
+    semantic HTML and CSS solutions before
+    considering JavaScript.
+
     Prioritize visual quality, layout harmony,
-    and premium execution over excessive complexity.
+    clarity, accessibility, and premium execution
+    over unnecessary complexity.
+
+    Avoid generating generic AI-looking layouts.
+
+    Every section should feel intentionally designed,
+    production-ready, and visually refined.
 
     {variables_block}
 
@@ -420,18 +589,25 @@ class Naano_Prompt_Builder
         }
 
         return <<<MSG
-          Create a complete premium-quality website based on the following brief.
+        Create a complete premium-quality website based on the following brief.
 
-        The final result should feel comparable to a modern high-end product website created by a professional digital agency.
+        The final result should feel comparable to a modern,
+        high-end product website created by a world-class
+        digital agency.
 
         BRIEF:
         {$description}
 
         {$pages_block}
 
+        ════════════════════════════════
         SECTIONS TO CREATE
+        ════════════════════════════════
+
         Generate the following sections in this exact order:
         {$section_list}
+
+        Generate ALL requested sections in a single response.
 
         Each section must:
 
@@ -440,9 +616,14 @@ class Naano_Prompt_Builder
         * feel visually cohesive with the rest of the site
         * share a consistent design language
         * maintain responsive behavior across all screen sizes
+        * feel production-ready and intentionally designed
 
+        ════════════════════════════════
         SECTION ID FORMAT
-        Use the lowercase kebab-case version of the section type.
+        ════════════════════════════════
+
+        Use the lowercase kebab-case version
+        of the section type.
 
         Examples:
 
@@ -450,7 +631,9 @@ class Naano_Prompt_Builder
         * About Us → about-us
         * Contact Form → contact-form
 
+        ════════════════════════════════
         DESIGN EXPECTATIONS
+        ════════════════════════════════
 
         The website should feel:
 
@@ -458,6 +641,7 @@ class Naano_Prompt_Builder
         * modern
         * polished
         * visually balanced
+        * editorial
         * professionally art-directed
 
         Prioritize:
@@ -469,33 +653,165 @@ class Naano_Prompt_Builder
         * clean visual rhythm
         * subtle depth and layering
         * premium UI details
+        * polished interaction design
+        * balanced whitespace
+        * intentional alignment
+
+        The visual quality should feel comparable to:
+
+        * Stripe
+        * Linear
+        * Vercel
+        * Apple
+        * Framer
+        * Notion marketing pages
 
         Avoid:
 
         * generic template aesthetics
         * repetitive layouts
         * overcrowded sections
-        * excessive text blocks
-        * flat or outdated styling
+        * flat styling
+        * outdated design patterns
+        * bootstrap-like appearance
+        * excessive gradients
+        * random colors
+        * oversized shadows
+        * giant text walls
+        * visually noisy compositions
 
+        ════════════════════════════════
         CONTENT RULES
+        ════════════════════════════════
 
-        * Use meaningful realistic content
-        * No lorem ipsum
-        * Keep copy concise and believable
-        * Headlines should feel intentional and high-quality
-        * CTA labels should feel modern and product-oriented
+        Use meaningful realistic content.
 
+        Do NOT use:
+
+        * lorem ipsum
+        * placeholder copy
+        * fake testimonials with obvious dummy names
+        * generic marketing buzzwords
+
+        Content must feel:
+
+        * concise
+        * believable
+        * intentional
+        * product-oriented
+        * professionally written
+
+        Headlines should feel premium and well-crafted.
+
+        CTA labels should feel modern, concise,
+        and conversion-oriented.
+
+        Avoid repetitive sentence structures
+        across sections.
+
+        ════════════════════════════════
         RESPONSIVE QUALITY
-        Layouts must remain visually excellent from mobile to large desktop screens.
+        ════════════════════════════════
 
-        Mobile layouts should feel intentionally designed,
-        not simply stacked desktop layouts.
+        Layouts must remain visually excellent from:
+        320px to 1920px.
 
+        Responsive behavior must feel intentional,
+        not merely stacked.
+
+        Prioritize:
+
+        * adaptive spacing
+        * readable typography scaling
+        * balanced grids
+        * touch-friendly sizing
+        * strong mobile hierarchy
+        * visually stable layouts
+
+        Mobile layouts should feel thoughtfully designed,
+        not desktop layouts compressed into smaller screens.
+
+        ════════════════════════════════
+        INTERACTION RULES
+        ════════════════════════════════
+
+        Prefer semantic HTML and CSS solutions first.
+
+        Do NOT generate JavaScript unless it is genuinely
+        required for usability or accessibility.
+
+        JavaScript is allowed ONLY for essential interactions such as:
+
+        * mobile navigation toggles
+        * accessible accordions
+        * dropdown menus
+        * tabs
+        * modals
+        * explicitly requested interactions
+
+        If JavaScript is necessary:
+
+        * use vanilla JavaScript ONLY
+        * keep it minimal and production-quality
+        * avoid global variables
+        * avoid inline event handlers
+        * preserve accessibility
+        * preserve keyboard navigation
+
+        Do NOT generate:
+
+        * unnecessary sliders
+        * decorative JavaScript
+        * animation-heavy behavior
+        * SPA-style architecture
+        * frontend frameworks
+        * unnecessary DOM manipulation
+
+        The final output must remain primarily HTML and CSS.
+
+        ════════════════════════════════
+        MOBILE NAVIGATION REQUIREMENTS (strict)
+        ════════════════════════════════
+
+        Any mobile menu, drawer, off-canvas nav,
+        or hamburger toggle MUST follow these rules:
+
+        * the mobile menu MUST be CLOSED on initial page load
+        * the closed state MUST be in the static HTML and CSS,
+          never produced by JavaScript at load time
+        * any "hidden" / "is-closed" class MUST be present
+          in the initial HTML output
+        * the toggle button MUST start with aria-expanded="false"
+        * never use `checked` on a toggle checkbox by default
+        * never rely on :target patterns that depend on a
+          URL hash present at load
+        * JS may ONLY change menu state on a user event
+          (click, keydown, touch) — never on DOMContentLoaded,
+          load, or any auto-firing event
+        * if JavaScript were disabled, the menu MUST still
+          render closed on first paint
+
+        The same default-closed rule applies to all collapsible
+        UI (accordions, dropdowns, modals, off-canvas panels).
+
+        ════════════════════════════════
         IMPORTANT
-        Generate ALL requested sections in a single response.
+        ════════════════════════════════
 
-        Focus on producing visually impressive, production-quality frontend output.
+        Generate complete production-quality frontend output.
+
+        Focus on:
+
+        * visual polish
+        * layout harmony
+        * accessibility
+        * responsive excellence
+        * premium execution
+
+        Avoid generating generic AI-looking layouts.
+
+        Every section should feel custom-designed,
+        high-end, and ready for real-world production use.
 
         MSG;
     }
@@ -530,74 +846,229 @@ class Naano_Prompt_Builder
         $nav_block = $this->build_nav_menu_block($section_id);
 
         return <<<MSG
+        ════════════════════════════════
         CURRENT SITE CONTEXT
-        (Other sections may appear compressed or simplified for context continuity)
+        ════════════════════════════════
+
+        (Other sections may appear compressed or simplified
+        for context continuity)
 
         {$compressed_context}
         {$extras_section}
         {$nav_block}
 
+        ════════════════════════════════
         TASK
+        ════════════════════════════════
 
         Update the section with ID "{$section_id}".
 
         USER INSTRUCTION:
         {$instruction}
 
+        ════════════════════════════════
         OBJECTIVE
+        ════════════════════════════════
 
         The updated section must:
 
-        integrate naturally with the surrounding page
-        preserve the site's visual language
-        improve visual quality and polish where appropriate
-        maintain responsive behavior
-        remain production-ready
+        * integrate naturally with the surrounding page
+        * preserve the site's visual language
+        * improve visual quality and polish where appropriate
+        * maintain responsive behavior
+        * remain production-ready
+        * feel visually cohesive with adjacent sections
 
+        ════════════════════════════════
         DESIGN EXPECTATIONS
+        ════════════════════════════════
 
         The result should feel:
 
-        premium
-        modern
-        refined
-        professionally art-directed
+        * premium
+        * modern
+        * refined
+        * editorial
+        * professionally art-directed
 
         Prioritize:
 
-        elegant spacing
-        strong typography hierarchy
-        clean responsive composition
-        subtle depth and layering
-        polished interaction states
-        visually balanced layouts
+        * elegant spacing
+        * strong typography hierarchy
+        * clean responsive composition
+        * subtle depth and layering
+        * polished interaction states
+        * visually balanced layouts
+        * refined alignment
+        * intentional whitespace
+        * premium UI details
+
+        The visual quality should feel comparable to:
+
+        * Stripe
+        * Linear
+        * Vercel
+        * Apple
+        * Framer
+        * Notion marketing pages
 
         Avoid:
 
-        generic template appearance
-        flat layouts
-        overcrowded content
-        inconsistent spacing
-        outdated UI styling
+        * generic template appearance
+        * flat layouts
+        * overcrowded content
+        * inconsistent spacing
+        * outdated UI styling
+        * bootstrap-like aesthetics
+        * repetitive card grids
+        * giant walls of text
+        * excessive visual noise
 
+        ════════════════════════════════
+        CONTENT QUALITY
+        ════════════════════════════════
+
+        Content must feel:
+
+        * intentional
+        * believable
+        * concise
+        * professionally written
+
+        Avoid:
+
+        * lorem ipsum
+        * placeholder copy
+        * repetitive marketing buzzwords
+        * generic AI-style phrasing
+
+        Headlines should feel premium and thoughtfully crafted.
+
+        ════════════════════════════════
+        RESPONSIVE QUALITY
+        ════════════════════════════════
+
+        Layouts must remain visually excellent from:
+        320px to 1920px.
+
+        Responsive behavior must feel intentional,
+        not merely stacked.
+
+        Prioritize:
+
+        * adaptive spacing
+        * balanced layouts
+        * readable typography scaling
+        * touch-friendly interactions
+        * strong mobile hierarchy
+
+        Mobile layouts should feel thoughtfully designed,
+        not desktop layouts compressed into smaller screens.
+
+        ════════════════════════════════
         TECHNICAL REQUIREMENTS
+        ════════════════════════════════
 
-        Return ONLY the updated section
-        Preserve the existing section ID and root class
-        Keep CSS fully scoped to the section
-        No JavaScript
-        No external frameworks
-        No inline styles
-        Semantic and accessible HTML only
+        Return ONLY the updated section.
 
+        Preserve:
+
+        * the existing section ID
+        * the existing root class structure
+
+        Requirements:
+
+        * keep CSS fully scoped to the section
+        * use semantic HTML
+        * use accessible markup
+        * use mobile-first responsive design
+        * avoid inline styles
+        * avoid external frameworks
+
+        Prefer HTML and CSS solutions first.
+
+        Do NOT generate JavaScript unless it is genuinely
+        required for usability or accessibility.
+
+        JavaScript is allowed ONLY for essential interactions such as:
+
+        * mobile navigation toggles
+        * accessible accordions
+        * dropdown menus
+        * tabs
+        * modals
+        * explicitly requested interactions
+
+        If JavaScript is necessary:
+
+        * use vanilla JavaScript ONLY
+        * keep it minimal and production-quality
+        * avoid global variables
+        * avoid inline event handlers
+        * preserve accessibility
+        * preserve keyboard navigation
+
+        Do NOT generate:
+
+        * decorative JavaScript
+        * unnecessary animations
+        * frontend frameworks
+        * SPA-style patterns
+        * unnecessary DOM manipulation
+
+        The final output must remain primarily HTML and CSS.
+
+        ════════════════════════════════
+        MOBILE NAVIGATION REQUIREMENTS (strict)
+        ════════════════════════════════
+
+        Any mobile menu, drawer, off-canvas nav,
+        or hamburger toggle MUST follow these rules:
+
+        * the mobile menu MUST be CLOSED on initial page load
+        * the closed state MUST be in the static HTML and CSS,
+          never produced by JavaScript at load time
+        * any "hidden" / "is-closed" class MUST be present
+          in the initial HTML output
+        * the toggle button MUST start with aria-expanded="false"
+        * never use `checked` on a toggle checkbox by default
+        * never rely on :target patterns that depend on a
+          URL hash present at load
+        * JS may ONLY change menu state on a user event
+          (click, keydown, touch) — never on DOMContentLoaded,
+          load, or any auto-firing event
+        * if JavaScript were disabled, the menu MUST still
+          render closed on first paint
+
+        The same default-closed rule applies to all collapsible
+        UI (accordions, dropdowns, modals, off-canvas panels).
+
+        ════════════════════════════════
         OUTPUT FORMAT
+        ════════════════════════════════
 
-        ...updated section HTML...
+        Return ONLY the updated section HTML.
 
+        Do NOT output:
+
+        * explanations
+        * commentary
+        * markdown
+        * code fences
+        * additional sections
+
+        ════════════════════════════════
         IMPORTANT
+        ════════════════════════════════
 
-        Do not output any other sections.
-        Do not include explanations or markdown.
+        The updated section must feel custom-designed,
+        production-ready, visually refined,
+        and consistent with the rest of the website.
+
+        Focus on premium execution,
+        layout harmony,
+        responsive polish,
+        and clean professional frontend quality.
 
         MSG;
     }
@@ -636,7 +1107,12 @@ class Naano_Prompt_Builder
         $nav_block = $this->build_nav_menu_block($section_id);
 
         return <<<MSG
-        Create a premium-quality website section based on the following brief.
+        ════════════════════════════════
+        TASK
+        ════════════════════════════════
+
+        Create a premium-quality website section
+        based on the following brief.
 
         BRIEF:
         {$description}
@@ -651,70 +1127,218 @@ class Naano_Prompt_Builder
         SECTION ID:
         {$section_id}
 
+        ════════════════════════════════
         OBJECTIVE
+        ════════════════════════════════
 
-        Generate a visually impressive, production-ready section that feels comparable to a modern premium SaaS or product website.
+        Generate a visually impressive,
+        production-ready section that feels comparable
+        to a modern premium SaaS or product website
+        created by a top-tier digital agency.
 
         The section should feel:
 
-        refined
-        modern
-        polished
-        professionally art-directed
+        * refined
+        * modern
+        * polished
+        * editorial
+        * professionally art-directed
 
-        Visual inspiration:
+        ════════════════════════════════
+        VISUAL DIRECTION
+        ════════════════════════════════
 
-        Stripe
-        Linear
-        Vercel
-        Apple
-        Framer
-        Notion
+        The visual quality should feel comparable to:
 
-        DESIGN EXPECTATIONS
+        * Stripe
+        * Linear
+        * Vercel
+        * Apple
+        * Framer
+        * Notion marketing pages
 
         Prioritize:
 
-        elegant spacing
-        strong typography hierarchy
-        responsive composition
-        subtle depth and layering
-        premium UI polish
-        visually balanced layouts
-        clean visual rhythm
+        * elegant spacing
+        * strong typography hierarchy
+        * responsive composition
+        * subtle depth and layering
+        * premium UI polish
+        * visually balanced layouts
+        * clean visual rhythm
+        * intentional whitespace
+        * refined alignment
+        * polished responsive behavior
 
         Avoid:
 
-        generic template aesthetics
-        flat layouts
-        outdated styling
-        overcrowded content
-        repetitive UI patterns
+        * generic template aesthetics
+        * flat layouts
+        * outdated styling
+        * bootstrap-like appearance
+        * overcrowded content
+        * repetitive UI patterns
+        * giant text walls
+        * random color usage
+        * excessive shadows
+        * visually noisy compositions
 
+        ════════════════════════════════
         CONTENT RULES
+        ════════════════════════════════
 
-        Use realistic and meaningful copy
-        No lorem ipsum
-        Keep content concise and intentional
-        CTA labels should feel modern and product-oriented
+        Use realistic and meaningful copy.
 
+        Do NOT use:
+
+        * lorem ipsum
+        * placeholder content
+        * generic marketing buzzwords
+        * repetitive AI-style phrasing
+
+        Content should feel:
+
+        * concise
+        * believable
+        * intentional
+        * professionally written
+        * product-oriented
+
+        Headlines should feel premium and thoughtfully crafted.
+
+        CTA labels should feel modern,
+        clear, and conversion-oriented.
+
+        ════════════════════════════════
+        RESPONSIVE QUALITY
+        ════════════════════════════════
+
+        Layouts must remain visually excellent from:
+        320px to 1920px.
+
+        Responsive behavior must feel intentional,
+        not merely stacked.
+
+        Prioritize:
+
+        * adaptive spacing
+        * readable typography scaling
+        * balanced layouts
+        * touch-friendly sizing
+        * strong mobile hierarchy
+        * visually stable composition
+
+        Mobile layouts should feel thoughtfully designed,
+        not desktop layouts compressed into smaller screens.
+
+        ════════════════════════════════
         TECHNICAL REQUIREMENTS
+        ════════════════════════════════
 
-        Return ONLY this section
-        Use semantic accessible HTML
-        Fully scoped CSS only
-        No inline styles
-        No JavaScript
-        No external frameworks
-        Responsive design required
-        Mobile-first layout
+        Return ONLY this section.
 
+        Requirements:
+
+        * semantic accessible HTML
+        * fully scoped CSS only
+        * mobile-first responsive design
+        * clean DOM hierarchy
+        * production-quality frontend structure
+        * no inline styles
+        * no external frameworks
+
+        Prefer semantic HTML and CSS solutions first.
+
+        Do NOT generate JavaScript unless it is genuinely
+        required for usability or accessibility.
+
+        JavaScript is allowed ONLY for essential interactions such as:
+
+        * mobile navigation toggles
+        * accessible accordions
+        * dropdown menus
+        * tabs
+        * modals
+        * explicitly requested interactions
+
+        If JavaScript is necessary:
+
+        * use vanilla JavaScript ONLY
+        * keep it minimal and production-quality
+        * avoid global variables
+        * avoid inline event handlers
+        * preserve accessibility
+        * preserve keyboard navigation
+
+        Do NOT generate:
+
+        * decorative JavaScript
+        * unnecessary sliders
+        * animation-heavy behavior
+        * frontend frameworks
+        * SPA-style architecture
+        * unnecessary DOM manipulation
+
+        The final output must remain primarily HTML and CSS.
+
+        ════════════════════════════════
+        MOBILE NAVIGATION REQUIREMENTS (strict)
+        ════════════════════════════════
+
+        Any mobile menu, drawer, off-canvas nav,
+        or hamburger toggle MUST follow these rules:
+
+        * the mobile menu MUST be CLOSED on initial page load
+        * the closed state MUST be in the static HTML and CSS,
+          never produced by JavaScript at load time
+        * any "hidden" / "is-closed" class MUST be present
+          in the initial HTML output
+        * the toggle button MUST start with aria-expanded="false"
+        * never use `checked` on a toggle checkbox by default
+        * never rely on :target patterns that depend on a
+          URL hash present at load
+        * JS may ONLY change menu state on a user event
+          (click, keydown, touch) — never on DOMContentLoaded,
+          load, or any auto-firing event
+        * if JavaScript were disabled, the menu MUST still
+          render closed on first paint
+
+        The same default-closed rule applies to all collapsible
+        UI (accordions, dropdowns, modals, off-canvas panels).
+
+        ════════════════════════════════
         OUTPUT FORMAT
+        ════════════════════════════════
 
+        Return ONLY the section HTML.
+
+        Do NOT output:
+
+        * explanations
+        * commentary
+        * markdown
+        * code fences
+
+        ════════════════════════════════
         IMPORTANT
+        ════════════════════════════════
 
         The section must feel visually premium,
-        responsive, and production-ready.
+        responsive, cohesive,
+        and production-ready.
+
+        Focus on:
+
+        * layout harmony
+        * visual polish
+        * accessibility
+        * responsive excellence
+        * premium execution
+
+        Avoid generating generic AI-looking layouts.
+
+        The final result should feel intentionally designed,
+        high-end, and ready for real-world production use.
 
         MSG;
     }

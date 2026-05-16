@@ -42,6 +42,8 @@ class Naano_Ajax_Handler
             "naano_set_homepage",
             "naano_save_firecrawl_key",
             "naano_test_firecrawl",
+            "naano_add_custom_html_section",
+            "naano_update_custom_html_section",
         ];
 
         foreach ($actions as $action) {
@@ -1090,6 +1092,176 @@ class Naano_Ajax_Handler
         update_option("page_on_front", $page_id);
 
         wp_send_json_success();
+    }
+
+    /**
+     * Insert a custom-HTML section (raw user-pasted HTML, no LLM call)
+     * just above an existing section. Used by the "Insert custom HTML"
+     * widget — the Elementor-style HTML block. The new section is
+     * stored with type="custom-html" so the front-end iframe can mark
+     * its wrapper with data-naano-custom-html, which the inspect script
+     * reads to suppress click-into behaviour and treat the whole block
+     * as one selectable widget.
+     *
+     * POST: page_id, before_section_id (string, optional — empty appends
+     *       at the end), html (raw HTML to embed)
+     */
+    public static function handle_naano_add_custom_html_section(): void
+    {
+        self::verify_nonce();
+
+        if (!current_user_can("edit_pages")) {
+            wp_send_json_error([
+                "message" => __(
+                    "Insufficient permissions.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $page_id = self::get_int("page_id");
+        if (!$page_id) {
+            wp_send_json_error([
+                "message" => __("Missing page_id.", "naano-ai-website-builder"),
+            ]);
+        }
+        if (!current_user_can("edit_post", $page_id)) {
+            wp_send_json_error([
+                "message" => __(
+                    "You cannot edit this page.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $before = sanitize_title(
+            (string) wp_unslash($_POST["before_section_id"] ?? ""),
+        );
+        $raw_html = (string) wp_unslash($_POST["html"] ?? "");
+
+        // Run the same sanitizer used on LLM output: strips <script>,
+        // on* attributes, javascript: URLs, and round-trips through
+        // DOMDocument to repair broken markup. The user has edit_pages
+        // capability so we trust their HTML at the structural level —
+        // we just don't want pasted scripts running inside the iframe.
+        $clean_html = Naano_HTML_Sanitizer::clean($raw_html);
+        // Empty payload is a legitimate first state — the iframe "+"
+        // button creates a fresh, blank widget and the user fills it
+        // in via the floating editor that pops up next. Store an HTML
+        // comment as a stable marker so the widget exists in the
+        // section list (and can be selected/deleted) but the iframe
+        // still treats it as visually empty and shows the placeholder.
+        if (trim($clean_html) === "") {
+            $clean_html = "<!-- naano:custom-html:empty -->";
+        }
+
+        // Build a unique section id. Using uniqid keeps it short and
+        // stable across the call lifetime; sanitize_title normalises
+        // case so the iframe selector [data-section="..."] is reliable.
+        $section_id = sanitize_title("custom-html-" . uniqid());
+
+        $manager = new Naano_Section_Manager();
+        $manager->insert_section_before($page_id, $before, [
+            "id" => $section_id,
+            "type" => "custom-html",
+            "html" => $clean_html,
+        ]);
+
+        // Ship back the full sections list (re-ordered) so the client
+        // can swap its in-memory copy in one step rather than splicing.
+        $sections = $manager->get_sections($page_id);
+        $client_sections = array_map(
+            static fn($s) => [
+                "id" => $s["id"] ?? "",
+                "type" => $s["type"] ?? "",
+                "html" => $s["html"] ?? "",
+            ],
+            $sections,
+        );
+
+        wp_send_json_success([
+            "section_id" => $section_id,
+            "section_html" => $clean_html,
+            "sections" => $client_sections,
+        ]);
+    }
+
+    /**
+     * Update the raw HTML of an existing custom-html section. Distinct
+     * from naano_save_section_html (which is the bulk "save manual
+     * tweaks" endpoint) because this one re-runs the sanitizer to
+     * accept fresh user-pasted HTML rather than already-rendered DOM.
+     *
+     * POST: page_id, section_id, html
+     */
+    public static function handle_naano_update_custom_html_section(): void
+    {
+        self::verify_nonce();
+
+        if (!current_user_can("edit_pages")) {
+            wp_send_json_error([
+                "message" => __(
+                    "Insufficient permissions.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $page_id = self::get_int("page_id");
+        if (!$page_id || !current_user_can("edit_post", $page_id)) {
+            wp_send_json_error([
+                "message" => __(
+                    "You cannot edit this page.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $section_id = sanitize_title(
+            (string) wp_unslash($_POST["section_id"] ?? ""),
+        );
+        $raw_html = (string) wp_unslash($_POST["html"] ?? "");
+        if ($section_id === "") {
+            wp_send_json_error([
+                "message" => __(
+                    "Missing parameters.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $clean_html = Naano_HTML_Sanitizer::clean($raw_html);
+        // Saving an empty editor is allowed — the user can blank a
+        // widget and come back to fill it in. Store the marker comment
+        // so the widget keeps its identity in the section list.
+        if (trim($clean_html) === "") {
+            $clean_html = "<!-- naano:custom-html:empty -->";
+        }
+
+        $manager = new Naano_Section_Manager();
+        // Look up the existing section to make sure it really is a
+        // custom-html block — we don't want this endpoint to silently
+        // overwrite an AI-generated section with raw user HTML.
+        $existing = $manager->get_section($page_id, $section_id);
+        if (!$existing || ($existing["type"] ?? "") !== "custom-html") {
+            wp_send_json_error([
+                "message" => __(
+                    "Missing parameters.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+        $manager->update_section(
+            $page_id,
+            $section_id,
+            $clean_html,
+            "custom-html",
+        );
+
+        wp_send_json_success([
+            "section_id" => $section_id,
+            "section_html" => $clean_html,
+        ]);
     }
 
     // -------------------------------------------------------------------------

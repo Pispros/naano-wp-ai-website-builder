@@ -1116,10 +1116,7 @@ class Naano_Admin_Page
                     "Please enter a section name.",
                     "naano-ai-website-builder",
                 ),
-                "save_failed" => __(
-                    "Save failed.",
-                    "naano-ai-website-builder",
-                ),
+                "save_failed" => __("Save failed.", "naano-ai-website-builder"),
                 "save_failed_network" => __(
                     "Save failed (network).",
                     "naano-ai-website-builder",
@@ -1206,10 +1203,33 @@ class Naano_Admin_Page
                 ),
                 "retry" => __("Retry", "naano-ai-website-builder"),
                 "failed_label" => __("(failed)", "naano-ai-website-builder"),
-                "asset_added" => __(
-                    "Asset added!",
+                "custom_html_inserted" => __(
+                    "Custom HTML inserted! 🧱",
                     "naano-ai-website-builder",
                 ),
+                "custom_html_updated" => __(
+                    "Custom HTML updated! ✨",
+                    "naano-ai-website-builder",
+                ),
+                "custom_html_empty_hint" => __(
+                    "Click to edit HTML",
+                    "naano-ai-website-builder",
+                ),
+                "enter_html" => __(
+                    "Please enter some HTML.",
+                    "naano-ai-website-builder",
+                ),
+                "edit_custom_html" => __(
+                    "Edit custom HTML",
+                    "naano-ai-website-builder",
+                ),
+                "save" => __("Save", "naano-ai-website-builder"),
+                "insert" => __("Insert", "naano-ai-website-builder"),
+                "remove_bg_color" => __(
+                    "Remove background color",
+                    "naano-ai-website-builder",
+                ),
+                "asset_added" => __("Asset added!", "naano-ai-website-builder"),
                 "select_asset" => __(
                     "Select Asset",
                     "naano-ai-website-builder",

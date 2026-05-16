@@ -683,7 +683,7 @@ $translations = $translations ?? [];
 								</button>
 							</div>
 						</div>
-					</div>
+					</div><!-- .naano-drawer__actions -->
 
 				</div><!-- #naano-drawer-edit -->
 
@@ -868,9 +868,26 @@ $translations = $translations ?? [];
           "Background",
           "naano-ai-website-builder",
       ); ?></div>
-						<div class="naano-esp-row">
+						<div class="naano-esp-row naano-esp-row--with-clear">
 							<label><?php esc_html_e("Color", "naano-ai-website-builder"); ?></label>
 							<input type="color" class="naano-esp-color-input" data-prop="backgroundColor" value="#ffffff">
+							<!-- Quick-clear button: wipes the inline background-color
+							     instead of forcing the user to delete a hex value
+							     they don't see (color inputs always have one). The
+							     row uses .naano-esp-row--with-clear so the grid has
+							     a third auto-sized column for this button, keeping
+							     input + button on the same line. -->
+							<button type="button" class="naano-esp-clear-prop-btn" id="naano-esp-clear-bg-btn"
+									aria-label="<?php esc_attr_e(
+             "Remove background color",
+             "naano-ai-website-builder",
+         ); ?>"
+									title="<?php esc_attr_e(
+             "Remove background color",
+             "naano-ai-website-builder",
+         ); ?>">
+								<span class="dashicons dashicons-no-alt"></span>
+							</button>
 						</div>
 						<div class="naano-esp-row">
 							<label><?php esc_html_e("Image", "naano-ai-website-builder"); ?></label>
@@ -1075,6 +1092,54 @@ $translations = $translations ?? [];
 		</div>
 
 	</div><!-- #naano-element-style-panel -->
+
+	<!-- ===================================================================
+	     CUSTOM-HTML WIDGET EDITOR (floating, top-right of canvas)
+
+	     Hidden by default. Shown when the user clicks any custom-html
+	     widget in the iframe — that path bypasses the regular element
+	     style panel because the user pasted raw markup they want
+	     preserved verbatim, so the editor exposes the source HTML in a
+	     plain textarea instead. Save round-trips through
+	     naano_update_custom_html_section (server-side sanitizer rerun)
+	     and refreshes the live preview.
+	     =================================================================== -->
+	<div id="naano-custom-html-editor-panel" class="naano-custom-html-editor naano-esp--floating" style="display:none;" role="dialog" aria-label="<?php esc_attr_e(
+     "Edit custom HTML",
+     "naano-ai-website-builder",
+ ); ?>">
+		<div class="naano-custom-html-editor__header">
+			<span class="dashicons dashicons-editor-code naano-custom-html-editor__icon"></span>
+			<span class="naano-custom-html-editor__title">
+				<?php esc_html_e("Edit custom HTML", "naano-ai-website-builder"); ?>
+			</span>
+			<button type="button" class="naano-custom-html-editor__close" id="naano-custom-html-editor-close-btn"
+					aria-label="<?php esc_attr_e("Close (Esc)", "naano-ai-website-builder"); ?>">
+				<span class="dashicons dashicons-no-alt"></span>
+			</button>
+		</div>
+		<div class="naano-custom-html-editor__body">
+			<p class="naano-field-hint" style="margin:0 0 6px;">
+				<?php esc_html_e(
+        "Paste raw HTML below. Scripts and event handlers are stripped on save.",
+        "naano-ai-website-builder",
+    ); ?>
+			</p>
+			<textarea id="naano-custom-html-editor-input" class="naano-textarea naano-custom-html-editor__textarea" rows="14"
+					  placeholder="<?php esc_attr_e(
+           '<div class="my-block">…</div>',
+           "naano-ai-website-builder",
+       ); ?>" spellcheck="false"></textarea>
+		</div>
+		<div class="naano-custom-html-editor__footer">
+			<button type="button" class="naano-btn-ghost" id="naano-custom-html-editor-cancel-btn">
+				<?php esc_html_e("Cancel", "naano-ai-website-builder"); ?>
+			</button>
+			<button type="button" class="naano-btn-generate" id="naano-custom-html-editor-save-btn">
+				<?php esc_html_e("Save", "naano-ai-website-builder"); ?>
+			</button>
+		</div>
+	</div><!-- #naano-custom-html-editor-panel -->
 
 </div><!-- .naano-vb -->
 

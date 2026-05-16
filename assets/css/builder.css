@@ -1913,6 +1913,14 @@ body.naano-fullscreen #wpbody-content > .wrap {
     align-items: center;
     gap: 8px;
 }
+/* Variant: row with a trailing "clear this property" button
+   (currently used for bg-color). A third auto-sized column keeps
+   input + button on the same horizontal line instead of letting the
+   button wrap below the input — which is what a 2-column grid would
+   otherwise force. */
+.naano-element-style-panel .naano-esp-row--with-clear {
+    grid-template-columns: 72px 1fr auto;
+}
 .naano-element-style-panel .naano-esp-row > label {
     font-size: 11.5px;
     color: #4b5563;
@@ -2004,12 +2012,24 @@ body.naano-fullscreen #wpbody-content > .wrap {
     line-height: 1.4;
 }
 
-/* Footer with action buttons split left (destructive/AI) / right (close/apply) */
+/* Footer with action buttons. Originally split left (destructive/AI) /
+ * right (close/apply) on a single flex row, but with 4 buttons and one
+ * long label ("Edit section with AI") that leaves the AI button wrapping
+ * onto 4 cramped lines on smaller drawers. Switched to a 2-column grid
+ * so we always get exactly 2 buttons per row, evenly sized, no wrap.
+ *
+ * Layout becomes:
+ *   row 1:  [Delete]            [Edit section with AI]
+ *   row 2:  [Done]               [Apply]
+ *
+ * Wrappers (.naano-esp__footer-left/-right) keep their semantic role
+ * but stop being layout containers — display:contents makes their
+ * children participate directly in the parent grid. */
 .naano-esp__footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-flow: row;
+    gap: 6px 8px;
     padding: 10px 12px;
     border-top: 1px solid #e5e7eb;
     background: #fafafa;
@@ -2017,9 +2037,16 @@ body.naano-fullscreen #wpbody-content > .wrap {
 }
 .naano-esp__footer-left,
 .naano-esp__footer-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display: contents;
+}
+.naano-esp__footer .naano-btn-ghost,
+.naano-esp__footer .naano-btn-generate {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .naano-element-style-panel .naano-btn-ghost {
@@ -2301,4 +2328,179 @@ overlapping it. */ @media (max-width: 900px) {
     width: 14px;
     height: 14px;
     color: #58a6ff;
+}
+
+/* ============================================================================
+   CUSTOM-HTML WIDGET EDITOR
+   Floating panel that opens when the user clicks any custom-html widget in
+   the iframe (or right after dropping a fresh one via the iframe's "+"
+   hover button). Shares position/animation with .naano-esp--floating so
+   it sits in the same top-right slot as the regular element editor.
+   ============================================================================ */
+
+.naano-custom-html-editor.naano-esp--floating {
+    position: fixed;
+    top: 76px;
+    right: 16px;
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 100px);
+    z-index: 100051; /* one above the regular ESP so it wins ties */
+    background: #ffffff;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.18),
+        0 2px 6px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: naano-esp-slide-in 0.18s ease-out;
+}
+
+.naano-custom-html-editor__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(180deg, #fafafa, #f3f4f6);
+    flex-shrink: 0;
+}
+
+.naano-custom-html-editor__icon {
+    color: #2271b1;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.naano-custom-html-editor__title {
+    font-weight: 600;
+    font-size: 13px;
+    color: #111827;
+    flex: 1;
+    min-width: 0;
+}
+
+.naano-custom-html-editor__close {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: background 0.12s;
+}
+
+.naano-custom-html-editor__close:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.naano-custom-html-editor__body {
+    padding: 12px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.naano-custom-html-editor__textarea {
+    width: 100%;
+    min-height: 240px;
+    font-family:
+        ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 10px;
+    resize: vertical;
+    tab-size: 2;
+}
+
+.naano-custom-html-editor__textarea:focus {
+    outline: none;
+    border-color: #2271b1;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.25);
+}
+
+.naano-custom-html-editor__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid #e5e7eb;
+    background: #fafafa;
+    flex-shrink: 0;
+}
+
+.naano-custom-html-editor__footer .naano-btn-ghost {
+    padding: 8px 14px;
+    font-size: 13px;
+    background: transparent;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+    border-radius: 6px;
+    cursor: pointer;
+    transition:
+        background 0.12s,
+        color 0.12s,
+        border-color 0.12s;
+}
+
+.naano-custom-html-editor__footer .naano-btn-ghost:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.naano-custom-html-editor__footer .naano-btn-generate {
+    padding: 8px 18px;
+    font-size: 13px;
+    width: auto;
+}
+
+/* Clear-property buttons in the element-style panel rows. Currently
+ * only used for bg-color (color inputs always have a value, so the
+ * only way to "unset" them is via this button), but the styles are
+ * generic so future properties can reuse it.
+ *
+ * NOTE: no margin-left here — the parent row uses
+ * .naano-esp-row--with-clear which provides a dedicated 3rd grid
+ * track and the row's gap: 8px already spaces the button correctly. */
+.naano-esp-clear-prop-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #6b7280;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    transition:
+        background 0.12s,
+        color 0.12s,
+        border-color 0.12s;
+}
+
+.naano-esp-clear-prop-btn:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
+
+.naano-esp-clear-prop-btn .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    line-height: 14px;
 }
