@@ -519,12 +519,6 @@ naano-ai-website-builder/
 
 ---
 
-## How to Rename the Plugin
-
-See [RENAMING.md](RENAMING.md) for a full step-by-step guide including automated `sed` / PowerShell commands and a database migration snippet.
-
----
-
 ## Contributing
 
 Pull requests are welcome! Please open an issue first for significant changes.
