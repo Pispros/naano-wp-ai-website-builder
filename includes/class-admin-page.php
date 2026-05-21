@@ -151,13 +151,14 @@ class Naano_Admin_Page
         // Read-only check of an unauthenticated query parameter — there is
         // no form submission to verify here. The actual builder access is
         // gated by current_user_can('manage_options') below.
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended
         if (
-            !empty($_GET["naano_builder"]) &&
-            current_user_can("manage_options")
+            ! empty( $_GET["naano_builder"] ) &&
+            current_user_can( "manage_options" )
         ) {
             return false;
         }
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
         return $show;
     }
 
@@ -348,16 +349,16 @@ class Naano_Admin_Page
     {
         // This is a register_setting() sanitize callback, invoked by
         // options.php after that page has already validated its own nonce.
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        // phpcs:disable WordPress.Security.NonceVerification.Missing
         $keys = array_map(
             "sanitize_text_field",
             (array) wp_unslash($_POST["naano_vars_keys"] ?? []),
         );
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $values = array_map(
             "sanitize_text_field",
             (array) wp_unslash($_POST["naano_vars_values"] ?? []),
         );
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
 
         $result = [];
         foreach ($keys as $i => $key) {
@@ -382,16 +383,16 @@ class Naano_Admin_Page
     {
         // This is a register_setting() sanitize callback, invoked by
         // options.php after that page has already validated its own nonce.
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        // phpcs:disable WordPress.Security.NonceVerification.Missing
         $codes = array_map(
             "sanitize_key",
             (array) wp_unslash($_POST["naano_lang_codes"] ?? []),
         );
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $labels = array_map(
             "sanitize_text_field",
             (array) wp_unslash($_POST["naano_lang_labels"] ?? []),
         );
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
 
         $result = [];
         foreach ($codes as $i => $code) {
@@ -865,24 +866,23 @@ class Naano_Admin_Page
      */
     public function maybe_render_frontend_builder(): void
     {
-        // Read-only check of an unauthenticated query parameter — this is
+        // Read-only check of unauthenticated query parameters — this is
         // a frontend route gate, not a form submission. Access is protected
         // by current_user_can('manage_options') below.
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended
         if (
-            empty($_GET["naano_builder"]) ||
-            !current_user_can("manage_options")
+            empty( $_GET["naano_builder"] ) ||
+            ! current_user_can( "manage_options" )
         ) {
             return;
         }
 
         // Determine the page ID from the queried object (e.g. /my-page/?naano_builder=1).
         // When naano_new=1 is present the user wants a blank new page — ignore the queried object.
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        $page_id = empty($_GET["naano_new"])
-            ? (get_queried_object_id() ?:
-            0)
+        $page_id = empty( $_GET["naano_new"] )
+            ? ( get_queried_object_id() ?: 0 )
             : 0;
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
         // Enqueue all required assets for the builder.
         wp_enqueue_style("dashicons");

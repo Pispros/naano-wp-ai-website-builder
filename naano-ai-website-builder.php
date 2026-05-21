@@ -3,7 +3,7 @@
  * Plugin Name: Naano AI Website Builder
  * Plugin URI:  https://github.com/Pispros/naano-ai-website-builder
  * Description: AI-powered section-by-section website builder using Claude, Gemini, or Kimi. Pure PHP — no external backend needed.
- * Version:     2.1.0
+ * Version:     2.1.2
  * Author:      Naano
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,7 +17,7 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-define("NAANO_VERSION", "2.1.0");
+define("NAANO_VERSION", "2.1.2");
 define("NAANO_PLUGIN_DIR", plugin_dir_path(__FILE__));
 define("NAANO_PLUGIN_URL", plugin_dir_url(__FILE__));
 define("NAANO_PLUGIN_BASENAME", plugin_basename(__FILE__));
@@ -93,7 +93,7 @@ function naano_deactivate(): void
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_naano_%'",
     );
     // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-    wp_cache_flush_group('options');
+    wp_cache_flush_group("options");
 }
 register_deactivation_hook(__FILE__, "naano_deactivate");
 

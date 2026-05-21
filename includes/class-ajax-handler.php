@@ -1316,12 +1316,13 @@ class Naano_Ajax_Handler
      */
     private static function get_int(string $key): int
     {
-        if (!isset($_POST[$key])) {
-            return 0;
-        }
         // Nonce verification is performed by every caller of get_int() at
         // the top of their handler via check_ajax_referer().
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing
-        return (int) sanitize_text_field(wp_unslash($_POST[$key]));
+        // phpcs:disable WordPress.Security.NonceVerification.Missing
+        if ( ! isset( $_POST[ $key ] ) ) {
+            return 0;
+        }
+        return (int) sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+        // phpcs:enable WordPress.Security.NonceVerification.Missing
     }
 }
