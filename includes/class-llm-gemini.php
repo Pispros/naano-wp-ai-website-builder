@@ -151,7 +151,7 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface
     }
 
     /**
-     * Execute the cURL request.
+     * Execute the HTTP request via WordPress HTTP API.
      *
      * @param string $endpoint Full URL with key.
      * @param array  $payload  JSON payload.
@@ -164,41 +164,31 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface
         if ($json_body === false) {
             throw new RuntimeException(
                 "Gemini request: failed to encode payload as JSON (" .
-                    json_last_error_msg() .
+                    esc_html(json_last_error_msg()) .
                     ").",
             );
         }
 
-        $ch = curl_init($endpoint);
+        $args = Naano_LLM_Utils::default_request_args(self::TIMEOUT_SECONDS) + [
+            "headers" => ["Content-Type" => "application/json"],
+            "body" => $json_body,
+        ];
 
-        // Set RETURNTRANSFER FIRST, individually. See class-llm-openai.php
-        // for the full rationale.
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = wp_remote_post($endpoint, $args);
 
-        curl_setopt_array(
-            $ch,
-            [
-                CURLOPT_POSTFIELDS => $json_body,
-                CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
-                CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
-            ] + Naano_LLM_Utils::default_curl_opts(),
-        );
-
-        $body = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $error = curl_error($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($errno !== CURLE_OK) {
-            throw new RuntimeException("Gemini cURL error: " . $error);
+        if (is_wp_error($response)) {
+            $error = $response->get_error_message();
+            throw new RuntimeException("Gemini HTTP error: " . esc_html($error));
         }
+
+        $body = wp_remote_retrieve_body($response);
+        $code = (int) wp_remote_retrieve_response_code($response);
 
         if (!is_string($body)) {
             throw new RuntimeException(
-                "Gemini cURL: curl_exec returned non-string (" .
-                    gettype($body) .
-                    "). CURLOPT_RETURNTRANSFER was likely rejected by curl_setopt_array.",
+                "Gemini HTTP: wp_remote_retrieve_body returned non-string (" .
+                    esc_html(gettype($body)) .
+                    ").",
             );
         }
 
@@ -225,11 +215,11 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface
                     $hint =
                         "Gemini API rate limit reached. Please wait a moment and try again.";
                 }
-                throw new RuntimeException($hint);
+                throw new RuntimeException(esc_html($hint));
             }
 
             throw new RuntimeException(
-                "Gemini API error (HTTP {$code}): {$msg}",
+                esc_html(sprintf("Gemini API error (HTTP %d): %s", $code, $msg)),
             );
         }
 

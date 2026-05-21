@@ -153,12 +153,18 @@ class Naano_Job_Manager
         ];
 
         $stringified = is_string($entry) ? $entry : wp_json_encode($entry);
-        @error_log(
-            "[Naano Job " .
-                $job_id .
-                "] " .
-                substr((string) $stringified, 0, 2000),
-        );
+        // Only emit to PHP error log when WP_DEBUG / WP_DEBUG_LOG is on.
+        // This keeps the production log clean while preserving the
+        // diagnostic trail developers expect on staging.
+        if (defined("WP_DEBUG") && WP_DEBUG) {
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+            @error_log(
+                "[Naano Job " .
+                    $job_id .
+                    "] " .
+                    substr((string) $stringified, 0, 2000),
+            );
+        }
 
         self::persist($job_id, $job);
     }

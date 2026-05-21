@@ -183,11 +183,11 @@ class Naano_LLM_OpenAI implements Naano_LLM_Provider_Interface
     }
 
     /**
-     * Execute the cURL request.
+     * Execute the HTTP request via WordPress HTTP API.
      *
      * @param array $payload JSON payload.
      * @return array Decoded response array.
-     * @throws RuntimeException On cURL or HTTP error.
+     * @throws RuntimeException On HTTP error.
      */
     private function request(array $payload): array
     {
@@ -195,51 +195,34 @@ class Naano_LLM_OpenAI implements Naano_LLM_Provider_Interface
         if ($json_body === false) {
             throw new RuntimeException(
                 "OpenAI request: failed to encode payload as JSON (" .
-                    json_last_error_msg() .
+                    esc_html(json_last_error_msg()) .
                     ").",
             );
         }
 
-        $ch = curl_init(self::API_ENDPOINT);
+        $args = Naano_LLM_Utils::default_request_args(self::TIMEOUT_SECONDS) + [
+            "headers" => [
+                "Content-Type" => "application/json",
+                "Authorization" => "Bearer " . $this->api_key,
+            ],
+            "body" => $json_body,
+        ];
 
-        // Set RETURNTRANSFER FIRST, individually. curl_setopt_array() stops
-        // processing on the first failed option without warning, so we must
-        // never put a critical option (like RETURNTRANSFER) anywhere except
-        // first. Without it, curl_exec() returns bool(true) on success, which
-        // then becomes (string)"1" → json_decode = int(1) → (array)[1], and
-        // the caller throws "Unexpected response structure: [1]".
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = wp_remote_post(self::API_ENDPOINT, $args);
 
-        curl_setopt_array(
-            $ch,
-            [
-                CURLOPT_POSTFIELDS => $json_body,
-                CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
-                CURLOPT_HTTPHEADER => [
-                    "Content-Type: application/json",
-                    "Authorization: Bearer " . $this->api_key,
-                ],
-            ] + Naano_LLM_Utils::default_curl_opts(),
-        );
-
-        $body = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $error = curl_error($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($errno !== CURLE_OK) {
-            throw new RuntimeException("OpenAI cURL error: " . $error);
+        if (is_wp_error($response)) {
+            $error = $response->get_error_message();
+            throw new RuntimeException("OpenAI HTTP error: " . esc_html($error));
         }
 
-        // Defensive: if curl_exec returns anything other than a string, it
-        // means RETURNTRANSFER was silently dropped by curl_setopt_array.
-        // Surface the real cause instead of the cryptic "[1]" downstream.
+        $body = wp_remote_retrieve_body($response);
+        $code = (int) wp_remote_retrieve_response_code($response);
+
         if (!is_string($body)) {
             throw new RuntimeException(
-                "OpenAI cURL: curl_exec returned non-string (" .
-                    gettype($body) .
-                    "). CURLOPT_RETURNTRANSFER was likely rejected by curl_setopt_array.",
+                "OpenAI HTTP: wp_remote_retrieve_body returned non-string (" .
+                    esc_html(gettype($body)) .
+                    ").",
             );
         }
 
@@ -263,7 +246,7 @@ class Naano_LLM_OpenAI implements Naano_LLM_Provider_Interface
             }
 
             throw new RuntimeException(
-                "OpenAI API error (HTTP {$code}): {$msg}",
+                esc_html(sprintf("OpenAI API error (HTTP %d): %s", $code, $msg)),
             );
         }
 

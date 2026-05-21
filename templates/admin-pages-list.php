@@ -10,10 +10,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Fetch all pages that have Naano AI sections saved.
-$ai_pages = get_posts( [
+// We legitimately need to filter pages by the presence of _naano_sections
+// meta — there's no higher-level WP API for this.
+$naano_ai_pages = get_posts( [
 	'post_type'      => 'page',
 	'post_status'    => 'any',
 	'posts_per_page' => -1,
+	// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 	'meta_key'       => '_naano_sections',
 	'orderby'        => 'modified',
 	'order'          => 'DESC',
@@ -22,11 +25,11 @@ $ai_pages = get_posts( [
 // Translation languages configured in settings.
 $naano_languages      = get_option( 'naano_languages', [] );
 if ( ! is_array( $naano_languages ) ) { $naano_languages = []; }
-$_default_lang_label  = get_option( 'naano_default_lang_label', '' );
-$naano_lang_map       = [ 'default' => $_default_lang_label !== '' ? $_default_lang_label : __( 'Default', 'naano-ai-website-builder' ) ];
-foreach ( $naano_languages as $lentry ) {
-	if ( ! empty( $lentry['code'] ) ) {
-		$naano_lang_map[ $lentry['code'] ] = $lentry['label'] ?? strtoupper( $lentry['code'] );
+$naano_default_lang_label  = get_option( 'naano_default_lang_label', '' );
+$naano_lang_map       = [ 'default' => $naano_default_lang_label !== '' ? $naano_default_lang_label : __( 'Default', 'naano-ai-website-builder' ) ];
+foreach ( $naano_languages as $naano_lentry ) {
+	if ( ! empty( $naano_lentry['code'] ) ) {
+		$naano_lang_map[ $naano_lentry['code'] ] = $naano_lentry['label'] ?? strtoupper( $naano_lentry['code'] );
 	}
 }
 ?>
@@ -36,7 +39,12 @@ foreach ( $naano_languages as $lentry ) {
 		<?php esc_html_e( 'Naano AI Builder — Pages', 'naano-ai-website-builder' ); ?>
 	</h1>
 
-	<?php if ( isset( $_GET['deleted'] ) ) : ?>
+	<?php
+	// Read-only "deleted=1" success flag after the admin-post trash flow.
+	// The actual delete is nonce-verified in handle_delete_page(); this is
+	// just the post-redirect display.
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( isset( $_GET['deleted'] ) ) : ?>
 		<div class="notice notice-success is-dismissible">
 			<p><?php esc_html_e( 'Page moved to trash.', 'naano-ai-website-builder' ); ?></p>
 		</div>
@@ -50,7 +58,7 @@ foreach ( $naano_languages as $lentry ) {
 		</a>
 	</div>
 
-	<?php if ( empty( $ai_pages ) ) : ?>
+	<?php if ( empty( $naano_ai_pages ) ) : ?>
 		<div class="naano-card" style="padding:30px;text-align:center;">
 			<span class="dashicons dashicons-admin-page" style="font-size:48px;width:48px;height:48px;color:#a7aaad;display:block;margin:0 auto 12px;"></span>
 			<p style="font-size:15px;color:#50575e;">
@@ -75,32 +83,36 @@ foreach ( $naano_languages as $lentry ) {
 					</tr>
 				</thead>
 				<tbody>
-					<?php foreach ( $ai_pages as $page ) :
-					$sections      = get_post_meta( $page->ID, '_naano_sections', true );
-					$section_count = is_array( $sections ) ? count( $sections ) : 0;
-					$builder_url   = add_query_arg( 'naano_builder', '1', get_permalink( $page->ID ) );
-					$page_lang     = get_post_meta( $page->ID, '_naano_lang', true );
-					$is_translation = (bool) get_post_meta( $page->ID, '_naano_translation_of', true );
-					$root_id        = $is_translation ? (int) get_post_meta( $page->ID, '_naano_translation_of', true ) : $page->ID;
-					// Sibling translations (only needed on originals).
-					$sibling_translations = $is_translation ? [] : get_posts( [
+					<?php foreach ( $naano_ai_pages as $page ) :
+					$naano_sections      = get_post_meta( $page->ID, '_naano_sections', true );
+					$naano_section_count = is_array( $naano_sections ) ? count( $naano_sections ) : 0;
+					$naano_builder_url   = add_query_arg( 'naano_builder', '1', get_permalink( $page->ID ) );
+					$naano_page_lang     = get_post_meta( $page->ID, '_naano_lang', true );
+					$naano_is_translation = (bool) get_post_meta( $page->ID, '_naano_translation_of', true );
+					$naano_root_id        = $naano_is_translation ? (int) get_post_meta( $page->ID, '_naano_translation_of', true ) : $page->ID;
+					// Sibling translations (only needed on originals). We
+					// legitimately need to filter by _naano_translation_of
+					// pointing at this page's ID.
+					$naano_sibling_translations = $naano_is_translation ? [] : get_posts( [
 						'post_type'      => 'page',
 						'post_status'    => 'any',
 						'posts_per_page' => -1,
+						// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 						'meta_key'       => '_naano_translation_of',
+						// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 						'meta_value'     => $page->ID,
 					] );
 					// Language codes already translated (to disable those options in the picker).
-					$translated_langs = [];
-					foreach ( $sibling_translations as $st ) {
-						$tl = get_post_meta( $st->ID, '_naano_lang', true );
-						if ( $tl ) { $translated_langs[] = $tl; }
+					$naano_translated_langs = [];
+					foreach ( $naano_sibling_translations as $naano_st ) {
+						$naano_tl = get_post_meta( $naano_st->ID, '_naano_lang', true );
+						if ( $naano_tl ) { $naano_translated_langs[] = $naano_tl; }
 					}
 					?>
 					<tr>
 						<td class="column-title column-primary">
 							<strong>
-							<a href="<?php echo esc_url( $builder_url ); ?>" target="_blank">
+							<a href="<?php echo esc_url( $naano_builder_url ); ?>" target="_blank">
 									<?php echo esc_html( $page->post_title ?: __( '(no title)', 'naano-ai-website-builder' ) ); ?>
 								</a>
 							</strong>
@@ -111,22 +123,22 @@ foreach ( $naano_languages as $lentry ) {
 							</span>
 						</td>					<!-- Language column -->
 					<td>
-						<?php if ( $page_lang ) : ?>
-							<span class="naano-status-badge naano-status-lang"><?php echo esc_html( strtoupper( $page_lang ) ); ?></span>
+						<?php if ( $naano_page_lang ) : ?>
+							<span class="naano-status-badge naano-status-lang"><?php echo esc_html( strtoupper( $naano_page_lang ) ); ?></span>
 						<?php endif; ?>
-						<?php if ( $is_translation ) : ?>
-							<a href="<?php echo esc_url( add_query_arg( 'naano_builder', '1', get_permalink( $root_id ) ) ); ?>"
+						<?php if ( $naano_is_translation ) : ?>
+							<a href="<?php echo esc_url( add_query_arg( 'naano_builder', '1', get_permalink( $naano_root_id ) ) ); ?>"
 							   class="naano-lang-orig-link" title="<?php esc_attr_e( 'Go to original page', 'naano-ai-website-builder' ); ?>">
 								&larr; <?php esc_html_e( 'Original', 'naano-ai-website-builder' ); ?>
 							</a>
 						<?php else : ?>
-							<?php foreach ( $sibling_translations as $st ) :
-								$st_lang = get_post_meta( $st->ID, '_naano_lang', true );
+							<?php foreach ( $naano_sibling_translations as $naano_st ) :
+								$naano_st_lang = get_post_meta( $naano_st->ID, '_naano_lang', true );
 							?>
-								<a href="<?php echo esc_url( add_query_arg( 'naano_builder', '1', get_permalink( $st->ID ) ) ); ?>"
+								<a href="<?php echo esc_url( add_query_arg( 'naano_builder', '1', get_permalink( $naano_st->ID ) ) ); ?>"
 								   class="naano-status-badge naano-status-lang naano-lang-badge--link"
-								   title="<?php echo esc_attr( $naano_lang_map[ $st_lang ] ?? strtoupper( $st_lang ) ); ?>">
-									<?php echo esc_html( strtoupper( $st_lang ) ); ?>
+								   title="<?php echo esc_attr( $naano_lang_map[ $naano_st_lang ] ?? strtoupper( $naano_st_lang ) ); ?>">
+									<?php echo esc_html( strtoupper( $naano_st_lang ) ); ?>
 								</a>
 							<?php endforeach; ?>
 							<?php if ( ! empty( $naano_languages ) ) : ?>
@@ -143,13 +155,13 @@ foreach ( $naano_languages as $lentry ) {
 										<input type="hidden" name="page_id" value="<?php echo esc_attr( $page->ID ); ?>">
 										<?php wp_nonce_field( 'naano_duplicate_translation_' . $page->ID ); ?>
 										<select name="lang" class="naano-lang-select-admin" style="margin-right:4px;">
-											<?php foreach ( $naano_languages as $lentry ) :
-												$lcode  = $lentry['code']  ?? '';
-												$llabel = $lentry['label'] ?? strtoupper( $lcode );
-												$ldone  = in_array( $lcode, $translated_langs, true );
+											<?php foreach ( $naano_languages as $naano_lentry ) :
+												$naano_lcode  = $naano_lentry['code']  ?? '';
+												$naano_llabel = $naano_lentry['label'] ?? strtoupper( $naano_lcode );
+												$naano_ldone  = in_array( $naano_lcode, $naano_translated_langs, true );
 											?>
-											<option value="<?php echo esc_attr( $lcode ); ?>" <?php disabled( $ldone ); ?>>
-												<?php echo esc_html( $llabel . ' (' . strtoupper( $lcode ) . ')' . ( $ldone ? ' ✓' : '' ) ); ?>
+											<option value="<?php echo esc_attr( $naano_lcode ); ?>" <?php disabled( $naano_ldone ); ?>>
+												<?php echo esc_html( $naano_llabel . ' (' . strtoupper( $naano_lcode ) . ')' . ( $naano_ldone ? ' ✓' : '' ) ); ?>
 											</option>
 											<?php endforeach; ?>
 										</select>
@@ -164,10 +176,10 @@ foreach ( $naano_languages as $lentry ) {
 								</div>
 							<?php endif; ?>
 						<?php endif; ?>
-					</td>						<td><?php echo (int) $section_count; ?></td>
+					</td>						<td><?php echo (int) $naano_section_count; ?></td>
 						<td><?php echo esc_html( get_the_modified_date( 'Y-m-d H:i', $page ) ); ?></td>
 						<td class="naano-row-actions">
-							<a href="<?php echo esc_url( $builder_url ); ?>"
+							<a href="<?php echo esc_url( $naano_builder_url ); ?>"
 							   class="button button-small" target="_blank">
 								<span class="dashicons dashicons-superhero-alt" style="vertical-align:middle;margin-top:-2px;font-size:14px;width:14px;height:14px;"></span>
 								<?php esc_html_e( 'Open Builder', 'naano-ai-website-builder' ); ?>
@@ -178,8 +190,8 @@ foreach ( $naano_languages as $lentry ) {
 							<?php esc_html_e( 'View', 'naano-ai-website-builder' ); ?>
 						</a>
 						<?php
-						$home_page_id = (int) get_option( 'page_on_front' );
-						if ( get_option( 'show_on_front' ) === 'page' && $home_page_id === $page->ID ) :
+						$naano_home_page_id = (int) get_option( 'page_on_front' );
+						if ( get_option( 'show_on_front' ) === 'page' && $naano_home_page_id === $page->ID ) :
 						?>
 							<span class="naano-status-badge naano-status-homepage" style="margin-left:6px;">
 								<?php esc_html_e( 'Homepage', 'naano-ai-website-builder' ); ?>

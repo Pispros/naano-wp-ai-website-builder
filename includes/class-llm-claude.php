@@ -145,11 +145,11 @@ class Naano_LLM_Claude implements Naano_LLM_Provider_Interface
     }
 
     /**
-     * Execute the cURL request.
+     * Execute the HTTP request via WordPress HTTP API.
      *
      * @param array $payload JSON payload.
      * @return array Decoded response array.
-     * @throws RuntimeException On cURL or HTTP error.
+     * @throws RuntimeException On HTTP error.
      */
     private function request(array $payload): array
     {
@@ -157,47 +157,35 @@ class Naano_LLM_Claude implements Naano_LLM_Provider_Interface
         if ($json_body === false) {
             throw new RuntimeException(
                 "Claude request: failed to encode payload as JSON (" .
-                    json_last_error_msg() .
+                    esc_html(json_last_error_msg()) .
                     ").",
             );
         }
 
-        $ch = curl_init(self::API_ENDPOINT);
+        $args = Naano_LLM_Utils::default_request_args(self::TIMEOUT_SECONDS) + [
+            "headers" => [
+                "Content-Type" => "application/json",
+                "x-api-key" => $this->api_key,
+                "anthropic-version" => self::API_VERSION,
+            ],
+            "body" => $json_body,
+        ];
 
-        // Set RETURNTRANSFER FIRST, individually. See class-llm-openai.php
-        // for the full rationale: curl_setopt_array() stops on first failed
-        // option silently, and a missing RETURNTRANSFER causes curl_exec()
-        // to return bool(true), which downstream becomes the cryptic [1].
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = wp_remote_post(self::API_ENDPOINT, $args);
 
-        curl_setopt_array(
-            $ch,
-            [
-                CURLOPT_POSTFIELDS => $json_body,
-                CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
-                CURLOPT_HTTPHEADER => [
-                    "Content-Type: application/json",
-                    "x-api-key: " . $this->api_key,
-                    "anthropic-version: " . self::API_VERSION,
-                ],
-            ] + Naano_LLM_Utils::default_curl_opts(),
-        );
-
-        $body = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $error = curl_error($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($errno !== CURLE_OK) {
-            throw new RuntimeException("Claude cURL error: " . $error);
+        if (is_wp_error($response)) {
+            $error = $response->get_error_message();
+            throw new RuntimeException("Claude HTTP error: " . esc_html($error));
         }
+
+        $body = wp_remote_retrieve_body($response);
+        $code = (int) wp_remote_retrieve_response_code($response);
 
         if (!is_string($body)) {
             throw new RuntimeException(
-                "Claude cURL: curl_exec returned non-string (" .
-                    gettype($body) .
-                    "). CURLOPT_RETURNTRANSFER was likely rejected by curl_setopt_array.",
+                "Claude HTTP: wp_remote_retrieve_body returned non-string (" .
+                    esc_html(gettype($body)) .
+                    ").",
             );
         }
 
@@ -206,7 +194,7 @@ class Naano_LLM_Claude implements Naano_LLM_Provider_Interface
         if ($code !== 200) {
             $msg = $data["error"]["message"] ?? $body;
             throw new RuntimeException(
-                "Claude API error (HTTP {$code}): {$msg}",
+                esc_html(sprintf("Claude API error (HTTP %d): %s", $code, $msg)),
             );
         }
 

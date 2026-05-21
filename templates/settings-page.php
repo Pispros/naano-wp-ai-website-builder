@@ -9,21 +9,21 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-$provider = get_option("naano_provider", "claude");
-$api_key = get_option("naano_api_key", "");
-$model = get_option("naano_model", "");
-$variables = get_option("naano_variables", []);
-if (!is_array($variables)) {
-    $variables = [];
+$naano_provider = get_option("naano_provider", "claude");
+$naano_api_key = get_option("naano_api_key", "");
+$naano_model = get_option("naano_model", "");
+$naano_variables = get_option("naano_variables", []);
+if (!is_array($naano_variables)) {
+    $naano_variables = [];
 }
-$languages = get_option("naano_languages", []);
-if (!is_array($languages)) {
-    $languages = [];
+$naano_languages = get_option("naano_languages", []);
+if (!is_array($naano_languages)) {
+    $naano_languages = [];
 }
-$custom_prompt = get_option("naano_custom_prompt", "");
-$default_lang_label = get_option("naano_default_lang_label", "");
-$initial_refine = get_option("naano_initial_refinement_passes", 1);
-$update_refine = get_option("naano_update_refinement_passes", 1);
+$naano_custom_prompt = get_option("naano_custom_prompt", "");
+$naano_default_lang_label = get_option("naano_default_lang_label", "");
+$naano_initial_refine = get_option("naano_initial_refinement_passes", 1);
+$naano_update_refine = get_option("naano_update_refinement_passes", 1);
 ?>
 <div class="wrap naano-builder-wrap">
 	<h1 class="naano-page-title">
@@ -77,16 +77,16 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 					<td>
 						<select name="naano_provider" id="naano_provider">
 							<option value="claude"  <?php selected(
-           $provider,
+           $naano_provider,
            "claude",
        ); ?>>Claude (Anthropic)</option>
 							<option value="gemini"  <?php selected(
-           $provider,
+           $naano_provider,
            "gemini",
        ); ?>>Gemini (Google)</option>
-							<option value="openai"  <?php selected($provider, "openai"); ?>>OpenAI</option>
+							<option value="openai"  <?php selected($naano_provider, "openai"); ?>>OpenAI</option>
 							<option value="kimi"    <?php selected(
-           $provider,
+           $naano_provider,
            "kimi",
        ); ?>>Kimi (Moonshot)</option>
 						</select>
@@ -104,7 +104,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 							   name="naano_api_key"
 							   id="naano_api_key"
 							   class="regular-text"
-							   value="<?php echo esc_attr($api_key); ?>"
+							   value="<?php echo esc_attr($naano_api_key); ?>"
 							   autocomplete="new-password">
 						<button type="button" class="button" id="naano-save-api-key-btn" style="margin-left:8px;">
 							<?php esc_html_e("Save Key", "naano-ai-website-builder"); ?>
@@ -133,7 +133,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 							   name="naano_model"
 							   id="naano_model"
 							   class="regular-text"
-							   value="<?php echo esc_attr($model); ?>"
+							   value="<?php echo esc_attr($naano_model); ?>"
 							   placeholder="<?php esc_attr_e(
               "Leave blank for default model",
               "naano-ai-website-builder",
@@ -189,7 +189,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 							   name="naano_initial_refinement_passes"
 							   id="naano_initial_refinement_passes"
 							   class="small-text"
-							   value="<?php echo esc_attr($initial_refine); ?>"
+							   value="<?php echo esc_attr($naano_initial_refine); ?>"
 							   min="0"
 							   max="10">
 						<p class="description">
@@ -212,7 +212,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 							   name="naano_update_refinement_passes"
 							   id="naano_update_refinement_passes"
 							   class="small-text"
-							   value="<?php echo esc_attr($update_refine); ?>"
+							   value="<?php echo esc_attr($naano_update_refine); ?>"
 							   min="0"
 							   max="10">
 						<p class="description">
@@ -266,13 +266,13 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 					</tr>
 				</thead>
 				<tbody id="naano-variables-tbody">
-					<?php foreach ($variables as $key => $val): ?>
+					<?php foreach ($naano_variables as $naano_key => $naano_val): ?>
 					<tr class="naano-variable-row">
 						<td>
 							<input type="text"
 								   name="naano_vars_keys[]"
 								   class="regular-text"
-								   value="<?php echo esc_attr($key); ?>"
+								   value="<?php echo esc_attr($naano_key); ?>"
 								   placeholder="<?php esc_attr_e(
                "e.g. primary_color",
                "naano-ai-website-builder",
@@ -282,7 +282,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 							<input type="text"
 								   name="naano_vars_values[]"
 								   class="regular-text"
-								   value="<?php echo esc_attr($val); ?>"
+								   value="<?php echo esc_attr($naano_val); ?>"
 								   placeholder="<?php esc_attr_e(
                "e.g. #3B82F6",
                "naano-ai-website-builder",
@@ -295,7 +295,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 						</td>
 					</tr>
 					<?php endforeach; ?>
-					<?php if (empty($variables)): ?>
+					<?php if (empty($naano_variables)): ?>
 					<tr class="naano-variable-row">
 						<td>
 							<input type="text" name="naano_vars_keys[]" class="regular-text"
@@ -354,7 +354,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 						placeholder="<?php esc_attr_e(
           "e.g. Always write copy in a friendly, conversational tone. Avoid formal language. The brand voice is warm and approachable.",
           "naano-ai-website-builder",
-      ); ?>"><?php echo esc_textarea($custom_prompt); ?></textarea>
+      ); ?>"><?php echo esc_textarea($naano_custom_prompt); ?></textarea>
 					<p class="description"><?php esc_html_e(
          "These instructions are appended to the system prompt for every LLM call. You can also modify the full assembled prompt programmatically via the naano_system_prompt WordPress filter.",
          "naano-ai-website-builder",
@@ -466,7 +466,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 							   name="naano_default_lang_label"
 							   id="naano_default_lang_label"
 							   class="regular-text"
-							   value="<?php echo esc_attr($default_lang_label); ?>"
+							   value="<?php echo esc_attr($naano_default_lang_label); ?>"
 							   placeholder="<?php esc_attr_e(
               "e.g. English",
               "naano-ai-website-builder",
@@ -488,13 +488,13 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 					</tr>
 				</thead>
 				<tbody id="naano-languages-tbody">
-					<?php foreach ($languages as $lang): ?>
+					<?php foreach ($naano_languages as $naano_lang): ?>
 					<tr class="naano-language-row">
 						<td>
 							<input type="text"
 								   name="naano_lang_codes[]"
 								   class="regular-text"
-								   value="<?php echo esc_attr($lang["code"] ?? ""); ?>"
+								   value="<?php echo esc_attr($naano_lang["code"] ?? ""); ?>"
 								   placeholder="<?php esc_attr_e("e.g. es", "naano-ai-website-builder"); ?>"
 								   style="max-width:100px;">
 						</td>
@@ -502,7 +502,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 							<input type="text"
 								   name="naano_lang_labels[]"
 								   class="regular-text"
-								   value="<?php echo esc_attr($lang["label"] ?? ""); ?>"
+								   value="<?php echo esc_attr($naano_lang["label"] ?? ""); ?>"
 								   placeholder="<?php esc_attr_e(
                "e.g. Spanish",
                "naano-ai-website-builder",
@@ -515,7 +515,7 @@ $update_refine = get_option("naano_update_refinement_passes", 1);
 						</td>
 					</tr>
 					<?php endforeach; ?>
-					<?php if (empty($languages)): ?>
+					<?php if (empty($naano_languages)): ?>
 					<tr class="naano-language-row">
 						<td>
 							<input type="text" name="naano_lang_codes[]" class="regular-text"

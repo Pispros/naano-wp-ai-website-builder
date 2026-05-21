@@ -244,20 +244,18 @@ class Naano_Section_Manager
         }
         $style_block .= "</style>";
 
-        return <<<HTML
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{$title}</title>
-        {$style_block}
-        </head>
-        <body>
-        {$body}
-        </body>
-        </html>
-        HTML;
+        return "<!DOCTYPE html>\n" .
+            "<html lang=\"en\">\n" .
+            "<head>\n" .
+            "<meta charset=\"UTF-8\">\n" .
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" .
+            "<title>{$title}</title>\n" .
+            "{$style_block}\n" .
+            "</head>\n" .
+            "<body>\n" .
+            "{$body}\n" .
+            "</body>\n" .
+            "</html>";
     }
 
     /**

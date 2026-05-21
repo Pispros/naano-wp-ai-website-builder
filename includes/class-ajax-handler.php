@@ -72,7 +72,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_generate_site(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         $page_name = sanitize_text_field(wp_unslash($_POST["page_name"] ?? ""));
@@ -81,11 +81,15 @@ class Naano_Ajax_Handler
         );
         $sections = array_map(
             "sanitize_text_field",
-            (array) ($_POST["sections"] ?? []),
+            (array) wp_unslash($_POST["sections"] ?? []),
         );
 
         // Parse imported sections (header/footer cloned from other pages, no LLM needed).
-        // NOTE: wp_unslash only — sanitize_text_field would strip HTML tags from the JSON.
+        // The raw JSON must NOT be passed through sanitize_text_field because that
+        // would strip HTML tags and break the encoded section HTML. We unslash,
+        // json_decode, and validate the decoded structure below — that decode is
+        // itself a strong form of input validation (malformed JSON is rejected).
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $imported_json = wp_unslash($_POST["imported_sections"] ?? "");
         $imported_data = [];
         if ($imported_json) {
@@ -173,7 +177,10 @@ class Naano_Ajax_Handler
         }
 
         // Parse initial references (URLs+notes only — content is fetched in the runner).
+        // Same rationale as imported_sections: raw JSON cannot be passed through
+        // sanitize_text_field; we sanitize the decoded fields below.
         $initial_refs = [];
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $initial_refs_json = wp_unslash($_POST["initial_references"] ?? "");
         if ($initial_refs_json) {
             $decoded_refs = json_decode($initial_refs_json, true);
@@ -195,7 +202,7 @@ class Naano_Ajax_Handler
             "description" => $description,
             "sections" => $sections,
             "initial_references" => $initial_refs,
-            "wp_menu_id" => (int) ($_POST["wp_menu"] ?? 0),
+            "wp_menu_id" => (int) sanitize_text_field(wp_unslash($_POST["wp_menu"] ?? "0")),
         ];
 
         $job_id = Naano_Job_Manager::create("generate_site", $payload);
@@ -220,7 +227,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_update_section(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -260,7 +267,7 @@ class Naano_Ajax_Handler
             "assets" => $assets,
             "redirects" => $redirects,
             "client_refs" => $client_refs,
-            "wp_menu_id" => (int) ($_POST["wp_menu"] ?? 0),
+            "wp_menu_id" => (int) sanitize_text_field(wp_unslash($_POST["wp_menu"] ?? "0")),
         ];
 
         $job_id = Naano_Job_Manager::create("update_section", $payload);
@@ -277,7 +284,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_poll_job(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $job_id = sanitize_text_field(wp_unslash($_POST["job_id"] ?? ""));
         if (!$job_id) {
@@ -348,7 +355,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_api_key(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -382,7 +389,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_firecrawl_key(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -419,7 +426,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_test_firecrawl(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -496,7 +503,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_global_config(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -533,7 +540,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_enhance_prompt(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $raw_text = sanitize_textarea_field(
             wp_unslash($_POST["raw_text"] ?? ""),
@@ -572,7 +579,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_test_connection(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $provider = sanitize_text_field(wp_unslash($_POST["provider"] ?? ""));
         $api_key = sanitize_text_field(wp_unslash($_POST["api_key"] ?? ""));
@@ -609,7 +616,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_assets(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         if (!$page_id) {
@@ -618,6 +625,8 @@ class Naano_Ajax_Handler
             ]);
         }
 
+        // JSON payload; sanitization happens per field after decoding.
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $raw = wp_unslash($_POST["assets"] ?? "[]");
         $assets = json_decode($raw, true);
         if (!is_array($assets)) {
@@ -647,7 +656,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_redirects(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         if (!$page_id) {
@@ -656,6 +665,8 @@ class Naano_Ajax_Handler
             ]);
         }
 
+        // JSON payload; sanitization happens per field after decoding.
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $raw = wp_unslash($_POST["redirects"] ?? "[]");
         $redirects = json_decode($raw, true);
         if (!is_array($redirects)) {
@@ -684,7 +695,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_add_reference(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -724,7 +735,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_remove_reference(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -756,7 +767,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_delete_section(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -785,12 +796,12 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_reorder_sections(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
         $order = array_map(
             "sanitize_text_field",
-            (array) ($_POST["order"] ?? []),
+            (array) wp_unslash($_POST["order"] ?? []),
         );
 
         if (!$page_id || empty($order)) {
@@ -815,7 +826,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_export_html(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         $page_id = self::get_int("page_id");
 
@@ -854,7 +865,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_section_html(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -883,6 +894,10 @@ class Naano_Ajax_Handler
             ]);
         }
 
+        // JSON payload containing section HTML; raw HTML cannot be passed
+        // through sanitize_text_field. Each section's HTML is sanitized
+        // by Naano_Section_Manager::update_section() below.
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $sections_json = wp_unslash($_POST["sections"] ?? "");
         $sections = json_decode($sections_json, true);
         if (!is_array($sections)) {
@@ -922,6 +937,10 @@ class Naano_Ajax_Handler
         // The empty string is a legitimate value (= clear the override).
         $global_css_saved = false;
         if (array_key_exists("global_css", $_POST)) {
+            // CSS text cannot be passed through sanitize_text_field (which
+            // strips line breaks and tags). set_global_css() applies its own
+            // CSS-safe sanitization downstream.
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
             $global_css = (string) wp_unslash($_POST["global_css"]);
             $manager->set_global_css($page_id, $global_css);
             $global_css_saved = true;
@@ -943,7 +962,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_get_failed_sections(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -976,7 +995,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_as_page(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("publish_pages")) {
             wp_send_json_error([
@@ -1017,6 +1036,9 @@ class Naano_Ajax_Handler
         // empty (brand-new draft, edge race condition). Use the client-sent
         // HTML so the user doesn't lose their work, but strip scripts.
         if (!trim($html)) {
+            // Raw HTML payload; sanitize_text_field would strip every tag and
+            // destroy the page content. Scripts are stripped explicitly below.
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
             $raw_html = wp_unslash($_POST["html"] ?? "");
             $html =
                 preg_replace(
@@ -1069,7 +1091,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_set_homepage(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -1108,7 +1130,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_add_custom_html_section(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -1137,6 +1159,10 @@ class Naano_Ajax_Handler
         $before = sanitize_title(
             (string) wp_unslash($_POST["before_section_id"] ?? ""),
         );
+        // Raw HTML payload; sanitize_text_field would strip every tag.
+        // Naano_HTML_Sanitizer::clean() below applies the proper HTML-safe
+        // sanitization (script/event/javascript: URL stripping).
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $raw_html = (string) wp_unslash($_POST["html"] ?? "");
 
         // Run the same sanitizer used on LLM output: strips <script>,
@@ -1196,7 +1222,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_update_custom_html_section(): void
     {
-        self::verify_nonce();
+        check_ajax_referer( "naano_builder_nonce", "nonce" );
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -1220,6 +1246,10 @@ class Naano_Ajax_Handler
         $section_id = sanitize_title(
             (string) wp_unslash($_POST["section_id"] ?? ""),
         );
+        // Raw HTML payload; sanitize_text_field would strip every tag.
+        // Naano_HTML_Sanitizer::clean() below applies the proper HTML-safe
+        // sanitization (script/event/javascript: URL stripping).
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $raw_html = (string) wp_unslash($_POST["html"] ?? "");
         if ($section_id === "") {
             wp_send_json_error([
@@ -1286,6 +1316,12 @@ class Naano_Ajax_Handler
      */
     private static function get_int(string $key): int
     {
-        return (int) ($_POST[$key] ?? 0);
+        if (!isset($_POST[$key])) {
+            return 0;
+        }
+        // Nonce verification is performed by every caller of get_int() at
+        // the top of their handler via check_ajax_referer().
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        return (int) sanitize_text_field(wp_unslash($_POST[$key]));
     }
 }

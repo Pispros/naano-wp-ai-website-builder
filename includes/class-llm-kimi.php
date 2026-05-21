@@ -148,44 +148,34 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
         if ($json_body === false) {
             throw new RuntimeException(
                 "Kimi request: failed to encode payload as JSON (" .
-                    json_last_error_msg() .
+                    esc_html(json_last_error_msg()) .
                     ").",
             );
         }
 
-        $ch = curl_init(self::API_ENDPOINT);
+        $args = Naano_LLM_Utils::default_request_args(self::TIMEOUT_SECONDS) + [
+            "headers" => [
+                "Content-Type" => "application/json",
+                "Authorization" => "Bearer " . $this->api_key,
+            ],
+            "body" => $json_body,
+        ];
 
-        // Set RETURNTRANSFER FIRST, individually. See class-llm-openai.php
-        // for the full rationale.
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = wp_remote_post(self::API_ENDPOINT, $args);
 
-        curl_setopt_array(
-            $ch,
-            [
-                CURLOPT_POSTFIELDS => $json_body,
-                CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
-                CURLOPT_HTTPHEADER => [
-                    "Content-Type: application/json",
-                    "Authorization: Bearer " . $this->api_key,
-                ],
-            ] + Naano_LLM_Utils::default_curl_opts(),
-        );
-
-        $body = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $error = curl_error($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($errno !== CURLE_OK) {
-            throw new RuntimeException("Kimi cURL error: " . $error);
+        if (is_wp_error($response)) {
+            $error = $response->get_error_message();
+            throw new RuntimeException("Kimi HTTP error: " . esc_html($error));
         }
+
+        $body = wp_remote_retrieve_body($response);
+        $code = (int) wp_remote_retrieve_response_code($response);
 
         if (!is_string($body)) {
             throw new RuntimeException(
-                "Kimi cURL: curl_exec returned non-string (" .
-                    gettype($body) .
-                    "). CURLOPT_RETURNTRANSFER was likely rejected by curl_setopt_array.",
+                "Kimi HTTP: wp_remote_retrieve_body returned non-string (" .
+                    esc_html(gettype($body)) .
+                    ").",
             );
         }
 
@@ -193,7 +183,9 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
 
         if ($code !== 200) {
             $msg = $data["error"]["message"] ?? $body;
-            throw new RuntimeException("Kimi API error (HTTP {$code}): {$msg}");
+            throw new RuntimeException(
+                esc_html(sprintf("Kimi API error (HTTP %d): %s", $code, $msg)),
+            );
         }
 
         return (array) $data;

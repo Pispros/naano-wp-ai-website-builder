@@ -111,7 +111,12 @@ class Naano_Admin_Page
      */
     public function handle_delete_page(): void
     {
-        $page_id = (int) ($_POST["page_id"] ?? 0);
+        // The page_id is read first so we can build the per-page nonce action
+        // (naano_delete_page_<id>) that check_admin_referer verifies below.
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $page_id = isset($_POST["page_id"])
+            ? (int) sanitize_text_field(wp_unslash($_POST["page_id"]))
+            : 0;
 
         check_admin_referer("naano_delete_page_" . $page_id);
 
@@ -143,6 +148,10 @@ class Naano_Admin_Page
      */
     public function maybe_hide_admin_bar(bool $show): bool
     {
+        // Read-only check of an unauthenticated query parameter — there is
+        // no form submission to verify here. The actual builder access is
+        // gated by current_user_can('manage_options') below.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         if (
             !empty($_GET["naano_builder"]) &&
             current_user_can("manage_options")
@@ -337,13 +346,17 @@ class Naano_Admin_Page
      */
     public function sanitize_variables($input): array
     {
+        // This is a register_setting() sanitize callback, invoked by
+        // options.php after that page has already validated its own nonce.
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $keys = array_map(
             "sanitize_text_field",
-            (array) ($_POST["naano_vars_keys"] ?? []),
+            (array) wp_unslash($_POST["naano_vars_keys"] ?? []),
         );
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $values = array_map(
             "sanitize_text_field",
-            (array) ($_POST["naano_vars_values"] ?? []),
+            (array) wp_unslash($_POST["naano_vars_values"] ?? []),
         );
 
         $result = [];
@@ -367,13 +380,17 @@ class Naano_Admin_Page
      */
     public function sanitize_languages($input): array
     {
+        // This is a register_setting() sanitize callback, invoked by
+        // options.php after that page has already validated its own nonce.
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $codes = array_map(
             "sanitize_key",
-            (array) ($_POST["naano_lang_codes"] ?? []),
+            (array) wp_unslash($_POST["naano_lang_codes"] ?? []),
         );
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $labels = array_map(
             "sanitize_text_field",
-            (array) ($_POST["naano_lang_labels"] ?? []),
+            (array) wp_unslash($_POST["naano_lang_labels"] ?? []),
         );
 
         $result = [];
@@ -400,8 +417,16 @@ class Naano_Admin_Page
      */
     public function handle_duplicate_for_translation(): void
     {
-        $page_id = (int) ($_POST["page_id"] ?? 0);
-        $lang = sanitize_key($_POST["lang"] ?? "");
+        // The page_id is read first so we can build the per-page nonce action
+        // (naano_duplicate_translation_<id>) that check_admin_referer verifies.
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $page_id = isset($_POST["page_id"])
+            ? (int) sanitize_text_field(wp_unslash($_POST["page_id"]))
+            : 0;
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $lang = isset($_POST["lang"])
+            ? sanitize_key(wp_unslash($_POST["lang"]))
+            : "";
 
         check_admin_referer("naano_duplicate_translation_" . $page_id);
 
@@ -436,10 +461,13 @@ class Naano_Admin_Page
         }
 
         // If a translation for this language already exists, open it instead of creating a duplicate.
+        // Meta_query is the right WP_Query primitive here — we genuinely
+        // need to filter on two post-meta fields.
         $existing = get_posts([
             "post_type" => "page",
             "post_status" => "any",
             "posts_per_page" => 1,
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
             "meta_query" => [
                 ["key" => "_naano_translation_of", "value" => $root_id],
                 ["key" => "_naano_lang", "value" => $lang],
@@ -720,12 +748,16 @@ class Naano_Admin_Page
             ];
         }
 
-        // Translation children.
+        // Translation children. We legitimately need to filter pages by
+        // _naano_translation_of pointing at this root, and there's no
+        // higher-level WP API for that one-to-many relationship.
         $trans_pages = get_posts([
             "post_type" => "page",
             "post_status" => "publish",
             "posts_per_page" => -1,
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
             "meta_key" => "_naano_translation_of",
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
             "meta_value" => $root_id,
         ]);
         foreach ($trans_pages as $tp) {
@@ -761,46 +793,65 @@ class Naano_Admin_Page
             $lang_map[$current_lang] ?? strtoupper($current_lang),
         );
 
-        // phpcs:disable
-        return <<<HTML
-        <style id="naano-ls-css">
-        #naano-ls{position:fixed;bottom:24px;right:24px;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px}
-        #naano-ls *{box-sizing:border-box}
-        .naano-ls__trigger{display:flex;align-items:center;gap:6px;background:#1e293b;color:#f1f5f9;border:1px solid #334155;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35);transition:background .15s}
-        .naano-ls__trigger:hover{background:#334155}
-        .naano-ls__globe{width:16px;height:16px;fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-        .naano-ls__caret{width:10px;height:10px;fill:none;stroke:#94a3b8;stroke-width:2;transition:transform .2s;flex-shrink:0}
-        .naano-ls__caret--open{transform:rotate(180deg)}
-        .naano-ls__menu{display:none;position:absolute;bottom:calc(100% + 6px);right:0;background:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-        .naano-ls__menu--open{display:block}
-        .naano-ls__menu ul{list-style:none;margin:0;padding:4px 0}
-        .naano-ls__item{display:block;padding:8px 14px;color:#cbd5e1;text-decoration:none;white-space:nowrap;transition:background .12s,color .12s}
-        .naano-ls__item:hover{background:#334155;color:#f1f5f9}
-        .naano-ls__item--active{color:#60a5fa;font-weight:600;pointer-events:none;background:#1e3a5a}
-        </style>
-        <div id="naano-ls" role="navigation" aria-label="Language">
-          <div class="naano-ls__trigger" id="naano-ls-trigger" aria-haspopup="true" aria-expanded="false" tabindex="0">
-            <svg class="naano-ls__globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            <span id="naano-ls-label">{$current_label}</span>
-            <svg class="naano-ls__caret" id="naano-ls-caret" viewBox="0 0 10 10" aria-hidden="true"><polyline points="1,3 5,7 9,3"/></svg>
-          </div>
-          <div class="naano-ls__menu" id="naano-ls-menu" role="menu">
-            <ul>{$items_html}</ul>
-          </div>
-        </div>
-        <script id="naano-ls-js">
-        (function(){
-          var t=document.getElementById('naano-ls-trigger'),
-              m=document.getElementById('naano-ls-menu'),
-              c=document.getElementById('naano-ls-caret');
-          function open(){m.classList.add('naano-ls__menu--open');c.classList.add('naano-ls__caret--open');t.setAttribute('aria-expanded','true');}
-          function close(){m.classList.remove('naano-ls__menu--open');c.classList.remove('naano-ls__caret--open');t.setAttribute('aria-expanded','false');}
-          t.addEventListener('click',function(){m.classList.contains('naano-ls__menu--open')?close():open();});
-          t.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();m.classList.contains('naano-ls__menu--open')?close():open();}if(e.key==='Escape'){close();}});
-          document.addEventListener('click',function(e){if(!document.getElementById('naano-ls').contains(e.target)){close();}});
-        })();
-        </script>
-        HTML;
+        // phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
+        $html = "<style id=\"naano-ls-css\">\n";
+        $html .=
+            "#naano-ls{position:fixed;bottom:24px;right:24px;z-index:99999;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px}\n";
+        $html .= "#naano-ls *{box-sizing:border-box}\n";
+        $html .=
+            ".naano-ls__trigger{display:flex;align-items:center;gap:6px;background:#1e293b;color:#f1f5f9;border:1px solid #334155;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35);transition:background .15s}\n";
+        $html .= ".naano-ls__trigger:hover{background:#334155}\n";
+        $html .=
+            ".naano-ls__globe{width:16px;height:16px;fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}\n";
+        $html .=
+            ".naano-ls__caret{width:10px;height:10px;fill:none;stroke:#94a3b8;stroke-width:2;transition:transform .2s;flex-shrink:0}\n";
+        $html .= ".naano-ls__caret--open{transform:rotate(180deg)}\n";
+        $html .=
+            ".naano-ls__menu{display:none;position:absolute;bottom:calc(100% + 6px);right:0;background:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.4)}\n";
+        $html .= ".naano-ls__menu--open{display:block}\n";
+        $html .= ".naano-ls__menu ul{list-style:none;margin:0;padding:4px 0}\n";
+        $html .=
+            ".naano-ls__item{display:block;padding:8px 14px;color:#cbd5e1;text-decoration:none;white-space:nowrap;transition:background .12s,color .12s}\n";
+        $html .= ".naano-ls__item:hover{background:#334155;color:#f1f5f9}\n";
+        $html .=
+            ".naano-ls__item--active{color:#60a5fa;font-weight:600;pointer-events:none;background:#1e3a5a}\n";
+        $html .= "</style>\n";
+        $html .=
+            "<div id=\"naano-ls\" role=\"navigation\" aria-label=\"Language\">\n";
+        $html .=
+            "  <div class=\"naano-ls__trigger\" id=\"naano-ls-trigger\" aria-haspopup=\"true\" aria-expanded=\"false\" tabindex=\"0\">\n";
+        $html .=
+            '    <svg class="naano-ls__globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' .
+            "\n";
+        $html .= "    <span id=\"naano-ls-label\">{$current_label}</span>\n";
+        $html .=
+            '    <svg class="naano-ls__caret" id="naano-ls-caret" viewBox="0 0 10 10" aria-hidden="true"><polyline points="1,3 5,7 9,3"/></svg>' .
+            "\n";
+        $html .= "  </div>\n";
+        $html .=
+            "  <div class=\"naano-ls__menu\" id=\"naano-ls-menu\" role=\"menu\">\n";
+        $html .= "    <ul>{$items_html}</ul>\n";
+        $html .= "  </div>\n";
+        $html .= "</div>\n";
+        $html .= "<script id=\"naano-ls-js\">\n";
+        $html .= "(function(){\n";
+        $html .= "  var t=document.getElementById('naano-ls-trigger'),\n";
+        $html .= "      m=document.getElementById('naano-ls-menu'),\n";
+        $html .= "      c=document.getElementById('naano-ls-caret');\n";
+        $html .=
+            "  function open(){m.classList.add('naano-ls__menu--open');c.classList.add('naano-ls__caret--open');t.setAttribute('aria-expanded','true');}\n";
+        $html .=
+            "  function close(){m.classList.remove('naano-ls__menu--open');c.classList.remove('naano-ls__caret--open');t.setAttribute('aria-expanded','false');}\n";
+        $html .=
+            "  t.addEventListener('click',function(){m.classList.contains('naano-ls__menu--open')?close():open();});\n";
+        $html .=
+            "  t.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();m.classList.contains('naano-ls__menu--open')?close():open();}if(e.key==='Escape'){close();}});\n";
+        $html .=
+            "  document.addEventListener('click',function(e){if(!document.getElementById('naano-ls').contains(e.target)){close();}});\n";
+        $html .= "})();\n";
+        $html .= "</script>\n";
+
+        return $html;
         // phpcs:enable
     }
 
@@ -814,6 +865,10 @@ class Naano_Admin_Page
      */
     public function maybe_render_frontend_builder(): void
     {
+        // Read-only check of an unauthenticated query parameter — this is
+        // a frontend route gate, not a form submission. Access is protected
+        // by current_user_can('manage_options') below.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         if (
             empty($_GET["naano_builder"]) ||
             !current_user_can("manage_options")
@@ -823,6 +878,7 @@ class Naano_Admin_Page
 
         // Determine the page ID from the queried object (e.g. /my-page/?naano_builder=1).
         // When naano_new=1 is present the user wants a blank new page — ignore the queried object.
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         $page_id = empty($_GET["naano_new"])
             ? (get_queried_object_id() ?:
             0)
@@ -879,6 +935,7 @@ class Naano_Admin_Page
                 "post_type" => "page",
                 "post_status" => "any",
                 "posts_per_page" => 20,
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                 "meta_key" => "_naano_sections",
                 "orderby" => "modified",
                 "order" => "DESC",
@@ -969,7 +1026,9 @@ class Naano_Admin_Page
                 "post_type" => "page",
                 "post_status" => "any",
                 "posts_per_page" => -1,
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                 "meta_key" => "_naano_translation_of",
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
                 "meta_value" => $root_id,
             ]);
             foreach ($trans_pages as $tp) {
@@ -1062,7 +1121,9 @@ class Naano_Admin_Page
                 // user can see at runtime that isn't already in the templates
                 // belongs here so it goes through the WP translation
                 // pipeline instead of being hard-coded English.
-                "sections_selected" => __(
+                "sections_selected" =>
+                /* translators: %d: number of sections currently selected by the user */
+                __(
                     "%d sections selected",
                     "naano-ai-website-builder",
                 ),
@@ -1070,7 +1131,9 @@ class Naano_Admin_Page
                     "Update Section",
                     "naano-ai-website-builder",
                 ),
-                "update_n_sections" => __(
+                "update_n_sections" =>
+                /* translators: %d: number of sections that will be updated by a bulk action */
+                __(
                     "Update %d Sections",
                     "naano-ai-website-builder",
                 ),
@@ -1121,11 +1184,15 @@ class Naano_Admin_Page
                     "Save failed (network).",
                     "naano-ai-website-builder",
                 ),
-                "saved_n_sections" => __(
+                "saved_n_sections" =>
+                /* translators: %d: number of sections saved (singular form, used when count is 1) */
+                __(
                     "Saved %d section",
                     "naano-ai-website-builder",
                 ),
-                "saved_n_sections_plural" => __(
+                "saved_n_sections_plural" =>
+                /* translators: %d: number of sections saved (plural form, used when count > 1) */
+                __(
                     "Saved %d sections",
                     "naano-ai-website-builder",
                 ),
@@ -1137,11 +1204,15 @@ class Naano_Admin_Page
                     "Section updated! ✨",
                     "naano-ai-website-builder",
                 ),
-                "n_sections_updated" => __(
+                "n_sections_updated" =>
+                /* translators: %d: number of sections that were successfully updated */
+                __(
                     "%d sections updated! ✨",
                     "naano-ai-website-builder",
                 ),
-                "section_added" => __(
+                "section_added" =>
+                /* translators: %s: name of the newly added section (e.g. "Hero", "Pricing") */
+                __(
                     'Section "%s" added! ✨',
                     "naano-ai-website-builder",
                 ),
@@ -1149,11 +1220,15 @@ class Naano_Admin_Page
                     "Website generated successfully! 🎉",
                     "naano-ai-website-builder",
                 ),
-                "site_generated_partial" => __(
+                "site_generated_partial" =>
+                /* translators: 1: number of sections successfully generated, 2: total number of sections that were requested */
+                __(
                     "%1\$d of %2\$d sections generated. ⚠️",
                     "naano-ai-website-builder",
                 ),
-                "generation_failed" => __(
+                "generation_failed" =>
+                /* translators: %s: error message returned by the LLM provider or server */
+                __(
                     "Generation failed: %s",
                     "naano-ai-website-builder",
                 ),
@@ -1165,15 +1240,21 @@ class Naano_Admin_Page
                     "unknown error",
                     "naano-ai-website-builder",
                 ),
-                "site_generated_with_skips" => __(
+                "site_generated_with_skips" =>
+                /* translators: 1: number of sections skipped due to timeout, 2: comma-separated list of skipped section names */
+                __(
                     "Website generated, but %1\$d section(s) were skipped due to server timeouts: %2\$s. You can regenerate them individually from the builder.",
                     "naano-ai-website-builder",
                 ),
-                "generation_in_progress" => __(
+                "generation_in_progress" =>
+                /* translators: %d: number of sections that have been generated so far while the job is still running */
+                __(
                     "Generation is still in progress on the server. Showing %d section(s) generated so far — refresh in a moment to see more.",
                     "naano-ai-website-builder",
                 ),
-                "generation_interrupted" => __(
+                "generation_interrupted" =>
+                /* translators: 1: error message describing why generation stopped, 2: number of sections successfully saved before the interruption */
+                __(
                     "Generation interrupted: %1\$s Showing %2\$d section(s) that were saved before the error.",
                     "naano-ai-website-builder",
                 ),
@@ -1185,19 +1266,27 @@ class Naano_Admin_Page
                     "Instruction enhanced!",
                     "naano-ai-website-builder",
                 ),
-                "page_published_html" => __(
+                "page_published_html" =>
+                /* translators: 1: URL to the published page on the public site, 2: URL to the page editor in wp-admin */
+                __(
                     'Page published! <a href="%1$s" target="_blank">View it</a> · <a href="%2$s" target="_blank">Edit in WP</a>',
                     "naano-ai-website-builder",
                 ),
-                "retrying_section" => __(
+                "retrying_section" =>
+                /* translators: %s: section identifier currently being retried after a failure */
+                __(
                     "Retrying section: %s…",
                     "naano-ai-website-builder",
                 ),
-                "section_recovered" => __(
+                "section_recovered" =>
+                /* translators: %s: section identifier that has been successfully regenerated */
+                __(
                     "Section recovered: %s ✓",
                     "naano-ai-website-builder",
                 ),
-                "retry_failed" => __(
+                "retry_failed" =>
+                /* translators: %s: error message returned by the LLM provider when the retry attempt failed */
+                __(
                     "Retry failed: %s",
                     "naano-ai-website-builder",
                 ),

@@ -13,10 +13,14 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-$page_id = empty($_GET["naano_new"]) ? (get_queried_object_id() ?: 0) : 0;
-$has_page = $page_id > 0;
+// Read-only check of an unauthenticated query parameter — this template
+// is dispatched from maybe_render_frontend_builder() which gates access
+// on current_user_can('manage_options'); no form submission to verify.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$naano_page_id = empty($_GET["naano_new"]) ? (get_queried_object_id() ?: 0) : 0;
+$naano_has_page = $naano_page_id > 0;
 
-$section_types = [
+$naano_section_types = [
     "header" => __("Header / Navigation", "naano-ai-website-builder"),
     "hero" => __("Hero / Banner", "naano-ai-website-builder"),
     "features" => __("Features", "naano-ai-website-builder"),
@@ -29,12 +33,12 @@ $section_types = [
 ];
 
 // Back-to-admin URL.
-$admin_pages_url = admin_url("admin.php?page=naano-ai-builder");
+$naano_admin_pages_url = admin_url("admin.php?page=naano-ai-builder");
 
 // Translation data is injected by maybe_render_frontend_builder() via
 // variable scope; fall back to empty arrays when accessed directly.
-$current_lang = $current_lang ?? "";
-$translations = $translations ?? [];
+$naano_current_lang = $naano_current_lang ?? "";
+$naano_translations = $naano_translations ?? [];
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -70,7 +74,7 @@ $translations = $translations ?? [];
 	<div class="naano-vb__toolbar" id="naano-vb-toolbar">
 
 		<div class="naano-vb__toolbar-left">
-			<a href="<?php echo esc_url($admin_pages_url); ?>"
+			<a href="<?php echo esc_url($naano_admin_pages_url); ?>"
 			   class="naano-drawer-toggle"
 			   title="<?php esc_attr_e(
           "Back to Dashboard",
@@ -88,11 +92,11 @@ $translations = $translations ?? [];
 			</span>
 			<span class="naano-vb__separator"></span>
 			<span class="naano-vb__page-name" id="naano-current-page-name">
-				<?php echo $has_page
-        ? esc_html(get_the_title($page_id))
+				<?php echo $naano_has_page
+        ? esc_html(get_the_title($naano_page_id))
         : esc_html__("New Page", "naano-ai-website-builder"); ?>
 			</span>
-			<?php if (count($translations) > 1): ?>
+			<?php if (count($naano_translations) > 1): ?>
 			<span class="naano-vb__separator"></span>
 			<div class="naano-lang-switcher-wrap">
 				<span class="dashicons dashicons-translation naano-lang-icon" title="<?php esc_attr_e(
@@ -100,12 +104,12 @@ $translations = $translations ?? [];
         "naano-ai-website-builder",
     ); ?>"></span>
 				<select id="naano-lang-switcher" class="naano-lang-select">
-					<?php foreach ($translations as $tr): ?>
-					<option value="<?php echo esc_attr($tr["builderUrl"]); ?>"
-						<?php selected($tr["current"]); ?>>
-						<?php echo esc_html(strtoupper($tr["lang"])); ?>
-						<?php if (!empty($tr["label"]) && $tr["label"] !== strtoupper($tr["lang"])):
-          echo " — " . esc_html($tr["label"]);
+					<?php foreach ($naano_translations as $naano_tr): ?>
+					<option value="<?php echo esc_attr($naano_tr["builderUrl"]); ?>"
+						<?php selected($naano_tr["current"]); ?>>
+						<?php echo esc_html(strtoupper($naano_tr["lang"])); ?>
+						<?php if (!empty($naano_tr["label"]) && $naano_tr["label"] !== strtoupper($naano_tr["lang"])):
+          echo " — " . esc_html($naano_tr["label"]);
       endif; ?>
 					</option>
 					<?php endforeach; ?>
@@ -209,7 +213,7 @@ $translations = $translations ?? [];
 
 				<!-- STATE 1 : Initial generation -->
 				<div class="naano-drawer-panel" id="naano-drawer-generate"
-					 <?php echo $has_page ? 'style="display:none;"' : ""; ?>>
+					 <?php echo $naano_has_page ? 'style="display:none;"' : ""; ?>>
 
 					<div class="naano-drawer__header">
 						<h3><?php esc_html_e("Create New Page", "naano-ai-website-builder"); ?></h3>
@@ -263,11 +267,11 @@ $translations = $translations ?? [];
           "naano-ai-website-builder",
       ); ?></label>
 						<div class="naano-section-checkboxes" id="naano-section-checkboxes">
-							<?php foreach ($section_types as $type => $label): ?>
+							<?php foreach ($naano_section_types as $naano_type => $naano_label): ?>
 							<label class="naano-checkbox-label">
 								<input type="checkbox" name="sections[]"
-									   value="<?php echo esc_attr($type); ?>" checked>
-								<?php echo esc_html($label); ?>
+									   value="<?php echo esc_attr($naano_type); ?>" checked>
+								<?php echo esc_html($naano_label); ?>
 							</label>
 							<?php endforeach; ?>
 						</div>
@@ -401,25 +405,25 @@ $translations = $translations ?? [];
          "naano-ai-website-builder",
      ); ?></p>
 					<div id="naano-import-list" style="display:none;">
-						<?php foreach ($existing_components as $ep): ?>
+						<?php foreach ($existing_components as $naano_ep): ?>
 						<div class="naano-import-page">
 							<span class="naano-import-page-name"><?php echo esc_html(
-           $ep["pageTitle"],
+           $naano_ep["pageTitle"],
        ); ?></span>
 							<div class="naano-import-btns">
-								<?php foreach ($ep["sections"] as $sec):
+								<?php foreach ($naano_ep["sections"] as $naano_sec):
 
-            $sec_type = sanitize_key($sec["type"] ?? ($sec["id"] ?? ""));
-            $sec_label = ucfirst(
-                str_replace(["_", "-"], " ", $sec["id"] ?? $sec_type),
+            $naano_sec_type = sanitize_key($naano_sec["type"] ?? ($naano_sec["id"] ?? ""));
+            $naano_sec_label = ucfirst(
+                str_replace(["_", "-"], " ", $naano_sec["id"] ?? $naano_sec_type),
             );
             ?>
 								<button type="button"
 										class="naano-import-section-btn"
-										data-section-id="<?php echo esc_attr($sec["id"]); ?>"
-										data-section-type="<?php echo esc_attr($sec_type); ?>">
+										data-section-id="<?php echo esc_attr($naano_sec["id"]); ?>"
+										data-section-type="<?php echo esc_attr($naano_sec_type); ?>">
 									<span class="naano-import-check dashicons dashicons-yes" style="display:none;"></span>
-									<?php echo esc_html($sec_label); ?>
+									<?php echo esc_html($naano_sec_label); ?>
 								</button>
 								<?php
         endforeach; ?>
@@ -451,7 +455,7 @@ $translations = $translations ?? [];
 
 				<!-- STATE 2 : Section editing -->
 				<div class="naano-drawer-panel" id="naano-drawer-edit"
-					 <?php echo $has_page ? "" : 'style="display:none;"'; ?>>
+					 <?php echo $naano_has_page ? "" : 'style="display:none;"'; ?>>
 
 					<div class="naano-drawer__header">
 						<h3><?php esc_html_e("Edit Section", "naano-ai-website-builder"); ?></h3>
@@ -697,7 +701,7 @@ $translations = $translations ?? [];
 
 			<!-- Empty state placeholder -->
 			<div class="naano-canvas-placeholder" id="naano-canvas-placeholder"
-				 <?php echo $has_page ? 'style="display:none;"' : ""; ?>>
+				 <?php echo $naano_has_page ? 'style="display:none;"' : ""; ?>>
 				<div class="naano-canvas-placeholder__inner">
 					<span class="dashicons dashicons-admin-site-alt3 naano-canvas-placeholder__icon"></span>
 					<h2><?php esc_html_e(
@@ -713,7 +717,7 @@ $translations = $translations ?? [];
 
 			<!-- Live preview iframe -->
 			<div class="naano-live-iframe-wrap" id="naano-live-iframe-wrap"
-				 <?php echo $has_page ? "" : 'style="display:none;"'; ?>>
+				 <?php echo $naano_has_page ? "" : 'style="display:none;"'; ?>>
 				<iframe
 					id="naano-live-preview"
 					class="naano-live-iframe"
@@ -1126,10 +1130,7 @@ $translations = $translations ?? [];
     ); ?>
 			</p>
 			<textarea id="naano-custom-html-editor-input" class="naano-textarea naano-custom-html-editor__textarea" rows="14"
-					  placeholder="<?php esc_attr_e(
-           '<div class="my-block">…</div>',
-           "naano-ai-website-builder",
-       ); ?>" spellcheck="false"></textarea>
+					  placeholder="<?php echo esc_attr( '<div class="my-block">…</div>' ); ?>" spellcheck="false"></textarea>
 		</div>
 		<div class="naano-custom-html-editor__footer">
 			<button type="button" class="naano-btn-ghost" id="naano-custom-html-editor-cancel-btn">

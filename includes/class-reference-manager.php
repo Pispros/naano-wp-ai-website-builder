@@ -171,30 +171,28 @@ class Naano_Reference_Manager {
 			// Fall through to basic fetcher if Firecrawl fails.
 		}
 
-		if ( ! function_exists( 'curl_init' ) ) {
+		if ( ! function_exists( 'curl_init' ) && ! function_exists( 'wp_remote_get' ) ) {
 			return '';
 		}
 
-		$ch = curl_init();
-		curl_setopt_array( $ch, [
-			CURLOPT_URL            => $url,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_MAXREDIRS      => 3,
-			CURLOPT_TIMEOUT        => 12,
-			CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; NaanoBot/1.0; +https://naanocorp.tech)',
-			CURLOPT_SSL_VERIFYPEER => true,
-			CURLOPT_HTTPHEADER     => [
-				'Accept: text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
-				'Accept-Language: en-US,en;q=0.5',
+		$response = wp_remote_get( $url, [
+			'timeout'     => 12,
+			'redirection' => 3,
+			'sslverify'   => true,
+			'user-agent'  => 'Mozilla/5.0 (compatible; NaanoBot/1.0; +https://naanocorp.tech)',
+			'headers'     => [
+				'Accept'          => 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+				'Accept-Language' => 'en-US,en;q=0.5',
 			],
 		] );
 
-		$html = curl_exec( $ch );
-		$err  = curl_errno( $ch );
-		curl_close( $ch );
+		if ( is_wp_error( $response ) ) {
+			return '';
+		}
 
-		if ( $err || ! $html || ! is_string( $html ) ) {
+		$html = wp_remote_retrieve_body( $response );
+
+		if ( ! $html || ! is_string( $html ) ) {
 			return '';
 		}
 
@@ -206,7 +204,7 @@ class Naano_Reference_Manager {
 			return $m[1] ? '[IMG: ' . $m[1] . ']' : '';
 		}, $text ) ?? $text;
 
-		$text = strip_tags( $text );
+		$text = wp_strip_all_tags( $text );
 		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		$text = preg_replace( '/\s+/', ' ', $text ) ?? $text;
 		$text = trim( $text );

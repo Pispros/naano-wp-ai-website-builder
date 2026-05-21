@@ -9,10 +9,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$page_id  = isset( $_GET['page_id'] ) ? (int) $_GET['page_id'] : 0;
-$has_page = $page_id > 0;
+// Read-only check of an unauthenticated query parameter — there is no
+// form submission to verify here. Access to this template is gated by
+// the admin page's capability check before it is included.
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$naano_page_id  = isset( $_GET['page_id'] ) ? (int) sanitize_text_field( wp_unslash( $_GET['page_id'] ) ) : 0;
+$naano_has_page = $naano_page_id > 0;
 
-$section_types = [
+$naano_section_types = [
 	'header'       => __( 'Header / Navigation', 'naano-ai-website-builder' ),
 	'hero'         => __( 'Hero / Banner', 'naano-ai-website-builder' ),
 	'features'     => __( 'Features', 'naano-ai-website-builder' ),
@@ -42,7 +46,7 @@ $section_types = [
 			</span>
 			<span class="naano-vb__separator"></span>
 			<span class="naano-vb__page-name" id="naano-current-page-name">
-				<?php echo $has_page ? esc_html( get_the_title( $page_id ) ) : esc_html__( 'New Page', 'naano-ai-website-builder' ); ?>
+				<?php echo $naano_has_page ? esc_html( get_the_title( $naano_page_id ) ) : esc_html__( 'New Page', 'naano-ai-website-builder' ); ?>
 			</span>
 		</div>
 
@@ -101,7 +105,7 @@ $section_types = [
 
 				<!-- STATE 1 : Initial generation -->
 				<div class="naano-drawer-panel" id="naano-drawer-generate"
-					 <?php echo $has_page ? 'style="display:none;"' : ''; ?>>
+					 <?php echo $naano_has_page ? 'style="display:none;"' : ''; ?>>
 
 					<div class="naano-drawer__header">
 						<h3><?php esc_html_e( 'Create New Page', 'naano-ai-website-builder' ); ?></h3>
@@ -140,11 +144,11 @@ $section_types = [
 					<div class="naano-drawer__field">
 						<label><?php esc_html_e( 'Sections to Generate', 'naano-ai-website-builder' ); ?></label>
 						<div class="naano-section-checkboxes" id="naano-section-checkboxes">
-							<?php foreach ( $section_types as $type => $label ) : ?>
+							<?php foreach ( $naano_section_types as $naano_type => $naano_label ) : ?>
 							<label class="naano-checkbox-label">
 								<input type="checkbox" name="sections[]"
-									   value="<?php echo esc_attr( $type ); ?>" checked>
-								<?php echo esc_html( $label ); ?>
+									   value="<?php echo esc_attr( $naano_type ); ?>" checked>
+								<?php echo esc_html( $naano_label ); ?>
 							</label>
 							<?php endforeach; ?>
 						</div>
@@ -215,7 +219,7 @@ $section_types = [
 
 				<!-- STATE 2 : Section editing -->
 				<div class="naano-drawer-panel" id="naano-drawer-edit"
-					 <?php echo $has_page ? '' : 'style="display:none;"'; ?>>
+					 <?php echo $naano_has_page ? '' : 'style="display:none;"'; ?>>
 
 					<div class="naano-drawer__header">
 						<h3><?php esc_html_e( 'Edit Section', 'naano-ai-website-builder' ); ?></h3>
@@ -493,7 +497,7 @@ $section_types = [
 
 			<!-- Empty state placeholder -->
 			<div class="naano-canvas-placeholder" id="naano-canvas-placeholder"
-				 <?php echo $has_page ? 'style="display:none;"' : ''; ?>>
+				 <?php echo $naano_has_page ? 'style="display:none;"' : ''; ?>>
 				<div class="naano-canvas-placeholder__inner">
 					<span class="dashicons dashicons-admin-site-alt3 naano-canvas-placeholder__icon"></span>
 					<h2><?php esc_html_e( 'Your page preview will appear here', 'naano-ai-website-builder' ); ?></h2>
@@ -503,7 +507,7 @@ $section_types = [
 
 			<!-- Live preview iframe -->
 			<div class="naano-live-iframe-wrap" id="naano-live-iframe-wrap"
-				 <?php echo $has_page ? '' : 'style="display:none;"'; ?>>
+				 <?php echo $naano_has_page ? '' : 'style="display:none;"'; ?>>
 				<iframe
 					id="naano-live-preview"
 					class="naano-live-iframe"

@@ -144,6 +144,9 @@ class Naano_Job_Runner
      */
     public static function run(string $job_id): void
     {
+        // Multi-step LLM job execution can run for several minutes per tick;
+        // we deliberately disable PHP's wall-clock limit for the worker.
+        // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged
         @set_time_limit(0);
         @ignore_user_abort(true);
 
@@ -569,11 +572,17 @@ class Naano_Job_Runner
                 ];
             }
 
+            // We legitimately need pages that have the _naano_sections meta
+            // and we must skip the page we're currently building. Both
+            // patterns are flagged by phpcs (slow meta_key, exclude param)
+            // but they're the cleanest expression for this query.
             $naano_pages = get_posts([
                 "post_type" => "page",
                 "post_status" => ["publish", "draft"],
                 "posts_per_page" => -1,
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
                 "meta_key" => "_naano_sections",
+                // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
                 "exclude" => [$page_id],
             ]);
             $site_pages = [];
@@ -1391,7 +1400,7 @@ class Naano_Job_Runner
 
         if (!$api_key) {
             throw new RuntimeException(
-                __(
+                esc_html__(
                     "No API key configured. Please visit Naano AI Builder → Settings.",
                     "naano-ai-website-builder",
                 ),

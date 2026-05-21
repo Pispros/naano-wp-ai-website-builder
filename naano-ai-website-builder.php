@@ -80,12 +80,20 @@ function naano_deactivate(): void
     delete_transient("naano_activation_errors");
     // Remove any per-request caches.
     global $wpdb;
+    // Bulk transient cleanup on deactivation: a single LIKE delete is
+    // dramatically faster than iterating delete_transient() across hundreds
+    // of rows. This runs exactly once per deactivation, so the lack of
+    // caching is intentional — there is nothing to cache for a teardown
+    // query, and the rows are being deleted anyway.
+    // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
     $wpdb->query(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_naano_%'",
     );
     $wpdb->query(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_naano_%'",
     );
+    // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+    wp_cache_flush_group('options');
 }
 register_deactivation_hook(__FILE__, "naano_deactivate");
 
@@ -143,6 +151,12 @@ require_once NAANO_PLUGIN_DIR . "includes/class-admin-page.php";
  */
 function naano_load_textdomain(): void
 {
+    // We intentionally call load_plugin_textdomain() because this plugin
+    // ships its own translations in /languages (notably the bundled
+    // French .mo) which are NOT hosted on translate.wordpress.org. The
+    // automatic loader in WP 4.6+ only handles translations served from
+    // wordpress.org, so the manual call is still required here.
+    // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
     load_plugin_textdomain(
         "naano-ai-website-builder",
         false,

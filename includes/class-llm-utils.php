@@ -1,61 +1,65 @@
 <?php
-class Naano_LLM_Utils
-{
-    /**
-     * Disable PHP timeouts for long-running LLM requests.
-     * Must be called at the start of each adapter's send() method.
-     *
-     * NOTE: the zlib.output_compression / output_buffering / implicit_flush
-     * tweaks that used to live here are leftovers from the SSE streaming
-     * era. They cannot be changed after headers are sent (which is the
-     * case once we're inside a WP-Cron tick or after litespeed_finish_request),
-     * so they would silently emit an E_WARNING that polluted error_get_last
-     * and confused the runner's shutdown handler. They have been removed.
-     */
-    public static function prepare_long_running_request(): void
-    {
-        @set_time_limit(0);
-        @ini_set("max_execution_time", "0");
-        @ini_set("default_socket_timeout", "600");
-        @ini_set("max_input_time", "-1");
+/**
+ * LLM Utility helpers.
+ *
+ * @package NaanoAIWebsiteBuilder
+ */
 
-        if (function_exists("apache_setenv")) {
-            @apache_setenv("noabort", "1");
-            @apache_setenv("noconntimeout", "1");
-        }
-
-        if (function_exists("ignore_user_abort")) {
-            @ignore_user_abort(true);
-        }
-
-        if (session_id()) {
-            session_write_close();
-        }
-    }
-
-    /**
-     * Options cURL standard pour requêtes LLM longues.
-     * À fusionner avec les options spécifiques de chaque adapter.
-     */
-    public static function default_curl_opts(): array
-    {
-        $opts = [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 30,
-            CURLOPT_POST => true,
-        ];
-
-        if (defined("CURLOPT_TCP_KEEPALIVE")) {
-            $opts[CURLOPT_TCP_KEEPALIVE] = 1;
-        }
-        if (defined("CURLOPT_TCP_KEEPIDLE")) {
-            $opts[CURLOPT_TCP_KEEPIDLE] = 30;
-        }
-        if (defined("CURLOPT_TCP_KEEPINTVL")) {
-            $opts[CURLOPT_TCP_KEEPINTVL] = 15;
-        }
-
-        return $opts;
-    }
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
-?>
+
+class Naano_LLM_Utils {
+
+	/**
+	 * Disable PHP timeouts for long-running LLM requests.
+	 * Must be called at the start of each adapter's send() method.
+	 *
+	 * LLM completion calls routinely take 60–600 seconds (token-by-token
+	 * generation of multi-thousand-token HTML payloads). Without raising
+	 * the limits below, the request would die mid-stream and leave a
+	 * partial response we can't recover. The Squiz "discouraged"
+	 * warnings are acknowledged but unavoidable for this workload.
+	 */
+	public static function prepare_long_running_request(): void {
+		// phpcs:disable Squiz.PHP.DiscouragedFunctions.Discouraged
+		@set_time_limit( 0 );
+		@ini_set( 'max_execution_time', '0' );
+		@ini_set( 'default_socket_timeout', '600' );
+		@ini_set( 'max_input_time', '-1' );
+		// phpcs:enable Squiz.PHP.DiscouragedFunctions.Discouraged
+
+		if ( function_exists( 'apache_setenv' ) ) {
+			@apache_setenv( 'noabort', '1' );
+			@apache_setenv( 'noconntimeout', '1' );
+		}
+
+		if ( function_exists( 'ignore_user_abort' ) ) {
+			@ignore_user_abort( true );
+		}
+
+		if ( session_id() ) {
+			session_write_close();
+		}
+	}
+
+	/**
+	 * Default arguments shared by every wp_remote_post() call to an LLM
+	 * provider. Adapter classes merge their endpoint-specific headers
+	 * and bodies on top of this.
+	 *
+	 * @param int $timeout Per-request timeout in seconds.
+	 * @return array<string,mixed>
+	 */
+	public static function default_request_args( int $timeout = 600 ): array {
+		return [
+			'method'      => 'POST',
+			'timeout'     => $timeout,
+			'redirection' => 5,
+			'httpversion' => '1.1',
+			'blocking'    => true,
+			'sslverify'   => true,
+			'data_format' => 'body',
+		];
+	}
+}
