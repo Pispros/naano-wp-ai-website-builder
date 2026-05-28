@@ -25,7 +25,7 @@ class Naano_Admin_Page
         add_action("admin_menu", [$this, "register_menus"]);
         add_action("admin_init", [$this, "register_settings"]);
         add_action("admin_enqueue_scripts", [$this, "enqueue_assets"]);
-        add_action("admin_head", [$this, "admin_icon_styles"]);
+        add_action("admin_enqueue_scripts", [$this, "enqueue_admin_common"]);
 
         // "Build with Naano AI" in the Pages list row actions.
         add_filter("page_row_actions", [$this, "add_page_row_action"], 10, 2);
@@ -62,43 +62,44 @@ class Naano_Admin_Page
     }
 
     /**
-     * Inject admin CSS: fix the SVG menu icon opacity and align page headings.
+     * Enqueue inline CSS used across every admin page (menu icon sizing
+     * and the small "page title with SVG" rule used by our top-level
+     * admin pages).
+     *
+     * Uses wp_register_style() + wp_add_inline_style() so the styles flow
+     * through the WordPress asset pipeline instead of being echoed in
+     * admin_head, satisfying the WordPress.org enqueue guideline.
      *
      * @return void
      */
-    public function admin_icon_styles(): void
+    public function enqueue_admin_common(): void
     {
-        ?>
-		<style>
-			/* Size and align the custom SVG menu icon exactly like WP dashicons. */
-			#adminmenu .toplevel_page_naano-ai-builder .wp-menu-image img {
-				width: 20px !important;
-				height: 20px !important;
-				padding: 0 !important;
-				margin: 0 !important;
-				opacity: 1 !important;
-				filter: none !important;
-				display: block;
-			}
-			#adminmenu .toplevel_page_naano-ai-builder .wp-menu-image {
-				display: flex !important;
-				align-items: center;
-				justify-content: center;
-			}
-			/* Vertically centre icon + text in page headings. */
-			.naano-page-title {
-				display: flex;
-				align-items: center;
-				gap: 10px;
-				line-height: 1;
-			}
-			.naano-page-title svg {
-				width: 28px;
-				height: 28px;
-				flex-shrink: 0;
-			}
-		</style>
-		<?php
+        // Register an empty handle just to give wp_add_inline_style()
+        // somewhere to attach. Passing `false` as the src tells WP not
+        // to print a <link> tag — only the inline CSS will be emitted.
+        wp_register_style(
+            "naano-admin-common",
+            false,
+            [],
+            NAANO_VERSION,
+        );
+        wp_enqueue_style("naano-admin-common");
+
+        $css =
+            // Size and align the custom SVG menu icon exactly like WP dashicons.
+            "#adminmenu .toplevel_page_naano-ai-builder .wp-menu-image img{" .
+                "width:20px !important;height:20px !important;" .
+                "padding:0 !important;margin:0 !important;" .
+                "opacity:1 !important;filter:none !important;display:block;" .
+            "}" .
+            "#adminmenu .toplevel_page_naano-ai-builder .wp-menu-image{" .
+                "display:flex !important;align-items:center;justify-content:center;" .
+            "}" .
+            // Vertically centre icon + text in our page headings.
+            ".naano-page-title{display:flex;align-items:center;gap:10px;line-height:1;}" .
+            ".naano-page-title svg{width:28px;height:28px;flex-shrink:0;}";
+
+        wp_add_inline_style("naano-admin-common", $css);
     }
 
     /**
@@ -347,9 +348,25 @@ class Naano_Admin_Page
      */
     public function sanitize_variables($input): array
     {
-        // This is a register_setting() sanitize callback, invoked by
-        // options.php after that page has already validated its own nonce.
-        // phpcs:disable WordPress.Security.NonceVerification.Missing
+        // This is a register_setting() sanitize callback. options.php
+        // verifies the nonce before calling sanitize callbacks, but we
+        // re-check it explicitly here so the dependency is visible in
+        // the source and Plugin Check is satisfied. We also gate on the
+        // user capability that options.php itself requires.
+        if (
+            !current_user_can("manage_options") ||
+            !isset($_POST["_wpnonce"]) ||
+            !wp_verify_nonce(
+                sanitize_text_field(wp_unslash($_POST["_wpnonce"])),
+                "naano_settings_group-options",
+            )
+        ) {
+            // Fall back to the previously-stored value so we never wipe
+            // saved settings when the nonce fails.
+            $existing = get_option("naano_variables", []);
+            return is_array($existing) ? $existing : [];
+        }
+
         $keys = array_map(
             "sanitize_text_field",
             (array) wp_unslash($_POST["naano_vars_keys"] ?? []),
@@ -358,7 +375,6 @@ class Naano_Admin_Page
             "sanitize_text_field",
             (array) wp_unslash($_POST["naano_vars_values"] ?? []),
         );
-        // phpcs:enable WordPress.Security.NonceVerification.Missing
 
         $result = [];
         foreach ($keys as $i => $key) {
@@ -381,9 +397,25 @@ class Naano_Admin_Page
      */
     public function sanitize_languages($input): array
     {
-        // This is a register_setting() sanitize callback, invoked by
-        // options.php after that page has already validated its own nonce.
-        // phpcs:disable WordPress.Security.NonceVerification.Missing
+        // This is a register_setting() sanitize callback. options.php
+        // verifies the nonce before calling sanitize callbacks, but we
+        // re-check it explicitly here so the dependency is visible in
+        // the source and Plugin Check is satisfied. We also gate on the
+        // user capability that options.php itself requires.
+        if (
+            !current_user_can("manage_options") ||
+            !isset($_POST["_wpnonce"]) ||
+            !wp_verify_nonce(
+                sanitize_text_field(wp_unslash($_POST["_wpnonce"])),
+                "naano_settings_group-options",
+            )
+        ) {
+            // Fall back to the previously-stored value so we never wipe
+            // saved settings when the nonce fails.
+            $existing = get_option("naano_languages", []);
+            return is_array($existing) ? $existing : [];
+        }
+
         $codes = array_map(
             "sanitize_key",
             (array) wp_unslash($_POST["naano_lang_codes"] ?? []),
@@ -392,7 +424,6 @@ class Naano_Admin_Page
             "sanitize_text_field",
             (array) wp_unslash($_POST["naano_lang_labels"] ?? []),
         );
-        // phpcs:enable WordPress.Security.NonceVerification.Missing
 
         $result = [];
         foreach ($codes as $i => $code) {
@@ -546,13 +577,95 @@ class Naano_Admin_Page
             return;
         }
 
-        // CSS for the admin pages list / settings.
+        // Shared CSS for the admin pages list / settings.
         wp_enqueue_style(
             "naano-builder",
             NAANO_PLUGIN_URL . "assets/css/builder.css",
             [],
             NAANO_VERSION,
         );
+
+        // The "Pages" list screen (toplevel_page_naano-ai-builder) also
+        // ships its own status-badge / row-action CSS and a small jQuery
+        // helper that toggles the per-row translate form. Both used to
+        // be echoed inline by templates/admin-pages-list.php — they are
+        // now real, enqueued assets so the WordPress.org "use wp_enqueue"
+        // guideline is satisfied.
+        if ($hook_suffix === "toplevel_page_naano-ai-builder") {
+            wp_enqueue_style(
+                "naano-admin-pages-list",
+                NAANO_PLUGIN_URL . "assets/css/admin-pages-list.css",
+                ["naano-builder"],
+                NAANO_VERSION,
+            );
+            wp_enqueue_script(
+                "naano-admin-pages-list",
+                NAANO_PLUGIN_URL . "assets/js/admin-pages-list.js",
+                ["jquery"],
+                NAANO_VERSION,
+                true,
+            );
+        }
+
+        // The Settings screen used to inline a ~290-line <script> block
+        // for tab switching, variable/language row management, and the
+        // AJAX save/test buttons. That JS is now shipped as a real file
+        // (assets/js/settings-page.js) and reads its ajax URL, nonce,
+        // and translatable strings from window.naanoSettingsData, set
+        // by wp_localize_script() below.
+        if ($hook_suffix === "naano-ai-builder_page_naano-settings") {
+            wp_enqueue_script(
+                "naano-settings-page",
+                NAANO_PLUGIN_URL . "assets/js/settings-page.js",
+                ["jquery"],
+                NAANO_VERSION,
+                true,
+            );
+
+            wp_localize_script("naano-settings-page", "naanoSettingsData", [
+                "ajaxUrl" => admin_url("admin-ajax.php"),
+                "nonce" => wp_create_nonce("naano_builder_nonce"),
+                "i18n" => [
+                    "varKeyPlaceholder" => __(
+                        "e.g. primary_color",
+                        "naano-ai-website-builder",
+                    ),
+                    "varValuePlaceholder" => __(
+                        "e.g. #3B82F6",
+                        "naano-ai-website-builder",
+                    ),
+                    "langCodePlaceholder" => __(
+                        "e.g. es",
+                        "naano-ai-website-builder",
+                    ),
+                    "langLabelPlaceholder" => __(
+                        "e.g. Spanish",
+                        "naano-ai-website-builder",
+                    ),
+                    "remove" => __("Remove", "naano-ai-website-builder"),
+                    "requestFailed" => __(
+                        "Request failed.",
+                        "naano-ai-website-builder",
+                    ),
+                    "enterApiKey" => __(
+                        "Please enter an API key.",
+                        "naano-ai-website-builder",
+                    ),
+                    "enterApiKeyFirst" => __(
+                        "Please enter an API key first.",
+                        "naano-ai-website-builder",
+                    ),
+                    "enterModel" => __(
+                        "Please enter a Model Override before testing.",
+                        "naano-ai-website-builder",
+                    ),
+                    "connected" => __(
+                        "Connected!",
+                        "naano-ai-website-builder",
+                    ),
+                ],
+            ]);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -650,11 +763,17 @@ class Naano_Admin_Page
                 }
             }
 
-            // Inject CSS + JS to offset fixed/sticky headers below the WP admin bar.
-            // WP core sets html { margin-top: 32px } for static content.  For
-            // position:fixed / position:sticky elements we must add a matching
-            // top offset.  Because scoped <style> blocks set position via CSS
-            // (not inline), we use a small script that inspects computedStyle.
+            // CSS + JS to offset fixed/sticky headers below the WP admin
+            // bar on the standalone Naano page. These blocks are part of
+            // the page CONTENT we are serving directly, not enqueued
+            // theme assets: this code path runs after `template_redirect`
+            // and outputs a complete HTML document with `exit()`, which
+            // means wp_enqueue_style() / wp_enqueue_script() (which write
+            // into wp_head / wp_footer of the active theme) would have
+            // no effect here. The "use wp_enqueue commands" guideline
+            // applies to WordPress runtime assets — these strings are
+            // page content woven into the served HTML document, which
+            // is why they're concatenated rather than enqueued.
             $admin_bar_css =
                 '<style id="naano-admin-bar-fix">' .
                 ".naano-abfix { top: 32px !important; }" .
@@ -794,6 +913,16 @@ class Naano_Admin_Page
             $lang_map[$current_lang] ?? strtoupper($current_lang),
         );
 
+        // Build the floating language-switcher widget. The CSS and JS
+        // below are inlined deliberately: the caller (maybe_render_standalone_page)
+        // serves a *complete* HTML document directly via `echo $html; exit;`
+        // after `template_redirect`, bypassing the WordPress theme. There
+        // is no wp_head/wp_footer pipeline for wp_enqueue_style/script to
+        // hook into in that code path, so the widget ships as a single
+        // self-contained string that is woven into the document just
+        // before </body>. The CSS/JS here are part of the served page's
+        // CONTENT, not separately-managed theme assets — the WordPress.org
+        // "use wp_enqueue commands" guideline does not apply.
         // phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped
         $html = "<style id=\"naano-ls-css\">\n";
         $html .=
@@ -891,6 +1020,17 @@ class Naano_Admin_Page
             NAANO_PLUGIN_URL . "assets/css/builder.css",
             ["dashicons"],
             NAANO_VERSION,
+        );
+
+        // Reset rules that suppress any theme styles leaking into the
+        // builder overlay. Previously printed as an inline <style> block
+        // inside templates/frontend-builder.php — moved here so the rules
+        // flow through wp_add_inline_style() per the WP enqueue guideline.
+        wp_add_inline_style(
+            "naano-builder",
+            "html,body{margin:0 !important;padding:0 !important;" .
+                "overflow:hidden !important;background:#1d2327 !important;}" .
+                ".naano-vb{height:100vh !important;}",
         );
 
         wp_enqueue_media();

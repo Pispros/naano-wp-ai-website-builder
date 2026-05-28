@@ -144,8 +144,14 @@ class Naano_Job_Runner
      */
     public static function run(string $job_id): void
     {
-        // Multi-step LLM job execution can run for several minutes per tick;
-        // we deliberately disable PHP's wall-clock limit for the worker.
+        // set_time_limit() is scoped to THIS function only — the entry
+        // point of the cron worker that performs one LLM step. It is
+        // not called on init, in a constructor, or in any globally-bound
+        // hook, so it does not affect any other request on the site
+        // (per the WordPress.org "don't force-set PHP limits globally"
+        // guideline). Each step routinely takes 30–90 seconds because
+        // it issues a network call to a remote LLM provider; without
+        // disabling the wall-clock limit the worker dies mid-stream.
         // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged
         @set_time_limit(0);
         @ignore_user_abort(true);

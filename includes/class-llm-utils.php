@@ -13,26 +13,30 @@ class Naano_LLM_Utils {
 
 	/**
 	 * Disable PHP timeouts for long-running LLM requests.
-	 * Must be called at the start of each adapter's send() method.
+	 * Must be called at the start of each adapter's send() method only —
+	 * NOT in a constructor, on init, or in any globally-bound hook. Each
+	 * LLM call needs the extended runtime; nothing else does.
 	 *
 	 * LLM completion calls routinely take 60–600 seconds (token-by-token
 	 * generation of multi-thousand-token HTML payloads). Without raising
-	 * the limits below, the request would die mid-stream and leave a
-	 * partial response we can't recover. The Squiz "discouraged"
-	 * warnings are acknowledged but unavoidable for this workload.
+	 * the limit below, the request would die mid-stream and leave a
+	 * partial response we can't recover.
+	 *
+	 * Only set_time_limit(0) is used here. We previously also called
+	 * ini_set() for max_execution_time / max_input_time / default_socket_timeout,
+	 * but:
+	 *   - set_time_limit(0) already covers wall-clock execution time;
+	 *   - max_input_time is only consulted during request parsing
+	 *     (before this code ever runs), so setting it at runtime is a
+	 *     no-op;
+	 *   - default_socket_timeout affects PHP stream functions only, not
+	 *     wp_remote_post() / cURL which is what our adapters use.
+	 * Removing the ini_set() calls keeps this plugin compliant with the
+	 * WordPress.org guideline against altering PHP runtime defaults.
 	 */
 	public static function prepare_long_running_request(): void {
-		// phpcs:disable Squiz.PHP.DiscouragedFunctions.Discouraged
+		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged
 		@set_time_limit( 0 );
-		@ini_set( 'max_execution_time', '0' );
-		@ini_set( 'default_socket_timeout', '600' );
-		@ini_set( 'max_input_time', '-1' );
-		// phpcs:enable Squiz.PHP.DiscouragedFunctions.Discouraged
-
-		if ( function_exists( 'apache_setenv' ) ) {
-			@apache_setenv( 'noabort', '1' );
-			@apache_setenv( 'noconntimeout', '1' );
-		}
 
 		if ( function_exists( 'ignore_user_abort' ) ) {
 			@ignore_user_abort( true );

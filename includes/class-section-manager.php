@@ -238,6 +238,13 @@ class Naano_Section_Manager
         // back if they really want to.
         $global_css = trim($this->get_global_css($page_id));
 
+        // This <style> block is part of the standalone HTML document
+        // we return to the caller — the page CONTENT being served to
+        // visitors, not a WordPress runtime asset. There is no
+        // wp_head/wp_footer pipeline in play here (the consumer of this
+        // method emits the whole document with echo + exit), so
+        // wp_enqueue_style would have no effect; the CSS is part of the
+        // document we are constructing.
         $style_block = "<style>" . $base_css;
         if ($global_css !== "") {
             $style_block .= "\n" . $global_css;

@@ -1752,7 +1752,11 @@ body.naano-fullscreen #wpbody-content > .wrap {
     }
 }
 
-/* Header: tag chip + breadcrumb + close button */
+/* Header: tag chip + breadcrumb + close button.
+   Also serves as the drag handle for the floating panel — see
+   _bindFloatingPanelDrag in builder.js. The `cursor: move` is set in
+   JS so the affordance only appears when the drag binding succeeded;
+   the dotted grip stripe is purely visual. */
 .naano-esp__header {
     display: flex;
     align-items: center;
@@ -1761,6 +1765,27 @@ body.naano-fullscreen #wpbody-content > .wrap {
     padding: 10px 12px;
     border-bottom: 1px solid #e5e7eb;
     background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+    position: relative;
+}
+
+/* Subtle grip dots on the left side of the header — visual hint that
+   the panel is draggable. Pure decoration; the entire header bar is
+   the actual drag surface. */
+.naano-esp__header::before {
+    content: "⋮⋮";
+    display: inline-block;
+    font-size: 11px;
+    color: #9ca3af;
+    letter-spacing: -2px;
+    margin-right: 2px;
+    line-height: 1;
+    flex-shrink: 0;
+    user-select: none;
+    pointer-events: none;
+}
+
+.naano-esp__header:hover::before {
+    color: #6b7280;
 }
 
 .naano-esp__header-info {
@@ -2047,6 +2072,48 @@ body.naano-fullscreen #wpbody-content > .wrap {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Image pane: preview thumbnail + replace button.
+   The preview frames the current image in a light card so the user
+   can confirm at a glance what they're about to replace. The image
+   itself is constrained to a reasonable max height so portrait shots
+   don't blow the panel out of the viewport. */
+.naano-esp-img-preview-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 0 10px;
+    padding: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    min-height: 80px;
+    max-height: 180px;
+    overflow: hidden;
+}
+
+.naano-esp-img-preview {
+    max-width: 100%;
+    max-height: 160px;
+    object-fit: contain;
+    display: block;
+}
+
+.naano-esp-img-preview:not([src]),
+.naano-esp-img-preview[src=""] {
+    /* When no image is loaded yet, hide the broken-image icon and show
+       a faint placeholder via the wrapper's background instead. */
+    display: none;
+}
+
+.naano-esp-img-actions {
+    margin-bottom: 8px;
+}
+
+.naano-esp-img-actions .naano-btn-primary .dashicons {
+    margin-right: 4px;
+    margin-top: 2px;
 }
 
 .naano-element-style-panel .naano-btn-ghost {

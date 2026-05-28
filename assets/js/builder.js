@@ -177,6 +177,7 @@
       NaanoBuilder._bindElementInspector();
       NaanoBuilder._bindIframeMessages();
       NaanoBuilder._bindLangSwitcher();
+      NaanoBuilder._bindFloatingPanelDrag();
 
       // Populate WP menu dropdowns.
       if (data.wpMenus && data.wpMenus.length) {
@@ -1791,6 +1792,63 @@
         NaanoBuilder._deleteSelectedElement();
       });
 
+      // ── Replace image button (Image tab) ────────────────────────────
+      // Opens the WP media library. On select, we push the chosen
+      // attachment's URL into the iframe so the live preview updates
+      // immediately — the user doesn't have to click Apply for image
+      // swaps to feel responsive. Alt text is also pulled from the
+      // attachment's WP-saved alt field so accessibility metadata
+      // travels with the image by default.
+      $(document).on("click", "#naano-esp-img-pick-btn", function () {
+        if (!NaanoBuilder.selectedElId) return;
+        if (typeof wp === "undefined" || !wp.media) {
+          NaanoBuilder._toast(
+            "Media library unavailable — refresh the page.",
+            "error",
+          );
+          return;
+        }
+        var frame = wp.media({
+          title: "Choose image",
+          button: { text: "Use this image" },
+          multiple: false,
+          library: { type: "image" },
+        });
+        frame.on("select", function () {
+          var att = frame.state().get("selection").first().toJSON();
+          if (!att || !att.url) return;
+          // Sync the panel inputs so they reflect the picked image.
+          $("#naano-esp-img-src-input").val(att.url);
+          // Prefer the attachment's own alt; fall back to title if not set.
+          var altGuess = att.alt || att.title || "";
+          $("#naano-esp-img-alt-input").val(altGuess);
+          $("#naano-esp-img-preview").attr("src", att.url).attr("alt", altGuess);
+          // Push to the iframe so the user sees the swap immediately.
+          NaanoBuilder._applyElementImage();
+        });
+        frame.open();
+      });
+
+      // Live-sync the URL field: every keystroke updates the thumbnail
+      // and pushes the new src into the iframe. `change` (not `input`)
+      // would only fire on blur — too sluggish for a builder.
+      $(document).on("input", "#naano-esp-img-src-input", function () {
+        var url = $(this).val();
+        $("#naano-esp-img-preview").attr("src", url);
+        if (NaanoBuilder.selectedElId && NaanoBuilder.selectedElTag === "img") {
+          NaanoBuilder._applyElementImage();
+        }
+      });
+
+      // Live-sync the alt field — same reasoning as the URL field.
+      $(document).on("input", "#naano-esp-img-alt-input", function () {
+        var alt = $(this).val();
+        $("#naano-esp-img-preview").attr("alt", alt);
+        if (NaanoBuilder.selectedElId && NaanoBuilder.selectedElTag === "img") {
+          NaanoBuilder._applyElementImage();
+        }
+      });
+
       $(document).on("click", "#naano-esp-edit-section-btn", function () {
         // Shortcut: jump to the editor for the section that contains
         // the currently-selected element. Two paths:
@@ -1992,6 +2050,25 @@
         }
       }
 
+      // Image tab: only show + populate when an <img> is selected.
+      // The tab button stays hidden for every other element type so the
+      // panel doesn't sprout an irrelevant tab on text/buttons/divs.
+      var isImage = (elData.tagName || "").toLowerCase() === "img";
+      $('.naano-esp-tab[data-tab="image"]').toggle(isImage);
+      if (isImage) {
+        var ii = elData.imageInfo || {};
+        var imgSrc = ii.src || "";
+        var imgAlt = ii.alt || "";
+        $("#naano-esp-img-src-input").val(imgSrc);
+        $("#naano-esp-img-alt-input").val(imgAlt);
+        // Pre-populate the thumbnail. If src is empty (newly-inserted
+        // <img> with no source yet) we hide the preview via the CSS
+        // `[src=""]` selector so we don't show a broken icon.
+        $("#naano-esp-img-preview")
+          .attr("src", imgSrc)
+          .attr("alt", imgAlt);
+      }
+
       $("#naano-element-style-panel").show();
     },
 
@@ -2090,6 +2167,15 @@
         });
       }
 
+      // 4) Image attributes — only when an <img> is currently selected.
+      // The src + alt fields already live-sync via the input handlers in
+      // _bindElementInspector, but a user clicking Apply expects ALL
+      // fields to be pushed in one go, so we resend here too. This is a
+      // no-op when the src/alt didn't actually change.
+      if ((NaanoBuilder.selectedElTag || "").toLowerCase() === "img") {
+        NaanoBuilder._applyElementImage();
+      }
+
       NaanoBuilder._toast(NaanoBuilder._i18n("applied"), "success", 1500);
     },
 
@@ -2107,6 +2193,28 @@
         elId: NaanoBuilder.selectedElId,
       });
       NaanoBuilder._clearElementSelection();
+    },
+
+    /**
+     * Push the current Image tab fields (src + alt) to the iframe so the
+     * selected <img> updates live. Called on every keystroke in the URL
+     * and Alt inputs and right after the WP media library picker
+     * resolves a new attachment.
+     *
+     * The iframe handles the actual DOM mutation + notifies the parent
+     * via naano-element-html-updated, which marks the section dirty so
+     * the toolbar's "Save changes" button surfaces the change.
+     */
+    _applyElementImage: function () {
+      if (!NaanoBuilder.selectedElId) return;
+      var src = $("#naano-esp-img-src-input").val() || "";
+      var alt = $("#naano-esp-img-alt-input").val() || "";
+      NaanoBuilder._iframePost({
+        type: "naano-apply-element-image",
+        elId: NaanoBuilder.selectedElId,
+        src: src,
+        alt: alt,
+      });
     },
 
     /**
@@ -2862,6 +2970,20 @@
         "    };",
         "  }",
 
+        // Image-specific info: when the selected element is an <img>,
+        // ship its current src + alt so the floating panel's Image tab
+        // can pre-populate and show a thumbnail of the current source.
+        "  var imageInfo=null;",
+        "  if(el.tagName==='IMG'){",
+        "    imageInfo={",
+        // Prefer the resolved absolute URL the browser computed so the
+        // preview thumbnail in the panel always loads, even when the
+        // raw attribute uses a relative path.
+        "      src:el.currentSrc||el.src||el.getAttribute('src')||'',",
+        "      alt:el.getAttribute('alt')||''",
+        "    };",
+        "  }",
+
         // Pre-populate the Custom CSS textarea with whatever the user
         // previously applied to this element. The single source of
         // truth is the data-naano-cust-css attribute on the element
@@ -2902,7 +3024,8 @@
         "    classes:existingCls.join(' '),",
         "    isCustomHtml:isCustomHtml,",
         "    customCss:savedCustomCss,",
-        '    linkInfo:linkInfo},"*");',
+        '    linkInfo:linkInfo,',
+        '    imageInfo:imageInfo},"*");',
         "},true);",
 
         // Capture text edits inline. Debounced via input event — fires on
@@ -3108,6 +3231,38 @@
         "    notifySectionChanged(el);",
         "  }",
 
+        // Apply image attributes (src, alt) to an <img> element.
+        // Triggered when the user picks a new image from the WP media
+        // library or edits the URL / alt fields in the Image tab of the
+        // floating panel. Empty src is ignored (would render a broken
+        // image); empty alt clears the attribute outright since alt=""
+        // is meaningful (declares the image purely decorative).
+        '  if(m.type==="naano-apply-element-image"){',
+        "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
+        "    if(!el)return;",
+        "    if(el.tagName!=='IMG')return;",
+        "    if(typeof m.src==='string'&&m.src){",
+        "      el.setAttribute('src',m.src);",
+        // Clear srcset if present — it would otherwise win over our new
+        // src on responsive layouts and the user's swap would look like
+        // it did nothing on certain viewport widths.
+        "      if(el.hasAttribute('srcset'))el.removeAttribute('srcset');",
+        // Same reasoning for <picture> parents: if this <img> sits inside
+        // a <picture>, drop the sibling <source> tags so the browser
+        // doesn't pick one of them instead of our new src. The user just
+        // told us explicitly which file they want — honour that.
+        "      var pic=el.parentElement;",
+        "      if(pic&&pic.tagName==='PICTURE'){",
+        "        var sources=pic.querySelectorAll('source');",
+        "        for(var si=0;si<sources.length;si++){sources[si].parentNode.removeChild(sources[si]);}",
+        "      }",
+        "    }",
+        "    if(typeof m.alt==='string'){",
+        "      el.setAttribute('alt',m.alt);",
+        "    }",
+        "    notifySectionChanged(el);",
+        "  }",
+
         // Delete the selected element from its parent.
         '  if(m.type==="naano-delete-element"){',
         "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
@@ -3201,6 +3356,207 @@
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage(msg, "*");
       }
+    },
+
+    /**
+     * Make every .naano-esp--floating panel draggable by its header.
+     *
+     * Behaviour:
+     *   - Drag handle is the `.naano-esp__header` of each panel. We grab
+     *     `mousedown` there, switch the panel to absolute top/left coords
+     *     (clearing the CSS `right` anchor), and follow the mouse until
+     *     mouseup.
+     *   - Position is clamped to the viewport so the panel can never end
+     *     up off-screen where the user couldn't reach it again.
+     *   - Position is persisted in localStorage per panel id, so the
+     *     panel stays where the user last dropped it across reloads. We
+     *     re-clamp on read in case the window was resized smaller since.
+     *   - We never start a drag from a button, input, select or textarea
+     *     inside the header — those need to keep their own click/focus
+     *     behaviour (the close "X", for example).
+     *   - On panel show (MutationObserver on the `style` attribute) we
+     *     restore the saved position; on hide we leave it alone so the
+     *     next open feels continuous.
+     */
+    _bindFloatingPanelDrag: function () {
+      var STORAGE_KEY = "naanoEspPanelPositions";
+
+      function readSaved() {
+        try {
+          var raw = window.localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+          return {};
+        }
+      }
+      function writeSaved(map) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+        } catch (e) {
+          /* quota / disabled — silently ignore */
+        }
+      }
+
+      // Clamp (x, y) so the panel stays at least 40px inside the
+      // viewport on every side. 40px is enough that the header is
+      // always grabbable, no matter what the panel's current size is.
+      function clamp(x, y, panel) {
+        var rect = panel.getBoundingClientRect();
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var minX = 8;
+        var minY = 8;
+        var maxX = Math.max(minX, vw - 40);
+        var maxY = Math.max(minY, vh - 40);
+        // Don't let the entire panel slide past the right/bottom edges
+        // either — keep at least its left/top within the safe area.
+        if (x + rect.width < 40) x = 40 - rect.width;
+        if (y + rect.height < 40) y = 40 - rect.height;
+        if (x > maxX) x = maxX;
+        if (y > maxY) y = maxY;
+        if (x < minX) x = minX;
+        if (y < minY) y = minY;
+        return { x: x, y: y };
+      }
+
+      function applyPos(panel, pos) {
+        var c = clamp(pos.x, pos.y, panel);
+        // Switch from the CSS-default top/right anchor to top/left
+        // so dragging math works in a single coordinate space.
+        panel.style.left = c.x + "px";
+        panel.style.top = c.y + "px";
+        panel.style.right = "auto";
+        panel.style.bottom = "auto";
+      }
+
+      function restoreFor(panel) {
+        var saved = readSaved();
+        var id = panel.id;
+        if (id && saved[id]) {
+          applyPos(panel, saved[id]);
+        }
+      }
+
+      function startDrag(panel, header, ev) {
+        // Ignore drags that begin on interactive children of the header.
+        var t = ev.target;
+        if (
+          t &&
+          (t.closest("button") ||
+            t.closest("input") ||
+            t.closest("select") ||
+            t.closest("textarea") ||
+            t.closest("a"))
+        ) {
+          return;
+        }
+
+        ev.preventDefault();
+
+        // Whatever the panel's current rendered position is, lock it in
+        // as top/left BEFORE we start moving so the first frame doesn't
+        // jump from the CSS `right` anchor to the cursor offset.
+        var rect = panel.getBoundingClientRect();
+        panel.style.left = rect.left + "px";
+        panel.style.top = rect.top + "px";
+        panel.style.right = "auto";
+        panel.style.bottom = "auto";
+        // Suppress the slide-in animation while dragging so the panel
+        // doesn't fight the user's cursor.
+        panel.style.animation = "none";
+
+        var startX = ev.clientX;
+        var startY = ev.clientY;
+        var origX = rect.left;
+        var origY = rect.top;
+
+        // While dragging, kill text selection on the whole page and
+        // pause iframe pointer events so a fast drag over the live
+        // preview doesn't get eaten by the iframe.
+        var prevUserSelect = document.body.style.userSelect;
+        document.body.style.userSelect = "none";
+        var iframe = document.getElementById("naano-live-preview");
+        var prevIframePointer = iframe ? iframe.style.pointerEvents : "";
+        if (iframe) iframe.style.pointerEvents = "none";
+
+        function onMove(e) {
+          var nx = origX + (e.clientX - startX);
+          var ny = origY + (e.clientY - startY);
+          var c = clamp(nx, ny, panel);
+          panel.style.left = c.x + "px";
+          panel.style.top = c.y + "px";
+        }
+        function onUp() {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          document.body.style.userSelect = prevUserSelect;
+          if (iframe) iframe.style.pointerEvents = prevIframePointer;
+
+          // Persist final position.
+          if (panel.id) {
+            var saved = readSaved();
+            saved[panel.id] = {
+              x: parseInt(panel.style.left, 10) || 0,
+              y: parseInt(panel.style.top, 10) || 0,
+            };
+            writeSaved(saved);
+          }
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      }
+
+      // Wire up every floating panel that already exists in the DOM.
+      // Both the element-style panel and the custom-html editor panel
+      // use the `.naano-esp--floating` class.
+      document
+        .querySelectorAll(".naano-esp--floating")
+        .forEach(function (panel) {
+          var header = panel.querySelector(".naano-esp__header");
+          if (!header) return;
+          header.style.cursor = "move";
+          header.style.userSelect = "none";
+          header.addEventListener("mousedown", function (e) {
+            startDrag(panel, header, e);
+          });
+
+          // Restore saved position whenever the panel becomes visible
+          // again. We watch the inline `style` attribute because that's
+          // how the rest of the codebase shows/hides the panel
+          // ($.show() / $.hide() toggle display in the inline style).
+          // The restore is deferred one frame so layout has run and the
+          // panel has real dimensions to clamp against.
+          var obs = new MutationObserver(function () {
+            if (panel.style.display !== "none" && panel.offsetParent !== null) {
+              window.requestAnimationFrame(function () {
+                restoreFor(panel);
+              });
+            }
+          });
+          obs.observe(panel, {
+            attributes: true,
+            attributeFilter: ["style"],
+          });
+
+          // If the panel happens to be visible at boot, restore now.
+          if (panel.style.display !== "none") {
+            restoreFor(panel);
+          }
+        });
+
+      // If the window is resized smaller, re-clamp every visible panel
+      // so it doesn't end up partially off-screen.
+      window.addEventListener("resize", function () {
+        document
+          .querySelectorAll(".naano-esp--floating")
+          .forEach(function (panel) {
+            if (panel.style.display === "none") return;
+            var rect = panel.getBoundingClientRect();
+            var c = clamp(rect.left, rect.top, panel);
+            panel.style.left = c.x + "px";
+            panel.style.top = c.y + "px";
+          });
+      });
     },
 
     /**

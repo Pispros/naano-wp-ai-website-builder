@@ -1,10 +1,11 @@
 <?php
 /**
  * Plugin Name: Naano AI Website Builder
- * Plugin URI:  https://github.com/Pispros/naano-ai-website-builder
- * Description: AI-powered section-by-section website builder using Claude, Gemini, or Kimi. Pure PHP — no external backend needed.
- * Version:     2.1.2
+ * Plugin URI:  https://wordpress.org/plugins/naano-ai-website-builder/
+ * Description: AI-powered section-by-section website builder using Claude, Gemini, OpenAI, or Kimi. Pure PHP — no external backend needed.
+ * Version:     2.1.3
  * Author:      Naano
+ * Author URI:  https://github.com/Pispros
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: naano-ai-website-builder
@@ -17,7 +18,7 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-define("NAANO_VERSION", "2.1.2");
+define("NAANO_VERSION", "2.1.3");
 define("NAANO_PLUGIN_DIR", plugin_dir_path(__FILE__));
 define("NAANO_PLUGIN_URL", plugin_dir_url(__FILE__));
 define("NAANO_PLUGIN_BASENAME", plugin_basename(__FILE__));
@@ -143,27 +144,15 @@ require_once NAANO_PLUGIN_DIR . "includes/class-ajax-handler.php";
 require_once NAANO_PLUGIN_DIR . "includes/class-admin-page.php";
 
 /**
- * Load the plugin's translation files. Hooks on `init` so WP's locale
- * (set in Settings ➔ General) is fully resolved before we look up the
- * matching .mo. Translations live in /languages — the FR build ships
- * inside the plugin so French users get a translated UI out of the box
- * without needing translate.wordpress.org coverage.
+ * Translation loading note:
+ *
+ * Since WordPress 4.6, translations for plugins hosted on WordPress.org are
+ * loaded automatically. Plugin-bundled translation files placed in
+ * /languages/ (e.g. naano-ai-website-builder-fr_FR.mo) are picked up by
+ * WordPress without needing load_plugin_textdomain(). We therefore do not
+ * call it here — the function is no longer required and would only delay
+ * translation loading.
  */
-function naano_load_textdomain(): void
-{
-    // We intentionally call load_plugin_textdomain() because this plugin
-    // ships its own translations in /languages (notably the bundled
-    // French .mo) which are NOT hosted on translate.wordpress.org. The
-    // automatic loader in WP 4.6+ only handles translations served from
-    // wordpress.org, so the manual call is still required here.
-    // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
-    load_plugin_textdomain(
-        "naano-ai-website-builder",
-        false,
-        dirname(NAANO_PLUGIN_BASENAME) . "/languages",
-    );
-}
-add_action("init", "naano_load_textdomain");
 
 /**
  * Bootstrap the plugin.

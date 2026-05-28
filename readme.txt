@@ -4,22 +4,22 @@ Tags: ai, website builder, claude, gemini, page builder
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 2.1.2
+Stable tag: 2.1.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-An AI-powered section-by-section WordPress website builder using Claude, Gemini, or Kimi. Pure PHP — no external backend needed.
+An AI-powered section-by-section WordPress website builder using Claude, Gemini, OpenAI, or Kimi. Pure PHP — no external backend needed.
 
 == Description ==
 
 **Naano AI Website Builder** generates complete, production-ready websites inside your WordPress dashboard using the AI model of your choice.
 
-You bring your own API key (Claude, Gemini, or Kimi). There is no external service, no subscription, and no data leaves your server except the prompts sent to the LLM provider.
+You bring your own API key (Claude, Gemini, OpenAI, or Kimi). The plugin does not run any Naano-hosted service: prompts go directly from your server to the LLM provider you selected. See the **External services** section below for the full list of endpoints, what is sent, and provider terms / privacy policies.
 
 **Key highlights:**
 
 * Section-by-section editing with token-optimized payloads (70–90% savings per edit)
-* Multi-LLM support: Claude (Anthropic), Gemini (Google), Kimi (Moonshot)
+* Multi-LLM support: Claude (Anthropic), Gemini (Google), OpenAI, Kimi (Moonshot)
 * Screenshot and URL references per section for visual inspiration
 * Custom design variables (colors, fonts, brand name, tone)
 * Automatic HTML sanitization — scripts and event handlers stripped from every response
@@ -85,7 +85,78 @@ curl, json, gd, dom, and mbstring. The plugin checks for these on activation and
 4. Edit panel — instruction field with screenshot and URL references.
 5. Preview modal — responsive desktop / tablet / mobile preview.
 
+== External services ==
+
+This plugin relies on third-party AI services to generate website HTML. It is "bring your own API key" — no calls are made until **you** paste a key into Settings and choose a provider, and your data is sent **directly** from your WordPress server to the provider you selected (no Naano-hosted proxy).
+
+In addition, an optional Firecrawl integration can be enabled to fetch reference URLs you supply in the builder.
+
+For each service below we list: what the service is, what data is sent, when it is sent, and links to that service's terms and privacy policy.
+
+= Anthropic Claude (default LLM provider) =
+
+* What it is and what it is used for: Anthropic's hosted Claude language model. Used to generate the HTML for each website section and, optionally, to rewrite a section based on a user instruction.
+* What data is sent: your Anthropic API key (as an HTTP header), the generation prompt assembled by the plugin, the natural-language site description you typed, the list of section types to generate, any custom design variables you saved in Settings (brand name, colors, fonts, tone), the current HTML of the section being edited when you edit one, the URL/notes of any references you attached, and — if you attached a screenshot reference — that image, downscaled to a maximum of 1024 × 1024 px and JPEG-encoded at 75 % quality, base64-encoded inside the request body.
+* When it is sent: only when you click **Generate**, **Update section**, **Enhance prompt**, or **Test connection** in the builder UI; and only if Claude is the currently-selected provider.
+* Endpoint: https://api.anthropic.com/v1/messages
+* Provider: Anthropic, PBC.
+* Terms of Service: https://www.anthropic.com/legal/consumer-terms
+* Privacy Policy: https://www.anthropic.com/legal/privacy
+
+= Google Gemini (alternate LLM provider) =
+
+* What it is and what it is used for: Google's hosted Gemini language model. Used to generate the HTML for each website section and, optionally, to rewrite a section based on a user instruction.
+* What data is sent: your Google API key (as a URL query parameter), the generation prompt, the natural-language site description, the list of section types, any custom design variables you saved in Settings, the current HTML of the section being edited when you edit one, the URL/notes of any references you attached, and — if you attached a screenshot reference — that image, downscaled to a maximum of 1024 × 1024 px and JPEG-encoded at 75 % quality, base64-encoded inside the request body.
+* When it is sent: only when you click **Generate**, **Update section**, **Enhance prompt**, or **Test connection** in the builder UI; and only if Gemini is the currently-selected provider.
+* Endpoint: https://generativelanguage.googleapis.com/v1beta/models/
+* Provider: Google LLC.
+* Terms of Service: https://policies.google.com/terms
+* Privacy Policy: https://policies.google.com/privacy
+* Additional Gemini API terms: https://ai.google.dev/gemini-api/terms
+
+= Moonshot AI Kimi (alternate LLM provider) =
+
+* What it is and what it is used for: Moonshot AI's hosted Kimi language model. Used to generate the HTML for each website section and, optionally, to rewrite a section based on a user instruction.
+* What data is sent: your Moonshot API key (as an HTTP Authorization header), the generation prompt, the natural-language site description, the list of section types, any custom design variables you saved in Settings, the current HTML of the section being edited when you edit one, the URL/notes of any references you attached. Screenshot references are sent to Kimi as a text note (the image itself is not uploaded — Kimi does not accept inline images on this endpoint).
+* When it is sent: only when you click **Generate**, **Update section**, **Enhance prompt**, or **Test connection** in the builder UI; and only if Kimi is the currently-selected provider.
+* Endpoint: https://api.moonshot.cn/v1/chat/completions
+* Provider: Moonshot AI (Beijing).
+* Terms of Service: https://platform.moonshot.cn/docs/agreement/serviceAgreement
+* Privacy Policy: https://platform.moonshot.cn/docs/agreement/privacyPolicy
+
+= OpenAI (alternate LLM provider) =
+
+* What it is and what it is used for: OpenAI's hosted GPT models. Used to generate the HTML for each website section and, optionally, to rewrite a section based on a user instruction.
+* What data is sent: your OpenAI API key (as an HTTP Authorization header), the generation prompt, the natural-language site description, the list of section types, any custom design variables you saved in Settings, the current HTML of the section being edited when you edit one, the URL/notes of any references you attached, and — if you attached a screenshot reference — that image, downscaled to a maximum of 1024 × 1024 px and JPEG-encoded at 75 % quality, base64-encoded inside the request body.
+* When it is sent: only when you click **Generate**, **Update section**, **Enhance prompt**, or **Test connection** in the builder UI; and only if OpenAI is the currently-selected provider.
+* Endpoint: https://api.openai.com/v1/chat/completions
+* Provider: OpenAI, L.L.C.
+* Terms of Service: https://openai.com/policies/row-terms-of-use/
+* Privacy Policy: https://openai.com/policies/row-privacy-policy/
+
+= Firecrawl (optional URL scraper) =
+
+* What it is and what it is used for: Firecrawl is a hosted web-scraping API. The plugin optionally calls it to fetch the readable content of any reference URL you paste in the builder, so the chosen LLM provider can use that page as design / copy inspiration.
+* What data is sent: your Firecrawl API key (as an HTTP Authorization header) and the reference URL you typed. No WordPress content, user data, or visitor data is sent.
+* When it is sent: only when (a) you paste a reference URL in the builder and (b) you have saved a Firecrawl API key in Settings → Firecrawl. If you leave the Firecrawl key blank, the plugin never contacts Firecrawl. Results are cached locally in a WordPress transient for 90 days so the same URL is not scraped more than once during that window.
+* Endpoint: https://api.firecrawl.dev/v2/scrape
+* Provider: Firecrawl, Inc.
+* Terms of Service: https://www.firecrawl.dev/terms-of-service
+* Privacy Policy: https://www.firecrawl.dev/privacy-policy
+
+No data is sent to any of these services without an explicit user action (clicking a builder button while a corresponding API key is configured). The plugin does not phone home, does not collect telemetry, and does not contact any Naano- or developer-controlled server.
+
 == Changelog ==
+
+= 2.1.3 =
+* Documented all external services (Claude, Gemini, OpenAI, Kimi, Firecrawl) in the readme.
+* Moved every inline `<style>` / `<script>` block in admin screens to enqueued CSS/JS files (or `wp_add_inline_style`).
+* Removed runtime `ini_set()` calls for `max_execution_time`, `max_input_time`, and `default_socket_timeout`. Only the function-scoped `set_time_limit(0)` remains on the LLM request path.
+* Removed the redundant `load_plugin_textdomain()` call (WP 4.6+ auto-loads plugin translations).
+* Added explicit nonce + capability verification inside the `register_setting()` sanitize callbacks for `naano_variables` and `naano_languages`.
+* Section-save and "save as page" AJAX handlers now run all user-submitted HTML through `Naano_HTML_Sanitizer::clean()` (previously only `<script>` was stripped in the fallback path).
+* The page-level Global CSS is now passed through `wp_strip_all_tags()` before storage.
+* Updated the Plugin URI to point to the wordpress.org plugin page (the previous GitHub URL returned 404).
 
 = 1.0.0 =
 * Initial release.
@@ -100,6 +171,9 @@ curl, json, gd, dom, and mbstring. The plugin checks for these on activation and
 * Conversation history with automatic trimming.
 
 == Upgrade Notice ==
+
+= 2.1.3 =
+Compliance fixes for the WordPress.org plugin review (asset enqueueing, external-service disclosure, sanitization). Recommended for everyone.
 
 = 1.0.0 =
 Initial release — no upgrade steps required.

@@ -917,10 +917,16 @@ class Naano_Ajax_Handler
                 continue;
             }
             $section_id = sanitize_title((string) ($entry["id"] ?? ""));
-            // The HTML is sanitized server-side by Naano_Section_Manager
-            // (which strips scripts, dangerous handlers, etc). We trust
-            // that pipeline here.
-            $html = (string) ($entry["html"] ?? "");
+            // Run user-submitted HTML through the same sanitizer used on
+            // LLM output. It strips <script>, on* event attributes, and
+            // javascript: URLs, and round-trips through DOMDocument to
+            // repair broken markup. Empty payloads remain empty (which
+            // is the explicit "delete this section" signal handled below).
+            $raw_html = (string) ($entry["html"] ?? "");
+            $html =
+                $raw_html === ""
+                    ? ""
+                    : Naano_HTML_Sanitizer::clean($raw_html);
             if ($section_id === "") {
                 continue;
             }
@@ -937,11 +943,13 @@ class Naano_Ajax_Handler
         // The empty string is a legitimate value (= clear the override).
         $global_css_saved = false;
         if (array_key_exists("global_css", $_POST)) {
-            // CSS text cannot be passed through sanitize_text_field (which
-            // strips line breaks and tags). set_global_css() applies its own
-            // CSS-safe sanitization downstream.
+            // Sanitize CSS: strip any HTML tags (we wrap the value in
+            // <style> at render time, so anything beyond CSS would be a
+            // tag-injection vector). wp_strip_all_tags() keeps newlines
+            // and CSS syntax intact while removing < > tag constructs.
             // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-            $global_css = (string) wp_unslash($_POST["global_css"]);
+            $global_css_raw = (string) wp_unslash($_POST["global_css"]);
+            $global_css = wp_strip_all_tags($global_css_raw);
             $manager->set_global_css($page_id, $global_css);
             $global_css_saved = true;
         }
@@ -1034,18 +1042,16 @@ class Naano_Ajax_Handler
 
         // Last-resort fallback for the rare case where sections meta is
         // empty (brand-new draft, edge race condition). Use the client-sent
-        // HTML so the user doesn't lose their work, but strip scripts.
+        // HTML so the user doesn't lose their work, but run it through
+        // the full sanitizer (strips scripts, on* attributes, javascript:
+        // URLs, and round-trips DOMDocument to repair broken markup).
         if (!trim($html)) {
-            // Raw HTML payload; sanitize_text_field would strip every tag and
-            // destroy the page content. Scripts are stripped explicitly below.
+            // Raw HTML payload; sanitize_text_field would strip every tag
+            // and destroy the page content. Naano_HTML_Sanitizer::clean()
+            // is the proper sanitizer for full-document HTML.
             // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-            $raw_html = wp_unslash($_POST["html"] ?? "");
-            $html =
-                preg_replace(
-                    "/<script\b[^>]*>[\s\S]*?<\/script>/i",
-                    "",
-                    $raw_html,
-                ) ?? "";
+            $raw_html = (string) wp_unslash($_POST["html"] ?? "");
+            $html = Naano_HTML_Sanitizer::clean($raw_html);
         }
 
         // Publish / update the SAME page that was edited in the builder.

@@ -50,19 +50,6 @@ $naano_translations = $naano_translations ?? [];
      "naano-ai-website-builder",
  ); ?></title>
 	<?php wp_head(); ?>
-	<style>
-		/* Reset any theme styles that may bleed into the builder. */
-		html, body {
-			margin: 0 !important;
-			padding: 0 !important;
-			overflow: hidden !important;
-			background: #1d2327 !important;
-		}
-		/* Override naano-vb height: fills the full viewport (no WP admin bar). */
-		.naano-vb {
-			height: 100vh !important;
-		}
-	</style>
 </head>
 <body class="naano-frontend-builder">
 
@@ -788,6 +775,12 @@ $naano_translations = $naano_translations ?? [];
        "Link",
        "naano-ai-website-builder",
    ); ?></button>
+			<!-- Image tab: shown only when the selected element is an <img>.
+			     Hidden by default; the JS unhides it on selection if applicable. -->
+			<button type="button" class="naano-esp-tab naano-esp-tab--image-only" data-tab="image" style="display:none;"><?php esc_html_e(
+       "Image",
+       "naano-ai-website-builder",
+   ); ?></button>
 			<button type="button" class="naano-esp-tab" data-tab="custom"><?php esc_html_e(
        "Custom CSS",
        "naano-ai-website-builder",
@@ -1048,6 +1041,50 @@ $naano_translations = $naano_translations ?? [];
 					<div class="naano-esp-row">
 						<label><?php esc_html_e("Rel", "naano-ai-website-builder"); ?></label>
 						<input type="text" id="naano-esp-rel-input" class="naano-esp-text-input" placeholder="noopener noreferrer">
+					</div>
+				</div>
+			</div>
+
+			<!-- Image pane: shown only when an <img> is selected.
+			     Lets the user pick a new file from the WP media library
+			     (no AI prompt needed) and tweak alt / sizing attributes. -->
+			<div class="naano-esp-tab-pane" id="naano-esp-pane-image" style="display:none;">
+				<div class="naano-esp-group">
+					<div class="naano-esp-group-label"><?php esc_html_e(
+         "Image source",
+         "naano-ai-website-builder",
+     ); ?></div>
+					<p class="naano-field-help" style="margin-top:0;">
+						<?php esc_html_e(
+          "Replace this image directly from your media library — no AI prompt required.",
+          "naano-ai-website-builder",
+      ); ?>
+					</p>
+
+					<!-- Live thumbnail preview of the current image. Updated
+					     whenever the URL field below changes or a new file
+					     is picked from the media library. -->
+					<div class="naano-esp-img-preview-wrap">
+						<img id="naano-esp-img-preview" class="naano-esp-img-preview" src="" alt="">
+					</div>
+
+					<div class="naano-esp-row naano-esp-img-actions">
+						<button type="button" class="naano-btn-primary" id="naano-esp-img-pick-btn" style="width:100%;">
+							<span class="dashicons dashicons-format-image"></span>
+							<?php esc_html_e("Replace image…", "naano-ai-website-builder"); ?>
+						</button>
+					</div>
+
+					<div class="naano-esp-row">
+						<label><?php esc_html_e("URL", "naano-ai-website-builder"); ?></label>
+						<input type="text" id="naano-esp-img-src-input" class="naano-esp-text-input" placeholder="https://…">
+					</div>
+					<div class="naano-esp-row">
+						<label><?php esc_html_e("Alt text", "naano-ai-website-builder"); ?></label>
+						<input type="text" id="naano-esp-img-alt-input" class="naano-esp-text-input" placeholder="<?php esc_attr_e(
+           "Describe the image…",
+           "naano-ai-website-builder",
+       ); ?>">
 					</div>
 				</div>
 			</div>
