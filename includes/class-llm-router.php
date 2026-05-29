@@ -19,7 +19,7 @@ class Naano_LLM_Router
     /**
      * Constructor.
      *
-     * @param string $provider One of 'claude', 'gemini', 'kimi'.
+     * @param string $provider One of 'claude', 'gemini', 'kimi', 'openai', 'deepseek'.
      * @param string $api_key  Provider API key.
      * @param array  $options  Optional overrides (model, …).
      * @throws InvalidArgumentException For unknown providers.
@@ -85,6 +85,7 @@ class Naano_LLM_Router
             "gemini" => new Naano_LLM_Gemini($api_key, $model),
             "kimi" => new Naano_LLM_Kimi($api_key, $model),
             "openai" => new Naano_LLM_OpenAI($api_key, $model),
+            "deepseek" => new Naano_LLM_DeepSeek($api_key, $model),
             default => throw new InvalidArgumentException(
                 sprintf("Unknown LLM provider: %s", esc_html($provider)),
             ),

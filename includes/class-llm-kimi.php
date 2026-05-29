@@ -14,8 +14,21 @@ if (!defined("ABSPATH")) {
  */
 class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
 {
-    private const API_ENDPOINT = "https://api.moonshot.cn/v1/chat/completions";
-    private const DEFAULT_MODEL = "kimi-k2.5";
+    // Moonshot operates two regional clusters with separate accounts:
+    //   - api.moonshot.ai  → international (recommended outside China)
+    //   - api.moonshot.cn  → mainland China
+    // The keys are NOT interchangeable. We default to the international
+    // domain since this plugin is distributed worldwide; users on the
+    // .cn cluster can swap the host via a small filter / override if
+    // needed. Both clusters speak the same OpenAI-compatible protocol.
+    private const API_ENDPOINT = "https://api.moonshot.ai/v1/chat/completions";
+    // The legacy kimi-k2 / kimi-k2-0711-preview series was officially
+    // discontinued on 2026-05-25. kimi-k2.6 (released 2026-04-20) is the
+    // current flagship and is multimodal + agentic. We keep the existing
+    // kimi-k2.5 temperature-restriction guard below so users who manually
+    // pin to kimi-k2.5 in Settings → Model Override still get a valid
+    // payload.
+    private const DEFAULT_MODEL = "kimi-k2.6";
     private const MAX_TOKENS = 40000;
     private const TIMEOUT_SECONDS = 600;
 

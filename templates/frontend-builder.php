@@ -460,6 +460,28 @@ $naano_translations = $naano_translations ?? [];
 						<ul class="naano-sections-list" id="naano-sections-list"></ul>
 					</div>
 
+					<div class="naano-drawer__field" id="naano-add-section-field">
+						<button type="button" class="naano-btn-secondary" id="naano-add-new-section-btn">
+							+ <?php esc_html_e("Add New Section", "naano-ai-website-builder"); ?>
+						</button>
+						<div id="naano-new-section-form" style="display:none;margin-top:8px;">
+							<input type="text" id="naano-new-section-name" class="naano-input"
+								   placeholder="<?php esc_attr_e(
+               "Section name, e.g. Team",
+               "naano-ai-website-builder",
+           ); ?>">
+							<p id="naano-new-section-error" style="display:none;color:#f87171;font-size:12px;margin:4px 0 0;"></p>
+							<div class="naano-add-url-form__btns" style="margin-top:6px;">
+								<button type="button" class="naano-btn-secondary" id="naano-confirm-new-section-btn">
+									<?php esc_html_e("Add", "naano-ai-website-builder"); ?>
+								</button>
+								<button type="button" class="naano-btn-ghost" id="naano-cancel-new-section-btn">
+									<?php esc_html_e("Cancel", "naano-ai-website-builder"); ?>
+								</button>
+							</div>
+						</div>
+					</div>
+
 					<!-- Element style panel was moved out of the drawer and now lives
 					     as a floating top-right overlay (#naano-element-style-panel)
 					     for an Elementor-style UX. See bottom of this template. -->
@@ -654,25 +676,6 @@ $naano_translations = $naano_translations ?? [];
 						<div class="naano-loading" id="naano-update-loading" style="display:none;">
 							<span class="spinner is-active"></span>
 							<?php esc_html_e("Updating…", "naano-ai-website-builder"); ?>
-						</div>
-						<button type="button" class="naano-btn-secondary naano-mt-8" id="naano-add-new-section-btn">
-							+ <?php esc_html_e("Add New Section", "naano-ai-website-builder"); ?>
-						</button>
-						<div id="naano-new-section-form" style="display:none;margin-top:8px;">
-							<input type="text" id="naano-new-section-name" class="naano-input"
-								   placeholder="<?php esc_attr_e(
-               "Section name, e.g. Team",
-               "naano-ai-website-builder",
-           ); ?>">
-							<p id="naano-new-section-error" style="display:none;color:#f87171;font-size:12px;margin:4px 0 0;"></p>
-							<div class="naano-add-url-form__btns" style="margin-top:6px;">
-								<button type="button" class="naano-btn-secondary" id="naano-confirm-new-section-btn">
-									<?php esc_html_e("Add", "naano-ai-website-builder"); ?>
-								</button>
-								<button type="button" class="naano-btn-ghost" id="naano-cancel-new-section-btn">
-									<?php esc_html_e("Cancel", "naano-ai-website-builder"); ?>
-								</button>
-							</div>
 						</div>
 					</div><!-- .naano-drawer__actions -->
 

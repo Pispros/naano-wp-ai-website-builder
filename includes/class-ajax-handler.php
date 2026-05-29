@@ -44,6 +44,9 @@ class Naano_Ajax_Handler
             "naano_test_firecrawl",
             "naano_add_custom_html_section",
             "naano_update_custom_html_section",
+            // Site-config + permalink endpoints (v2.2.0)
+            "naano_save_site_config",
+            "naano_update_permalink",
         ];
 
         foreach ($actions as $action) {
@@ -1312,6 +1315,163 @@ class Naano_Ajax_Handler
     private static function verify_nonce(): void
     {
         check_ajax_referer("naano_builder_nonce", "nonce");
+    }
+
+    /**
+     * Save the Site Configuration form (slogan, favicon, maintenance).
+     *
+     * Posted fields (all optional, missing ones reset to defaults):
+     *   - slogan: free text
+     *   - favicon_url, favicon_attachment_id: image picked from media library
+     *   - maintenance_enabled: "1" or empty
+     *   - maintenance_page_id: int (must reference an existing page)
+     *
+     * @return void
+     */
+    public static function handle_naano_save_site_config(): void
+    {
+        check_ajax_referer("naano_builder_nonce", "nonce");
+
+        if (!current_user_can("manage_options")) {
+            wp_send_json_error([
+                "message" => __(
+                    "Permission denied.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        $slogan = sanitize_text_field(wp_unslash($_POST["slogan"] ?? ""));
+        $favicon_url = esc_url_raw(wp_unslash($_POST["favicon_url"] ?? ""));
+        $favicon_attach_id = self::get_int("favicon_attachment_id");
+        $maintenance_enabled = !empty($_POST["maintenance_enabled"]) ? "1" : "";
+        $maintenance_page_id = self::get_int("maintenance_page_id");
+
+        // Validate the maintenance page exists if one was picked. We
+        // don't want to silently accept a stale id from the form — the
+        // user would toggle maintenance on and discover later that
+        // nothing happens because the picked page was trashed.
+        if ($maintenance_page_id) {
+            $p = get_post($maintenance_page_id);
+            if (!$p || $p->post_status === "trash") {
+                $maintenance_page_id = 0;
+            }
+        }
+
+        // Refuse to enable maintenance mode without a target page —
+        // doing so would silently do nothing and confuse the user.
+        if ($maintenance_enabled && !$maintenance_page_id) {
+            wp_send_json_error([
+                "message" => __(
+                    "Pick (or create) a maintenance page before enabling maintenance mode.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        update_option("naano_site_slogan", $slogan);
+        update_option("naano_site_favicon_url", $favicon_url);
+        update_option(
+            "naano_site_favicon_attachment_id",
+            $favicon_attach_id,
+        );
+        update_option("naano_maintenance_enabled", $maintenance_enabled);
+        update_option("naano_maintenance_page_id", $maintenance_page_id);
+
+        // Tag the chosen page with the maintenance flag so the AI pages
+        // list shows the badge. Clear the flag on the previous page (if
+        // any) so we don't end up with multiple "maintenance" badges.
+        if ($maintenance_page_id) {
+            $previously = get_posts([
+                "post_type" => "page",
+                "post_status" => "any",
+                "posts_per_page" => -1,
+                "fields" => "ids",
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+                "meta_key" => "_naano_maintenance",
+                // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+                "meta_value" => "1",
+            ]);
+            foreach ($previously as $pid) {
+                if ((int) $pid !== $maintenance_page_id) {
+                    delete_post_meta((int) $pid, "_naano_maintenance");
+                }
+            }
+            update_post_meta($maintenance_page_id, "_naano_maintenance", "1");
+        }
+
+        wp_send_json_success([
+            "message" => __(
+                "Site configuration saved.",
+                "naano-ai-website-builder",
+            ),
+        ]);
+    }
+
+    /**
+     * Update a page's slug (permalink). Called from the pages-list
+     * inline edit form.
+     *
+     * POST: page_id, slug
+     *
+     * @return void
+     */
+    public static function handle_naano_update_permalink(): void
+    {
+        check_ajax_referer("naano_builder_nonce", "nonce");
+
+        $page_id = self::get_int("page_id");
+        $slug = sanitize_title(wp_unslash($_POST["slug"] ?? ""));
+
+        if (!$page_id) {
+            wp_send_json_error([
+                "message" => __(
+                    "Missing page_id.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+        if (!current_user_can("edit_post", $page_id)) {
+            wp_send_json_error([
+                "message" => __(
+                    "Insufficient permissions.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+        if ($slug === "") {
+            wp_send_json_error([
+                "message" => __(
+                    "Slug cannot be empty.",
+                    "naano-ai-website-builder",
+                ),
+            ]);
+        }
+
+        // wp_update_post will run the slug through wp_unique_post_slug()
+        // automatically, so if the user picks one that collides with an
+        // existing page it gets suffixed (e.g. "about-2"). We capture the
+        // final slug from the saved post and return it so the UI can
+        // show the user what was actually stored.
+        $result = wp_update_post(
+            [
+                "ID" => $page_id,
+                "post_name" => $slug,
+            ],
+            true,
+        );
+        if (is_wp_error($result)) {
+            wp_send_json_error(["message" => $result->get_error_message()]);
+        }
+
+        $final_slug = get_post_field("post_name", $page_id);
+        $permalink = get_permalink($page_id);
+
+        wp_send_json_success([
+            "slug" => $final_slug,
+            "permalink" => $permalink,
+            "message" => __("Permalink updated.", "naano-ai-website-builder"),
+        ]);
     }
 
     /**

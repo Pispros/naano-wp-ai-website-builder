@@ -89,6 +89,10 @@ $naano_update_refine = get_option("naano_update_refinement_passes", 1);
            $naano_provider,
            "kimi",
        ); ?>>Kimi (Moonshot)</option>
+							<option value="deepseek" <?php selected(
+           $naano_provider,
+           "deepseek",
+       ); ?>>DeepSeek</option>
 						</select>
 					</td>
 				</tr>
@@ -140,7 +144,7 @@ $naano_update_refine = get_option("naano_update_refinement_passes", 1);
           ); ?>">
 						<p class="description">
 							<?php esc_html_e(
-           "Defaults: Claude → claude-sonnet-4-6 | Gemini → gemini-2.5-flash | Kimi → kimi-k2-0711-preview | OpenAI → gpt-5.5",
+           "Defaults: Claude → claude-sonnet-4-6 | Gemini → gemini-2.5-flash | Kimi → kimi-k2.6 | OpenAI → gpt-5.5 | DeepSeek → deepseek-v4-flash",
            "naano-ai-website-builder",
        ); ?>
 						</p>

@@ -44,11 +44,14 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface
     ): string {
         Naano_LLM_Utils::prepare_long_running_request();
 
+        // Google now recommends passing the API key in the x-goog-api-key
+        // header rather than as a `?key=` query parameter. The query-string
+        // form still works, but the header form keeps the key out of any
+        // intermediate proxy / access logs.
         $endpoint =
             self::API_BASE .
             rawurlencode($this->model) .
-            ":generateContent?key=" .
-            rawurlencode($this->api_key);
+            ":generateContent";
 
         $contents = $this->build_contents($messages, $images);
 
@@ -170,7 +173,10 @@ class Naano_LLM_Gemini implements Naano_LLM_Provider_Interface
         }
 
         $args = Naano_LLM_Utils::default_request_args(self::TIMEOUT_SECONDS) + [
-            "headers" => ["Content-Type" => "application/json"],
+            "headers" => [
+                "Content-Type" => "application/json",
+                "x-goog-api-key" => $this->api_key,
+            ],
             "body" => $json_body,
         ];
 

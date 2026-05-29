@@ -32,7 +32,64 @@ foreach ( $naano_languages as $naano_lentry ) {
 		$naano_lang_map[ $naano_lentry['code'] ] = $naano_lentry['label'] ?? strtoupper( $naano_lentry['code'] );
 	}
 }
+
+// Maintenance state — shown as a banner above the table when active.
+$naano_maint_on   = (bool) get_option( 'naano_maintenance_enabled', '' );
+$naano_maint_pid  = (int) get_option( 'naano_maintenance_page_id', 0 );
+
+// Localize for the inline-permalink-editor JS in admin-pages-list.js.
+// Done via wp_add_inline_script so the data is available before the
+// listener fires, even though the script handle is registered elsewhere.
+wp_register_script(
+	'naano-admin-pages-list-data',
+	false,
+	[],
+	NAANO_VERSION
+);
+wp_enqueue_script( 'naano-admin-pages-list-data' );
+wp_add_inline_script(
+	'naano-admin-pages-list-data',
+	'window.naanoPagesListData = ' . wp_json_encode( [
+		'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+		'nonce'   => wp_create_nonce( 'naano_builder_nonce' ),
+		'i18n'    => [
+			'saving'      => __( 'Saving…', 'naano-ai-website-builder' ),
+			'saved'       => __( 'Permalink saved.', 'naano-ai-website-builder' ),
+			'save_failed' => __( 'Save failed.', 'naano-ai-website-builder' ),
+		],
+	] ) . ';',
+	'before'
+);
+// And enqueue admin-pages-list.js itself (it already exists in the
+// plugin's JS folder but wasn't being loaded from this template).
+wp_enqueue_script(
+	'naano-admin-pages-list',
+	NAANO_PLUGIN_URL . 'assets/js/admin-pages-list.js',
+	[ 'jquery', 'naano-admin-pages-list-data' ],
+	NAANO_VERSION,
+	true
+);
 ?>
+<style>
+/* Inline permalink editor in the AI Pages table. Keeps the slug input
+   visually attached to the home URL prefix so the user always sees the
+   final URL shape while editing. */
+.naano-perma-wrap {
+	display:flex;align-items:center;gap:0;font-size:12px;line-height:1.2;
+}
+.naano-perma-prefix {
+	color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+	max-width:160px;
+}
+.naano-perma-input {
+	font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+	padding:2px 6px;height:24px;line-height:1.2;min-width:0;width:auto;
+	flex:1;max-width:180px;
+}
+.naano-perma-msg.is-success { color:#15803d; }
+.naano-perma-msg.is-error   { color:#b91c1c; }
+.naano-perma-msg.is-saving  { color:#6b7280;font-style:italic; }
+</style>
 <div class="wrap naano-builder-wrap">
 	<h1 class="naano-page-title">
 		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 340" aria-hidden="true" focusable="false"><rect x="54" y="54" width="232" height="232" rx="26" ry="26" fill="none" stroke="#2060F0" stroke-width="18"/><line x1="115" y1="54" x2="115" y2="26" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="170" y1="54" x2="170" y2="26" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="225" y1="54" x2="225" y2="26" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="115" y1="286" x2="115" y2="314" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="170" y1="286" x2="170" y2="314" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="225" y1="286" x2="225" y2="314" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="54" y1="115" x2="26" y2="115" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="54" y1="170" x2="26" y2="170" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="54" y1="225" x2="26" y2="225" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="286" y1="115" x2="314" y2="115" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="286" y1="170" x2="314" y2="170" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="286" y1="225" x2="314" y2="225" stroke="#2060F0" stroke-width="17" stroke-linecap="round"/><line x1="106" y1="106" x2="106" y2="234" stroke="#2060F0" stroke-width="22" stroke-linecap="round"/><line x1="234" y1="106" x2="234" y2="234" stroke="#2060F0" stroke-width="22" stroke-linecap="round"/><line x1="106" y1="106" x2="234" y2="234" stroke="#2060F0" stroke-width="22" stroke-linecap="round"/></svg>
@@ -50,11 +107,28 @@ foreach ( $naano_languages as $naano_lentry ) {
 		</div>
 	<?php endif; ?>
 
+	<?php if ( $naano_maint_on ) : ?>
+		<div class="notice notice-warning" style="border-left-color:#d63638;">
+			<p>
+				<strong><?php esc_html_e( '⚠ Maintenance mode is ACTIVE.', 'naano-ai-website-builder' ); ?></strong>
+				<?php esc_html_e( 'Visitors are seeing the maintenance page. Admins (you) still see the real site.', 'naano-ai-website-builder' ); ?>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=naano-site-config' ) ); ?>">
+					<?php esc_html_e( 'Manage in Site Configuration →', 'naano-ai-website-builder' ); ?>
+				</a>
+			</p>
+		</div>
+	<?php endif; ?>
+
 	<div class="naano-admin-actions" style="margin-bottom:20px;">
 		<a href="<?php echo esc_url( add_query_arg( [ 'naano_builder' => '1', 'naano_new' => '1' ], home_url( '/' ) ) ); ?>"
 		   class="button button-primary" target="_blank">
 			<span class="dashicons dashicons-plus-alt2" style="vertical-align:middle;margin-top:-2px;"></span>
 			<?php esc_html_e( 'Create New Page with AI', 'naano-ai-website-builder' ); ?>
+		</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=naano-site-config' ) ); ?>"
+		   class="button" style="margin-left:6px;">
+			<span class="dashicons dashicons-admin-site-alt3" style="vertical-align:middle;margin-top:-2px;"></span>
+			<?php esc_html_e( 'Site Configuration', 'naano-ai-website-builder' ); ?>
 		</a>
 	</div>
 
@@ -76,6 +150,7 @@ foreach ( $naano_languages as $naano_lentry ) {
 					<tr>
 						<th scope="col" class="column-title column-primary"><?php esc_html_e( 'Page', 'naano-ai-website-builder' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Status', 'naano-ai-website-builder' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Permalink', 'naano-ai-website-builder' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Language', 'naano-ai-website-builder' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Sections', 'naano-ai-website-builder' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Last Modified', 'naano-ai-website-builder' ); ?></th>
@@ -108,20 +183,50 @@ foreach ( $naano_languages as $naano_lentry ) {
 						$naano_tl = get_post_meta( $naano_st->ID, '_naano_lang', true );
 						if ( $naano_tl ) { $naano_translated_langs[] = $naano_tl; }
 					}
+					$naano_is_maint = (bool) get_post_meta( $page->ID, '_naano_maintenance', true );
+					$naano_slug     = $page->post_name ?: '';
+					// home_url() gives us "https://site.tld" — append a trailing slash
+					// so the slug field appears next to a properly-terminated prefix.
+					$naano_home     = trailingslashit( home_url( '/' ) );
 					?>
-					<tr>
+					<tr data-page-id="<?php echo esc_attr( $page->ID ); ?>">
 						<td class="column-title column-primary">
 							<strong>
 							<a href="<?php echo esc_url( $naano_builder_url ); ?>" target="_blank">
 									<?php echo esc_html( $page->post_title ?: __( '(no title)', 'naano-ai-website-builder' ) ); ?>
 								</a>
 							</strong>
+							<?php if ( $naano_is_maint ) : ?>
+								<span class="naano-status-badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;margin-left:6px;">
+									<span class="dashicons dashicons-warning" style="font-size:12px;width:12px;height:12px;vertical-align:middle;margin-top:-2px;"></span>
+									<?php esc_html_e( 'Maintenance', 'naano-ai-website-builder' ); ?>
+								</span>
+							<?php endif; ?>
 						</td>
 						<td>
 							<span class="naano-status-badge naano-status-<?php echo esc_attr( $page->post_status ); ?>">
 								<?php echo esc_html( get_post_status_object( $page->post_status )->label ?? $page->post_status ); ?>
 							</span>
-						</td>					<!-- Language column -->
+						</td>
+						<!-- Permalink column: inline editor.
+						     Submitting saves the slug via AJAX (handle_naano_update_permalink).
+						     We display the home URL as a static prefix so the user sees the
+						     final URL shape while editing just the slug part. -->
+						<td class="naano-perma-cell">
+							<div class="naano-perma-wrap" data-page-id="<?php echo esc_attr( $page->ID ); ?>">
+								<span class="naano-perma-prefix"><?php echo esc_html( $naano_home ); ?></span><input
+									type="text"
+									class="naano-perma-input"
+									value="<?php echo esc_attr( $naano_slug ); ?>"
+									data-original="<?php echo esc_attr( $naano_slug ); ?>"
+									aria-label="<?php esc_attr_e( 'Page slug', 'naano-ai-website-builder' ); ?>">
+								<button type="button" class="button button-small naano-perma-save" style="display:none;margin-left:4px;">
+									<?php esc_html_e( 'Save', 'naano-ai-website-builder' ); ?>
+								</button>
+								<span class="naano-perma-msg" style="margin-left:6px;font-size:11px;"></span>
+							</div>
+						</td>
+						<!-- Language column -->
 					<td>
 						<?php if ( $naano_page_lang ) : ?>
 							<span class="naano-status-badge naano-status-lang"><?php echo esc_html( strtoupper( $naano_page_lang ) ); ?></span>

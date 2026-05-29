@@ -59,6 +59,41 @@ class Naano_Admin_Page
 
         // Add "Edit with Naano AI" to the WP admin bar on standalone Naano pages.
         add_action("admin_bar_menu", [$this, "add_admin_bar_edit_link"], 80);
+
+        // ── Site Configuration: favicon + maintenance mode ────────────────
+        //
+        // Maintenance gate. Runs EARLY on template_redirect (priority 0)
+        // so it fires before maybe_render_standalone_page / the theme
+        // pipeline. When the admin has toggled maintenance mode on and
+        // picked a maintenance page, every front-end URL (except wp-admin,
+        // wp-login, AJAX, REST, cron, and the builder/preview itself) is
+        // served the maintenance page's HTML with a 503 Service
+        // Unavailable status so search engines don't index the placeholder
+        // as the real content.
+        add_action(
+            "template_redirect",
+            [$this, "maybe_render_maintenance_page"],
+            0,
+        );
+
+        // Inject the favicon link tag into <head> on every front-end
+        // request — including standalone Naano pages, where we still
+        // capture wp_head() output. Hooking wp_head means anything that
+        // calls it gets the favicon (theme pages AND our raw HTML
+        // injection path via the wp_head capture inside
+        // maybe_render_standalone_page).
+        add_action("wp_head", [$this, "render_favicon_meta"], 2);
+        // Same favicon link in the admin so the back-office tabs are
+        // visually consistent with the front-end site identity.
+        add_action("admin_head", [$this, "render_favicon_meta"], 2);
+
+        // Server-side action for the "Create maintenance page" button on
+        // the Site Configuration screen. Bootstraps a draft + opens the
+        // builder so the admin can generate the maintenance content.
+        add_action("admin_post_naano_create_maintenance_page", [
+            $this,
+            "handle_create_maintenance_page",
+        ]);
     }
 
     /**
@@ -255,6 +290,15 @@ class Naano_Admin_Page
 
         $this->page_hooks[] = add_submenu_page(
             "naano-ai-builder",
+            __("Site Configuration", "naano-ai-website-builder"),
+            __("Site Configuration", "naano-ai-website-builder"),
+            "manage_options",
+            "naano-site-config",
+            [$this, "render_site_config_page"],
+        );
+
+        $this->page_hooks[] = add_submenu_page(
+            "naano-ai-builder",
             __("Settings", "naano-ai-website-builder"),
             __("Settings", "naano-ai-website-builder"),
             "manage_options",
@@ -274,7 +318,7 @@ class Naano_Admin_Page
             "sanitize_callback" => static function ($v) {
                 return in_array(
                     $v,
-                    ["claude", "gemini", "kimi", "openai"],
+                    ["claude", "gemini", "kimi", "openai", "deepseek"],
                     true,
                 )
                     ? $v
@@ -335,6 +379,51 @@ class Naano_Admin_Page
             "sanitize_callback" => "sanitize_text_field",
             "default" => "",
         ]);
+
+        // ── Site Configuration options ────────────────────────────────────
+        //
+        // These options drive the new "Site Configuration" submenu:
+        // tagline/slogan (used as both a meta tag and an AI variable),
+        // favicon (URL string — we accept any URL, not just an attachment
+        // ID, so the admin can paste a CDN-hosted favicon if they want),
+        // and the maintenance-mode toggle + maintenance page id. The
+        // options live in their own group `naano_site_config_group` so
+        // a save on the Site Configuration page doesn't accidentally
+        // wipe the unrelated LLM/translation settings.
+        register_setting("naano_site_config_group", "naano_site_slogan", [
+            "sanitize_callback" => "sanitize_text_field",
+            "default" => "",
+        ]);
+        register_setting("naano_site_config_group", "naano_site_favicon_url", [
+            "sanitize_callback" => "esc_url_raw",
+            "default" => "",
+        ]);
+        register_setting(
+            "naano_site_config_group",
+            "naano_site_favicon_attachment_id",
+            [
+                "sanitize_callback" => "absint",
+                "default" => 0,
+            ],
+        );
+        register_setting(
+            "naano_site_config_group",
+            "naano_maintenance_enabled",
+            [
+                "sanitize_callback" => static function ($v) {
+                    return $v ? "1" : "";
+                },
+                "default" => "",
+            ],
+        );
+        register_setting(
+            "naano_site_config_group",
+            "naano_maintenance_page_id",
+            [
+                "sanitize_callback" => "absint",
+                "default" => 0,
+            ],
+        );
     }
 
     /**
@@ -692,6 +781,293 @@ class Naano_Admin_Page
         require NAANO_PLUGIN_DIR . "templates/settings-page.php";
     }
 
+    /**
+     * Render the Site Configuration page (slogan, favicon, maintenance).
+     *
+     * @return void
+     */
+    public function render_site_config_page(): void
+    {
+        // Enqueue the site-config JS (handles the AJAX save, the
+        // wp.media() favicon picker, and the "Create maintenance page"
+        // shortcut). The handle name follows the rest of the plugin
+        // (naano-*) for consistency.
+        wp_enqueue_media();
+        wp_enqueue_script(
+            "naano-site-config",
+            NAANO_PLUGIN_URL . "assets/js/site-config.js",
+            ["jquery", "wp-util"],
+            NAANO_VERSION,
+            true,
+        );
+        wp_localize_script("naano-site-config", "naanoSiteConfig", [
+            "ajaxUrl" => admin_url("admin-ajax.php"),
+            "nonce" => wp_create_nonce("naano_builder_nonce"),
+            "i18n" => [
+                "saved" => __("Configuration saved.", "naano-ai-website-builder"),
+                "save_failed" => __(
+                    "Save failed — please retry.",
+                    "naano-ai-website-builder",
+                ),
+                "pick_favicon" => __(
+                    "Choose favicon",
+                    "naano-ai-website-builder",
+                ),
+                "use_this" => __("Use this image", "naano-ai-website-builder"),
+                // Live status banner text shown when the user toggles
+                // the maintenance-mode checkbox. Must match the strings
+                // rendered server-side in templates/site-config-page.php
+                // so the banner doesn't flicker on save.
+                "maint_on" => __(
+                    "Maintenance mode is ON — visitors see the maintenance page.",
+                    "naano-ai-website-builder",
+                ),
+                "maint_off" => __(
+                    "Maintenance mode is OFF — your site is live.",
+                    "naano-ai-website-builder",
+                ),
+            ],
+        ]);
+        require NAANO_PLUGIN_DIR . "templates/site-config-page.php";
+    }
+
+    /**
+     * Output a <link rel="icon"> tag in the document <head> when a
+     * favicon URL has been configured under Site Configuration.
+     *
+     * The same callback runs on both wp_head and admin_head so the
+     * favicon shows in browser tabs for the public site, the WP admin,
+     * and the Naano builder overlay. We also emit an apple-touch-icon
+     * for iOS home-screen bookmarks.
+     *
+     * Skipped silently when no favicon is configured so the active
+     * theme's site_icon (if any) can take over.
+     *
+     * @return void
+     */
+    public function render_favicon_meta(): void
+    {
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo $this->build_favicon_meta_html();
+    }
+
+    /**
+     * Build the <link> tag(s) for the configured favicon. Returns an
+     * empty string when no favicon URL is set so the caller can
+     * concatenate it without conditional guards.
+     *
+     * Shared by render_favicon_meta (wp_head/admin_head printer) AND
+     * the standalone page renderer, which doesn't go through wp_head
+     * for anonymous visitors and so needs to inject the tag directly.
+     *
+     * @return string
+     */
+    private function build_favicon_meta_html(): string
+    {
+        $favicon = get_option("naano_site_favicon_url", "");
+        if (!$favicon) {
+            return "";
+        }
+        // Guess the MIME type from the extension. PNG, ICO and SVG are
+        // the only three the major browsers actually care about — anything
+        // else falls back to a bare type attribute which all browsers
+        // tolerate (they sniff the bytes anyway).
+        $ext = strtolower(
+            pathinfo(wp_parse_url($favicon, PHP_URL_PATH) ?: "", PATHINFO_EXTENSION),
+        );
+        $type = "image/x-icon";
+        if ($ext === "png") {
+            $type = "image/png";
+        } elseif ($ext === "svg") {
+            $type = "image/svg+xml";
+        } elseif ($ext === "jpg" || $ext === "jpeg") {
+            $type = "image/jpeg";
+        } elseif ($ext === "webp") {
+            $type = "image/webp";
+        }
+        return '<link rel="icon" type="' .
+            esc_attr($type) .
+            '" href="' .
+            esc_url($favicon) .
+            '">' .
+            "\n" .
+            '<link rel="apple-touch-icon" href="' .
+            esc_url($favicon) .
+            '">' .
+            "\n";
+    }
+
+    /**
+     * Intercept every front-end request when maintenance mode is on and
+     * serve the configured maintenance page in place of the requested
+     * URL. Hooked on `template_redirect` priority 0 so we run before
+     * maybe_render_standalone_page.
+     *
+     * Bypass conditions (in order):
+     *   1. Maintenance toggle is off → return normally.
+     *   2. No maintenance page configured / page missing → return.
+     *   3. Caller is an admin (manage_options) → preview the site
+     *      normally so they can still see / edit pages while maintenance
+     *      is active. They can still hit the maintenance URL directly to
+     *      preview it.
+     *   4. ?naano_builder=1 / ?naano_new=1 → preserve the builder
+     *      overlay flow.
+     *   5. ?naano_maintenance_preview=1 → explicit preview link from
+     *      the Site Configuration page.
+     *   6. Request is for the maintenance page itself → render it
+     *      normally with a 200 status (no 503 — the admin is looking
+     *      at it on purpose).
+     *
+     * Everything else gets the maintenance page HTML + a 503 status +
+     * a Retry-After header set to 1 hour (a reasonable default; the
+     * admin can override via filter `naano_maintenance_retry_after`).
+     *
+     * @return void
+     */
+    public function maybe_render_maintenance_page(): void
+    {
+        // 1. Toggle.
+        if (!get_option("naano_maintenance_enabled", "")) {
+            return;
+        }
+        // 2. Configured page.
+        $maint_id = (int) get_option("naano_maintenance_page_id", 0);
+        if (!$maint_id) {
+            return;
+        }
+        $maint_post = get_post($maint_id);
+        if (!$maint_post || $maint_post->post_status === "trash") {
+            return;
+        }
+
+        // 3. Admins bypass — they can still browse the site while it's
+        // closed to the public.
+        if (current_user_can("manage_options")) {
+            return;
+        }
+
+        // 4. Builder/preview overlay.
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended
+        if (!empty($_GET["naano_builder"]) || !empty($_GET["naano_new"])) {
+            return;
+        }
+        // 5. Explicit preview link.
+        $is_preview = !empty($_GET["naano_maintenance_preview"]);
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+        // 6. The maintenance page itself.
+        $queried_id = get_queried_object_id();
+        $is_maint_url = ($queried_id === $maint_id);
+
+        $html = get_post_meta($maint_id, "_naano_page_html", true);
+        if (!$html) {
+            // Maintenance page has no assembled HTML yet — fall through
+            // to normal rendering so the admin doesn't accidentally
+            // lock out the whole site with a blank screen.
+            return;
+        }
+
+        if (!$is_maint_url && !$is_preview) {
+            $retry_after = (int) apply_filters(
+                "naano_maintenance_retry_after",
+                3600,
+            );
+            status_header(503);
+            nocache_headers();
+            header("Retry-After: " . max(0, $retry_after));
+        }
+
+        header("Content-Type: text/html; charset=UTF-8");
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo $html;
+        exit();
+    }
+
+    /**
+     * Handle the "Create maintenance page" form on Site Configuration.
+     *
+     * Creates a fresh WordPress page tagged with _naano_maintenance=1
+     * meta (so the pages list can show the badge) and assigns it as the
+     * configured maintenance page. The user is then redirected straight
+     * into the builder to generate / edit the content.
+     *
+     * If a maintenance page already exists, the existing one is reused
+     * (no duplicate is created) and the user is redirected to its
+     * builder.
+     *
+     * @return void
+     */
+    public function handle_create_maintenance_page(): void
+    {
+        if (!current_user_can("manage_options")) {
+            wp_die(
+                esc_html__(
+                    "Insufficient permissions.",
+                    "naano-ai-website-builder",
+                ),
+            );
+        }
+        check_admin_referer("naano_create_maintenance_page");
+
+        $existing_id = (int) get_option("naano_maintenance_page_id", 0);
+        $existing = $existing_id ? get_post($existing_id) : null;
+        if ($existing && $existing->post_status !== "trash") {
+            // Already exists — go straight to the builder for it.
+            wp_safe_redirect(
+                add_query_arg(
+                    "naano_builder",
+                    "1",
+                    get_permalink($existing->ID),
+                ),
+            );
+            exit();
+        }
+
+        // Create a draft page. We use status='private' so it's
+        // accessible at a clean URL but never shows up in front-end
+        // listings or search results before the admin is ready.
+        $new_id = wp_insert_post(
+            [
+                "post_type" => "page",
+                "post_status" => "private",
+                "post_title" => __(
+                    "Site Maintenance",
+                    "naano-ai-website-builder",
+                ),
+                "post_name" => "maintenance",
+                "post_content" => __(
+                    "This page is rendered by Naano AI Website Builder during maintenance mode.",
+                    "naano-ai-website-builder",
+                ),
+            ],
+            true,
+        );
+
+        if (is_wp_error($new_id) || !$new_id) {
+            wp_die(
+                esc_html__(
+                    "Could not create maintenance page.",
+                    "naano-ai-website-builder",
+                ),
+            );
+        }
+
+        update_post_meta($new_id, "_naano_maintenance", "1");
+        // Mark it as a Naano page so it shows up in the AI Pages list
+        // (the list filters on the presence of _naano_sections meta).
+        update_post_meta($new_id, "_naano_sections", []);
+        update_post_meta($new_id, "_naano_standalone", "1");
+
+        update_option("naano_maintenance_page_id", (int) $new_id);
+
+        // Redirect straight into the builder so the admin can generate
+        // the maintenance content right away.
+        wp_safe_redirect(
+            add_query_arg("naano_builder", "1", get_permalink($new_id)),
+        );
+        exit();
+    }
+
     // -------------------------------------------------------------------------
     // Frontend builder
     // -------------------------------------------------------------------------
@@ -719,6 +1095,16 @@ class Naano_Admin_Page
 
         if (!$html) {
             return; // Nothing to render; let WP fall through normally.
+        }
+
+        // Inject the configured favicon into <head> directly. For logged-in
+        // visitors the wp_head capture below will ALSO emit a favicon tag —
+        // duplicate link rels are harmless and browsers just pick one.
+        // For anonymous visitors this is the only place the favicon link
+        // can land because wp_head is not run on the standalone HTML path.
+        $favicon_html = $this->build_favicon_meta_html();
+        if ($favicon_html && stripos($html, "</head>") !== false) {
+            $html = str_ireplace("</head>", $favicon_html . "</head>", $html);
         }
 
         // Inject a floating language switcher when this page has translation variants.
@@ -1116,8 +1502,9 @@ class Naano_Admin_Page
         $_mld = [
             "claude" => "claude-sonnet-4-6",
             "gemini" => "gemini-2.5-flash",
-            "kimi" => "kimi-k2-0711-preview",
+            "kimi" => "kimi-k2.6",
             "openai" => "gpt-5.5",
+            "deepseek" => "deepseek-v4-flash",
         ];
         $model_label = $_mlm ?: $_mld[$_mlp] ?? $_mlp;
 

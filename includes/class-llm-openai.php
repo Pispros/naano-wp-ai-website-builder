@@ -52,36 +52,42 @@ class Naano_LLM_OpenAI implements Naano_LLM_Provider_Interface
         $payload = [
             "model" => $this->model,
             "max_completion_tokens" => self::MAX_TOKENS,
-            "temperature" => 1,
             "messages" => $all_messages,
         ];
 
-        // GPT-5.x family (gpt-5, gpt-5.5, gpt-5-pro, etc.) supports a
-        // `reasoning_effort` param that controls how long the model thinks
-        // before producing tokens. Default is typically "medium" which can
-        // burn 60-120s of hidden reasoning on a complex HTML generation
-        // request — enough to push a single LLM call past a 120s LSAPI
-        // ceiling on shared LiteSpeed hosts.
+        $is_reasoning_model = $this->is_reasoning_model($this->model);
+
+        // Reasoning-family models (gpt-5*, o1, o3, o4) reject any `temperature`
+        // value other than the default (1) and frequently 400 when it's sent
+        // explicitly through OpenAI-compatible gateways. Only send temperature
+        // for non-reasoning chat models (gpt-4*, gpt-3.5*, gpt-5-chat-latest…).
+        if (!$is_reasoning_model) {
+            $payload["temperature"] = 1;
+        }
+
+        // The reasoning_effort and verbosity parameters control how long the
+        // model "thinks" before producing tokens and how verbose the answer
+        // is. Default reasoning effort is typically "medium", which can burn
+        // 60-120s of hidden reasoning on a complex HTML generation request —
+        // enough to push a single LLM call past a 120s LSAPI ceiling on
+        // shared LiteSpeed hosts.
         //
         // For HTML generation with a long, structured system prompt, the
         // marginal quality gain from extended reasoning is small while the
-        // wall-clock cost is large. We force "minimal" so the model emits
-        // tokens almost immediately. The system prompt's design rules already
-        // do most of the heavy lifting; reasoning_effort=minimal still
-        // produces production-quality HTML in our tests.
+        // wall-clock cost is large. We force the lowest-effort setting so
+        // the model emits tokens almost immediately. The valid lowest value
+        // depends on the model:
+        //   - gpt-5 (original):                       "minimal"
+        //   - gpt-5.1, gpt-5.2, gpt-5.4, gpt-5.5:     "none"
+        //   - o1 / o3 / o4 series:                    "minimal" (when supported)
         //
-        // The param is silently ignored by older non-reasoning models
-        // (gpt-4o, gpt-4-turbo, etc.) so it's safe to send unconditionally
-        // for any model whose name starts with "gpt-5".
-        if (
-            stripos($this->model, "gpt-5") === 0 ||
-            stripos($this->model, "o1") === 0 ||
-            stripos($this->model, "o3") === 0 ||
-            stripos($this->model, "o4") === 0
-        ) {
-            $payload["reasoning_effort"] = "none";
-            // verbosity governs response length tendency; "none" keeps
-            // sections substantial without runaway over-generation.
+        // Verbosity accepts only "low", "medium", "high" — we keep "medium"
+        // to avoid runaway over-generation while still producing substantial
+        // sections.
+        if ($is_reasoning_model) {
+            $payload["reasoning_effort"] = $this->lowest_reasoning_effort(
+                $this->model,
+            );
             $payload["verbosity"] = "medium";
         }
 
@@ -127,6 +133,64 @@ class Naano_LLM_OpenAI implements Naano_LLM_Provider_Interface
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Detect whether the given model is a reasoning-family model (gpt-5*,
+     * o1*, o3*, o4*, etc.). Reasoning models reject `temperature != 1` and
+     * support `reasoning_effort` + `verbosity`. Non-reasoning chat variants
+     * such as `gpt-5-chat-latest` and `gpt-5-chat` follow standard chat
+     * semantics and accept `temperature`.
+     *
+     * @param string $model Model identifier.
+     * @return bool
+     */
+    private function is_reasoning_model(string $model): bool
+    {
+        $lower = strtolower($model);
+
+        // gpt-5-chat / gpt-5-chat-latest are the non-reasoning chat variants.
+        if (
+            stripos($lower, "gpt-5-chat") === 0 ||
+            stripos($lower, "gpt-5.5-chat") === 0
+        ) {
+            return false;
+        }
+
+        return stripos($lower, "gpt-5") === 0 ||
+            stripos($lower, "o1") === 0 ||
+            stripos($lower, "o3") === 0 ||
+            stripos($lower, "o4") === 0;
+    }
+
+    /**
+     * Return the lowest valid `reasoning_effort` value for the given model.
+     *
+     * OpenAI changed the accepted values between GPT-5 generations:
+     *   - gpt-5 (original):                  minimal | low | medium | high
+     *   - gpt-5.1 / 5.2 / 5.4 / 5.5:         none    | low | medium | high (+ xhigh on 5.2+)
+     *   - o1 / o3 / o4 series:               minimal | low | medium | high
+     *
+     * Sending "none" to a model that doesn't accept it returns HTTP 400,
+     * and so does sending "minimal" to gpt-5.1+. We pick the right token
+     * for each generation.
+     *
+     * @param string $model Model identifier.
+     * @return string
+     */
+    private function lowest_reasoning_effort(string $model): string
+    {
+        $lower = strtolower($model);
+
+        // gpt-5.1 and newer ("gpt-5.1", "gpt-5.2", "gpt-5.4", "gpt-5.5", ...)
+        // accept "none". A simple prefix check catches all of them while
+        // leaving the original "gpt-5" / "gpt-5-mini" / "gpt-5-nano" on
+        // "minimal".
+        if (preg_match('/^gpt-5\.\d/i', $lower)) {
+            return "none";
+        }
+
+        return "minimal";
+    }
 
     /**
      * Build messages with image support via OpenAI Vision format.

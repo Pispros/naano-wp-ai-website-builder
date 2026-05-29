@@ -199,6 +199,17 @@
         NaanoBuilder._showBuilder();
         NaanoBuilder._refreshLivePreview();
         NaanoBuilder._renderSectionsList();
+
+        // Single-section pages (most notably the maintenance page) are
+        // implicitly "the section you're editing" — requiring the user
+        // to click into the iframe before the Update button enables is
+        // pure friction with nothing to disambiguate. Pre-select it so
+        // the user can type a prompt and click Update straight away.
+        // For multi-section pages we leave selection empty so the user
+        // explicitly picks which one they want to update.
+        if (NaanoBuilder.sectionsData.length === 1) {
+          NaanoBuilder.openEditPanel(NaanoBuilder.sectionsData[0].id, true);
+        }
       }
 
       // Restore persisted assets & redirects.
@@ -414,6 +425,17 @@
             NaanoBuilder._showBuilder();
             NaanoBuilder._refreshLivePreview();
             NaanoBuilder._renderSectionsList();
+
+            // Same single-section auto-select as on cold boot — see init()
+            // above for the rationale (maintenance pages, single-section
+            // landings: pre-select so the Update button enables without
+            // requiring an extra click).
+            if (NaanoBuilder.sectionsData.length === 1) {
+              NaanoBuilder.openEditPanel(
+                NaanoBuilder.sectionsData[0].id,
+                true,
+              );
+            }
 
             // The server's skip-on-LSAPI policy may have completed the job
             // while skipping one or more sections that hit LSAPI kills /
