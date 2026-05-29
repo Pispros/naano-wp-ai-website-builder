@@ -2539,6 +2539,15 @@
           }
         }
 
+        // The "♻" button injected into the iframe was clicked on a
+        // hovered element. Open the widget-picker modal so the user
+        // can choose what to replace the element with (Text / Image).
+        if (msg.type === "naano-element-recycle-click") {
+          if (msg.elId && msg.sectionId) {
+            NaanoBuilder._openWidgetPicker(msg.elId, msg.sectionId);
+          }
+        }
+
         if (msg.type === "naano-element-html-updated") {
           // Mirror the new HTML into sectionsData and mark the section as
           // dirty so the toolbar's "Save changes" button appears.
@@ -2669,7 +2678,13 @@
         // of its target so it visually reads as "insert above this".
         '+".naano-section-add-btn{position:absolute;width:34px;height:34px;border-radius:50%;background:#2271b1;color:#fff;border:2px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,0.35);cursor:pointer;font:700 22px/1 system-ui,-apple-system,sans-serif;display:none;align-items:center;justify-content:center;z-index:2147483646;transform:translate(-50%,-50%);padding:0;user-select:none;}"',
         '+".naano-section-add-btn:hover{background:#135e96;transform:translate(-50%,-50%) scale(1.1);}"',
-        '+".naano-section-add-btn span{display:block;line-height:1;margin-top:-2px;};";',
+        '+".naano-section-add-btn span{display:block;line-height:1;margin-top:-2px;}"',
+        // Floating "♻" button that follows the hovered ELEMENT (not section).
+        // Smaller than the section "+" button, positioned at the top-right
+        // corner of the element so it doesn't visually fight with the
+        // section's "+" anchor at the top-center edge.
+        '+".naano-el-recycle-btn{position:fixed;width:28px;height:28px;border-radius:50%;background:#f59e0b;color:#fff;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.3);cursor:pointer;font:600 14px/1 system-ui,-apple-system,sans-serif;display:none;align-items:center;justify-content:center;z-index:2147483645;transform:translate(-50%,-50%);padding:0;user-select:none;pointer-events:auto;transition:background 0.12s,transform 0.12s;}"',
+        '+".naano-el-recycle-btn:hover{background:#d97706;transform:translate(-50%,-50%) scale(1.12);}";',
         "document.head.appendChild(s);",
 
         // ── Floating "+" hover button (Elementor-style insert) ─────────
@@ -2716,6 +2731,53 @@
         // hover state — the button isn't part of the section visually.
         "addBtn.addEventListener('mouseenter',function(e){e.stopPropagation();});",
         "document.body.appendChild(addBtn);",
+
+        // ── Floating "♻" recycle button (per-element widget swap) ──────
+        // Twin of addBtn but targets the hovered ELEMENT instead of the
+        // section. Visible only when the user is hovering an element
+        // (the same one that would receive the selection outline if
+        // they clicked). On click it postMessages to the parent which
+        // opens the widget picker modal (Text / Image).
+        'var recycleBtn=document.createElement("button");',
+        'recycleBtn.type="button";',
+        'recycleBtn.className="naano-el-recycle-btn";',
+        'recycleBtn.setAttribute("aria-label","Remplacer cet element par un widget");',
+        'recycleBtn.innerHTML="\u267B";',
+        "var hoverElForRecycle=null;",
+        "function positionRecycleBtn(){",
+        "  if(!hoverElForRecycle||!hoverElForRecycle.isConnected){",
+        '    recycleBtn.style.display="none";return;',
+        "  }",
+        // position:fixed → use getBoundingClientRect() directly. Anchor
+        // at top-right of the element, then clamp inside the viewport so
+        // the button stays clickable even when an element extends past
+        // the visible area.
+        "  var r=hoverElForRecycle.getBoundingClientRect();",
+        "  var half=14;var pad=6;",
+        "  var x=r.right;var y=r.top;",
+        "  var vw=window.innerWidth||document.documentElement.clientWidth;",
+        "  var vh=window.innerHeight||document.documentElement.clientHeight;",
+        "  x=Math.min(Math.max(x,half+pad),vw-half-pad);",
+        "  y=Math.min(Math.max(y,half+pad),vh-half-pad);",
+        '  recycleBtn.style.left=x+"px";',
+        '  recycleBtn.style.top=y+"px";',
+        '  recycleBtn.style.display="flex";',
+        "}",
+        "window.addEventListener('scroll',positionRecycleBtn,{passive:true});",
+        "window.addEventListener('resize',positionRecycleBtn,{passive:true});",
+        "recycleBtn.addEventListener('click',function(e){",
+        "  e.stopPropagation();e.preventDefault();",
+        "  if(!hoverElForRecycle)return;",
+        // Assign a stable id if the element doesn't have one yet (the
+        // regular click-to-select path is what normally does this, but
+        // recycle works on hover so we may run before that).
+        "  var elId=getOrAssignId(hoverElForRecycle);",
+        "  var sid=getSectionId(hoverElForRecycle);",
+        "  if(!sid)return;",
+        '  window.parent.postMessage({type:"naano-element-recycle-click",elId:elId,sectionId:sid,tagName:hoverElForRecycle.tagName.toLowerCase()},"*");',
+        "},true);",
+        "recycleBtn.addEventListener('mouseenter',function(e){e.stopPropagation();});",
+        "document.body.appendChild(recycleBtn);",
 
         // Inspect-mode is now ALWAYS active.
         "var inspectActive=true;",
@@ -2899,7 +2961,9 @@
         // editor panel instead of inserting a new custom-HTML widget,
         // which is exactly the bug the user reported. We freeze the
         // current hover state while the cursor is over the button.
+        // Same guard applies to the recycle "♻" button.
         "  if(e.target&&(e.target===addBtn||addBtn.contains(e.target)))return;",
+        "  if(e.target&&(e.target===recycleBtn||recycleBtn.contains(e.target)))return;",
         '  document.querySelectorAll(".naano-el-hover").forEach(function(n){n.classList.remove("naano-el-hover");});',
         // Update the floating "+" button position to follow whichever
         // section the user is hovering. We walk up to the nearest
@@ -2910,7 +2974,13 @@
         "  if(hoverSec){hoverSectionEl=hoverSec;positionAddBtn();}",
         "  else{hoverSectionEl=null;addBtn.style.display='none';}",
         "  var el=resolveCustomTarget(e.target);",
-        "  if(!el||el===document.body||el===document.documentElement)return;",
+        "  if(!el||el===document.body||el===document.documentElement){",
+        "    hoverElForRecycle=null;recycleBtn.style.display='none';return;",
+        "  }",
+        // The recycle button always follows the currently-hovered
+        // element, including the currently-selected one — the recycle
+        // action is independent of the click-to-edit selection state.
+        "  hoverElForRecycle=el;positionRecycleBtn();",
         // Don't show hover outline on the currently-selected element
         // (would make the dashed outline fight with the solid one).
         "  if(el===currentSelected)return;",
@@ -2924,8 +2994,11 @@
         // handler already calls stopPropagation in capture phase, but
         // if anything ever gets that listener detached or out of order
         // we still don't want clicks on the button to fall through
-        // here and pop the wrong panel.
+        // here and pop the wrong panel. Same guard applies to the
+        // recycle "♻" button — its click handler opens the widget
+        // picker, NOT the regular element editor.
         "  if(e.target&&(e.target===addBtn||addBtn.contains(e.target)))return;",
+        "  if(e.target&&(e.target===recycleBtn||recycleBtn.contains(e.target)))return;",
         // If the user clicked inside the currently-selected (and now
         // contenteditable) element, let them place the caret freely
         // without re-selecting and resetting state.
@@ -3299,6 +3372,44 @@
         "    }",
         "  }",
 
+        // Replace an element with a fresh widget (Text or Image).
+        // Triggered by the parent after the user clicks the ♻ button and
+        // picks a widget in the modal. We preserve the AI-generated
+        // class names so the widget sits visually inside the section's
+        // layout, but drop inline styles + data-naano-el so the new
+        // element starts in a clean state.
+        '  if(m.type==="naano-replace-element-with-widget"){',
+        "    var oldEl=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
+        "    if(!oldEl)return;",
+        '    var sec=oldEl.closest("[data-section]");',
+        "    if(oldEl===sec)return;", // Don't allow replacing the section root.
+        "    var newEl;",
+        "    if(m.widget==='text'){",
+        "      newEl=document.createElement('p');",
+        "      newEl.textContent=m.placeholder||'Texte à éditer...';",
+        "    }else if(m.widget==='image'){",
+        "      newEl=document.createElement('img');",
+        "      newEl.src=m.src||'';",
+        "      newEl.alt=m.alt||'';",
+        "      newEl.style.maxWidth='100%';",
+        "      newEl.style.height='auto';",
+        "    }else{return;}",
+        // Preserve the AI-generated class names. Strip our internal
+        // helper classes (hover/selected) so they don't get persisted.
+        "    if(oldEl.className&&typeof oldEl.className==='string'){",
+        "      var keptCls=oldEl.className.split(/\\s+/).filter(function(c){",
+        "        return c&&c!=='naano-el-hover'&&c!=='naano-el-selected';",
+        "      }).join(' ');",
+        "      if(keptCls)newEl.className=keptCls;",
+        "    }",
+        "    oldEl.parentNode.replaceChild(newEl,oldEl);",
+        "    if(currentSelected===oldEl)currentSelected=null;",
+        "    if(sec){",
+        '      window.parent.postMessage({type:"naano-element-html-updated",',
+        '        sectionId:sec.getAttribute("data-section"),html:sec.innerHTML},"*");',
+        "    }",
+        "  }",
+
         // Parent asks us to deselect (panel closed by user).
         '  if(m.type==="naano-deselect-element"){',
         "    if(currentSelected){",
@@ -3377,6 +3488,162 @@
       var iframe = document.getElementById("naano-live-preview");
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage(msg, "*");
+      }
+    },
+
+    /**
+     * Open the widget-picker modal so the user can choose which widget
+     * (Text or Image) should replace the element they clicked the ♻
+     * button on. The element id + section id are captured so the modal's
+     * card click handlers know what to target.
+     *
+     * @param {string} elId      The element's data-naano-el id.
+     * @param {string} sectionId The id of the section that contains it.
+     */
+    _openWidgetPicker: function (elId, sectionId) {
+      NaanoBuilder._closeWidgetPicker(); // Safety: clear any stale modal.
+
+      // Remember target for the card click handlers.
+      NaanoBuilder._pendingRecycle = { elId: elId, sectionId: sectionId };
+
+      var $overlay = $(
+        '<div class="naano-widget-picker-overlay" role="dialog" aria-modal="true" aria-label="Choisir un widget">' +
+          '<div class="naano-widget-picker">' +
+            '<div class="naano-widget-picker__header">' +
+              '<span class="naano-widget-picker__title">Remplacer par un widget</span>' +
+              '<button type="button" class="naano-widget-picker__close" aria-label="Fermer">✕</button>' +
+            "</div>" +
+            '<div class="naano-widget-picker__body">' +
+              '<button type="button" class="naano-widget-card" data-widget="text">' +
+                '<span class="naano-widget-card__icon">T</span>' +
+                '<span class="naano-widget-card__label">Texte</span>' +
+                '<span class="naano-widget-card__desc">Paragraphe éditable avec placeholder</span>' +
+              "</button>" +
+              '<button type="button" class="naano-widget-card" data-widget="image">' +
+                '<span class="naano-widget-card__icon">🖼</span>' +
+                '<span class="naano-widget-card__label">Image</span>' +
+                '<span class="naano-widget-card__desc">Choisir depuis la médiathèque WP</span>' +
+              "</button>" +
+            "</div>" +
+          "</div>" +
+        "</div>"
+      );
+
+      $("body").append($overlay);
+      NaanoBuilder._$widgetPicker = $overlay;
+
+      $overlay.find(".naano-widget-picker__close").on("click", function () {
+        NaanoBuilder._closeWidgetPicker();
+      });
+
+      // Click on the dimmed backdrop closes the modal.
+      $overlay.on("click", function (e) {
+        if ($(e.target).is(".naano-widget-picker-overlay")) {
+          NaanoBuilder._closeWidgetPicker();
+        }
+      });
+
+      $overlay.find(".naano-widget-card").on("click", function () {
+        var widget = $(this).data("widget");
+        // For text, close immediately and apply. For image, the WP
+        // media picker takes over — we close after that frame opens
+        // so the modal doesn't sit on top of it.
+        NaanoBuilder._applyWidgetReplacement(widget);
+      });
+
+      $(document).on("keydown.naano-widget-picker", function (e) {
+        if (e.key === "Escape") {
+          NaanoBuilder._closeWidgetPicker();
+        }
+      });
+
+      // Slide-in transition (same approach as the preview modal).
+      setTimeout(function () {
+        $overlay.addClass("naano-widget-picker-overlay--open");
+      }, 10);
+    },
+
+    /** Reference to the open widget picker overlay (jQuery). */
+    _$widgetPicker: null,
+
+    /** Pending recycle target — set by _openWidgetPicker. */
+    _pendingRecycle: null,
+
+    /**
+     * Close and remove the widget-picker modal.
+     */
+    _closeWidgetPicker: function () {
+      if (NaanoBuilder._$widgetPicker) {
+        NaanoBuilder._$widgetPicker.remove();
+        NaanoBuilder._$widgetPicker = null;
+      }
+      $(document).off("keydown.naano-widget-picker");
+    },
+
+    /**
+     * Replace the pending element with the chosen widget.
+     *
+     * Text  → posts the replace message immediately.
+     * Image → opens wp.media first, then posts on select.
+     *
+     * @param {string} widget  "text" | "image"
+     */
+    _applyWidgetReplacement: function (widget) {
+      var pending = NaanoBuilder._pendingRecycle;
+      if (!pending) return;
+
+      if (widget === "text") {
+        NaanoBuilder._closeWidgetPicker();
+        NaanoBuilder._iframePost({
+          type: "naano-replace-element-with-widget",
+          elId: pending.elId,
+          widget: "text",
+          placeholder: "Texte à éditer...",
+        });
+        NaanoBuilder._pendingRecycle = null;
+        return;
+      }
+
+      if (widget === "image") {
+        if (typeof wp === "undefined" || !wp.media) {
+          NaanoBuilder._toast(
+            "Media library unavailable — refresh the page.",
+            "error"
+          );
+          return;
+        }
+        // Close the picker before opening wp.media so they don't stack.
+        NaanoBuilder._closeWidgetPicker();
+        var frame = wp.media({
+          title: "Choisir une image",
+          button: { text: "Insérer l'image" },
+          multiple: false,
+          library: { type: "image" },
+        });
+        frame.on("select", function () {
+          var att = frame.state().get("selection").first().toJSON();
+          if (!att || !att.url) {
+            NaanoBuilder._pendingRecycle = null;
+            return;
+          }
+          NaanoBuilder._iframePost({
+            type: "naano-replace-element-with-widget",
+            elId: pending.elId,
+            widget: "image",
+            src: att.url,
+            alt: att.alt || att.title || "",
+          });
+          NaanoBuilder._pendingRecycle = null;
+        });
+        // If user cancels wp.media without picking, clear pending too.
+        frame.on("close", function () {
+          // Small delay so a successful select still has time to run first.
+          setTimeout(function () {
+            NaanoBuilder._pendingRecycle = null;
+          }, 0);
+        });
+        frame.open();
+        return;
       }
     },
 

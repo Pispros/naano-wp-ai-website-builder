@@ -2571,3 +2571,147 @@ overlapping it. */ @media (max-width: 900px) {
     height: 14px;
     line-height: 14px;
 }
+
+/* =============================================================================
+   PREVIEW — Widget Picker Modal
+   Appears when the user clicks the ♻ recycle button on a hovered element
+   inside the preview iframe.
+   ============================================================================= */
+
+.naano-widget-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000010; /* above the preview modal (999999) */
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.naano-widget-picker-overlay--open {
+    opacity: 1;
+}
+
+.naano-widget-picker {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transform: scale(0.96);
+    transition: transform 0.2s ease;
+}
+
+.naano-widget-picker-overlay--open .naano-widget-picker {
+    transform: scale(1);
+}
+
+/* Header */
+.naano-widget-picker__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(180deg, #fafafa, #f3f4f6);
+}
+
+.naano-widget-picker__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.01em;
+}
+
+.naano-widget-picker__close {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: background 0.12s, color 0.12s;
+}
+
+.naano-widget-picker__close:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+/* Body — card grid */
+.naano-widget-picker__body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px;
+}
+
+/* Individual widget card */
+.naano-widget-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 14px 16px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition:
+        background 0.15s,
+        border-color 0.15s,
+        box-shadow 0.15s,
+        transform 0.12s;
+}
+
+.naano-widget-card:hover {
+    background: #fffbeb;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+    transform: translateY(-2px);
+}
+
+.naano-widget-card:active {
+    transform: translateY(0);
+}
+
+.naano-widget-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    font-size: 22px;
+    font-weight: 800;
+    color: #374151;
+    transition: border-color 0.15s;
+}
+
+.naano-widget-card:hover .naano-widget-card__icon {
+    border-color: #f59e0b;
+    color: #92400e;
+}
+
+.naano-widget-card__label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.naano-widget-card__desc {
+    font-size: 11px;
+    color: #6b7280;
+    line-height: 1.4;
+}
