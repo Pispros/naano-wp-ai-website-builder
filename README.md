@@ -1,24 +1,10 @@
 # Naano AI Website Builder
 
-> An AI-powered, section-by-section WordPress website builder using Claude, Gemini, OpenAI, Kimi, or DeepSeek — pure PHP, no external backend needed.
+> An AI-powered, section-by-section WordPress website builder using Claude, Gemini, or Kimi — pure PHP, no external backend needed.
 
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?logo=php)
-![Version](https://img.shields.io/badge/Version-2.3.1-9A3412)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
-
-[Documentation](https://github.com/Pispros/naano-wp-ai-website-builder) · [Download latest release](https://github.com/Pispros/naano-wp-ai-website-builder/releases)
-
----
-
-## What's new (2.3.1)
-
-- **♻ Recycle button on every hovered element** — in the live preview iframe (where inspect mode is the default), every element you hover now gets a small amber ♻ button at its top-right corner. Click it to open a widget picker modal and swap the element for a fresh Text or Image widget.
-- **Text widget** — replaces the target element with an editable `<p>` containing `"Texte à éditer…"`. AI-generated class names are preserved so the new paragraph keeps the section's layout context.
-- **Image widget** — opens the WordPress media library immediately. On select, the element is replaced with an `<img>` whose `src` and `alt` come from the attachment. `max-width: 100%` and `height: auto` are applied inline so the image scales correctly.
-- **Section is marked dirty automatically** — the replacement triggers the same `naano-element-html-updated` flow as every other DOM mutation, so the toolbar's *Save changes* button surfaces immediately.
-- **No existing behaviour changed** — the section "+" button, click-to-edit inspect mode, contenteditable inline typing, and the floating Element Editor panel all continue to work exactly as before. The recycle button has its own hover scope and z-index.
-- **Cache-bust bump** — `NAANO_VERSION` is now `2.3.1` so WordPress regenerates the asset URL and browsers fetch the new `builder.js`.
 
 ---
 
@@ -41,7 +27,7 @@
 
 ## Overview
 
-**Naano AI Website Builder** lets you generate, edit, and visually inspect complete, production-ready websites directly inside your WordPress dashboard using the AI model of your choice. You bring your own API key (Claude, Gemini, OpenAI, Kimi, or DeepSeek) — there is no external service, no subscription, and no data leaves your server except the prompts you send to the LLM provider.
+**Naano AI Website Builder** lets you generate, edit, and visually inspect complete, production-ready websites directly inside your WordPress dashboard using the AI model of your choice. You bring your own API key (Claude, Gemini, or Kimi) — there is no external service, no subscription, and no data leaves your server except the prompts you send to the LLM provider.
 
 ### Core philosophy
 
@@ -68,7 +54,6 @@
 - 🖥️ **Live preview iframe** — see your changes instantly in a sandboxed preview panel
 - 📱 **Responsive viewports** — toggle between Desktop (100%), Tablet (768 px) and Mobile (375 px) inside the builder
 - 🖱️ **Click-to-edit by default** — no toggle needed. Click any element in the live preview to open the floating Element Editor (top-right of the canvas, Elementor-style)
-- ♻ **Recycle button on hover** *(new in 2.3.1)* — a small amber ♻ button on every hovered element opens a widget picker so you can swap the element for a fresh Text or Image widget in one click
 - ✏️ **Inline text editing** — selected elements become `contenteditable`; type directly in the live preview to change copy
 - 🎨 **Style tab** — Typography (color, size, weight, align), Background (color, image, size), Border, Border Radius
 - 📐 **Spacing tab** — Width / Height / Max-width and individual Padding T/R/B/L + Margin T/R/B/L inputs
@@ -86,9 +71,7 @@
 ### Multi-LLM Support
 - 🤖 **Claude** (Anthropic) — supports inline base64 image vision
 - 🤖 **Gemini** (Google) — supports inline base64 image vision, generous free tier
-- 🤖 **OpenAI** — GPT-5.x with `reasoning_effort: none` for shared-host friendliness
 - 🤖 **Kimi** (Moonshot) — text-based, good for copy-heavy pages
-- 🤖 **DeepSeek** — text-based, competitive pricing
 
 ### References & Assets
 - 🖼️ **Screenshot references** — attach images from the WordPress media library as visual inspiration; images are auto-resized to 1024 px JPEG/75% and base64-encoded
@@ -158,11 +141,10 @@ Job Runner (class-job-runner.php)
     ▼
 LLM Router (class-llm-router.php)
     │
-    ├─► Claude Adapter   (class-llm-claude.php)    ─► cURL → api.anthropic.com
-    ├─► Gemini Adapter   (class-llm-gemini.php)    ─► cURL → generativelanguage.googleapis.com
-    ├─► OpenAI Adapter   (class-llm-openai.php)    ─► cURL → api.openai.com
-    ├─► Kimi Adapter     (class-llm-kimi.php)      ─► cURL → api.moonshot.cn
-    └─► DeepSeek Adapter (class-llm-deepseek.php)  ─► cURL → api.deepseek.com
+    ├─► Claude Adapter  (class-llm-claude.php)   ─► cURL → api.anthropic.com
+    ├─► Gemini Adapter  (class-llm-gemini.php)   ─► cURL → generativelanguage.googleapis.com
+    ├─► Kimi Adapter    (class-llm-kimi.php)     ─► cURL → api.moonshot.cn
+    └─► OpenAI Adapter  (class-llm-openai.php)   ─► cURL → api.openai.com
     │
     ▼
 Raw LLM Response
@@ -184,14 +166,11 @@ JSON Response → UI Update (builder.js)
             ▲
             │  naano-element-selected · naano-apply-element-style ·
             │  naano-apply-element-classes · naano-apply-element-link ·
-            │  naano-delete-element · naano-element-html-updated ·
-            │  naano-deselect-element · naano-element-recycle-click ·
-            │  naano-replace-element-with-widget  (new in 2.3.1)
+            │  naano-delete-element · naano-element-html-updated · naano-deselect-element
             ▼
         Iframe helper script (injected)
             Hover highlight · click selection · inline contenteditable text ·
-            inline style apply · class merge · href/target editing · delete ·
-            ♻ recycle button → widget swap (new in 2.3.1)
+            inline style apply · class merge · href/target editing · delete
 ```
 
 ### Persistent state (post meta)
@@ -226,10 +205,11 @@ JSON Response → UI Update (builder.js)
 
 ### Method 1 — Upload ZIP
 
-1. Download the latest release from [GitHub](https://github.com/Pispros/naano-wp-ai-website-builder/releases).
-2. In WordPress Admin, go to **Plugins → Add New Plugin → Upload Plugin**.
-3. Choose the zip file and click **Install Now**.
-4. Click **Activate Plugin**.
+1. Download or clone this repository.
+2. Zip the `naano-ai-website-builder` folder.
+3. In WordPress Admin, go to **Plugins → Add New Plugin → Upload Plugin**.
+4. Choose the zip file and click **Install Now**.
+5. Click **Activate Plugin**.
 
 ### Method 2 — Manual FTP
 
@@ -237,32 +217,23 @@ JSON Response → UI Update (builder.js)
 2. In WordPress Admin, go to **Plugins → Installed Plugins**.
 3. Find **Naano AI Website Builder** and click **Activate**.
 
-### Updating from a previous version
-
-WordPress version-strings every plugin asset URL (`builder.js?ver=…`). If the version string doesn't change between releases, browsers may serve the cached `builder.js` and miss new features. After updating:
-
-1. Deactivate the previous version and remove it.
-2. Install the new zip.
-3. **Hard-reload** the builder page (`Cmd/Ctrl + Shift + R`) to force the browser to fetch the new assets.
-
 ---
 
 ## Quick Start
 
 1. **Activate** the plugin (see Installation above).
 2. Go to **Naano AI Builder → Settings**.
-3. Select your LLM **Provider** (Claude, Gemini, OpenAI, Kimi, or DeepSeek).
+3. Select your LLM **Provider** (Claude, Gemini, Kimi, or OpenAI).
 4. Paste your **API Key** and click **Test Connection**.
 5. Add **Custom Design Variables** (e.g. `primary_color → #3B82F6`, `brand_name → Acme Corp`).
 6. Click **Save Settings**.
 7. Go to **Naano AI Builder → AI Pages** and click **Create New Page with AI**.
 8. Enter a page name and description, optionally import an existing header/footer, check the sections you want, and click **Generate Full Website**.
 9. Once generation completes, **click any element directly in the live preview** to open the floating Element Editor — type to edit text, switch tabs to tweak Style / Spacing / Classes / Link / Custom CSS.
-10. **Hover any element** to see the **♻ recycle button** in its top-right corner. Click it to swap the element for a fresh Text or Image widget.
-11. Use the drawer's **Global CSS** textarea to set page-wide CSS rules.
-12. If sections failed during generation, find them in the **Failed sections** drawer and click **Retry** per entry.
-13. Click **Save changes** in the toolbar to persist your manual edits and Global CSS as a draft (does **not** publish).
-14. Click **Publish** to push the assembled HTML to the live WordPress page. Tick **Set as Homepage** if you want this page to replace the WordPress front page.
+10. Use the drawer's **Global CSS** textarea to set page-wide CSS rules.
+11. If sections failed during generation, find them in the **Failed sections** drawer and click **Retry** per entry.
+12. Click **Save changes** in the toolbar to persist your manual edits and Global CSS as a draft (does **not** publish).
+13. Click **Publish** to push the assembled HTML to the live WordPress page. Tick **Set as Homepage** if you want this page to replace the WordPress front page.
 
 ### Server prerequisite for AI generation
 
@@ -305,22 +276,6 @@ The built-in element editor works like Elementor's style editor — without bloc
 | **Done** | Deselects without applying any pending changes from the inputs |
 | **Apply** | Pushes the panel's styles + classes + link to the live preview and marks the section as "unsaved" |
 
-### Recycle button — swap elements for widgets *(new in 2.3.1)*
-
-Alongside the click-to-edit flow, every hovered element now shows a small **♻ button** at its top-right corner. Click it to open a **widget picker modal** with two options:
-
-| Widget | Behaviour |
-|--------|-----------|
-| **Text** | Replaces the element with a `<p>` containing `"Texte à éditer…"`. The paragraph inherits the original element's AI-generated classes so it sits in the same layout. Immediately editable — click it to start typing. |
-| **Image** | Closes the modal and opens the WordPress media library directly. On select, the element is replaced with an `<img>` whose `src` and `alt` are pulled from the attachment. `max-width: 100%` and `height: auto` are applied inline. |
-
-What's preserved across the swap:
-- ✅ **AI-generated class names** — the widget keeps its layout context.
-- ❌ **Inline `style` attribute and `data-naano-el` id** — the widget starts visually clean and gets a fresh id on the next click-to-select.
-- 🏷️ **Section marked dirty** — the replacement broadcasts the same `naano-element-html-updated` event as every other DOM mutation, so the toolbar's *Save changes* button appears automatically.
-
-The recycle button has its own hover scope, click handler, and z-index — it never interferes with the section "+" button, the click-to-edit inspect mode, or the floating Element Editor.
-
 ### Save vs Publish
 
 The toolbar separates the two operations clearly:
@@ -347,7 +302,7 @@ When `generate_site` is interrupted (host kills the worker on a slow LLM call, e
 Translations follow WordPress page hierarchy: each translated page is a **child** of the original with its language code as the page slug, giving automatic URLs:
 
 | Original | Spanish translation | French translation |
-|----------|--------------------|--------------------|
+|----------|--------------------|--------------------|  
 | `/about/` | `/about/es/` | `/about/fr/` |
 | `/` (homepage) | `/es/` | `/fr/` |
 
@@ -394,9 +349,7 @@ When creating a new page, you can skip AI generation for the header and/or foote
 |----------|----------------------|-----------|
 | Claude (Anthropic) | [console.anthropic.com](https://console.anthropic.com/) | No (pay-as-you-go) |
 | Gemini (Google) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Yes (generous free tier) |
-| OpenAI | [platform.openai.com](https://platform.openai.com/) | Free credits on signup |
 | Kimi (Moonshot) | [platform.moonshot.cn](https://platform.moonshot.cn/) | Yes (limited) |
-| DeepSeek | [platform.deepseek.com](https://platform.deepseek.com/) | Yes (limited) |
 
 ### Custom Variables
 
@@ -433,9 +386,8 @@ Custom variables are injected into every system prompt as a structured list. The
 |----------|----------|------|---------------|---------------|
 | Claude | `api.anthropic.com/v1/messages` | `x-api-key` header | Base64 inline | `claude-sonnet-4-20250514` |
 | Gemini | `generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | URL query param `?key=` | `inlineData` base64 | `gemini-2.5-flash` |
-| OpenAI | `api.openai.com/v1/chat/completions` | `Authorization: Bearer` | `image_url` base64 | `gpt-5.5` |
 | Kimi | `api.moonshot.cn/v1/chat/completions` | `Authorization: Bearer` | Via text note | `kimi-k2-0711-preview` |
-| DeepSeek | `api.deepseek.com/v1/chat/completions` | `Authorization: Bearer` | Via text note | Latest available |
+| OpenAI | `api.openai.com/v1/chat/completions` | `Authorization: Bearer` | `image_url` base64 | `gpt-5.5` |
 
 All adapters implement `Naano_LLM_Provider_Interface` — adding a new provider is straightforward.
 
@@ -451,7 +403,7 @@ All adapters implement `Naano_LLM_Provider_Interface` — adding a new provider 
   2. Resizes it to a maximum of 1024 × 1024 pixels using PHP GD (`imagecopyresampled`).
   3. Re-encodes it as JPEG at 75% quality.
   4. Base64-encodes the result.
-  5. Injects it into the LLM message as an image content block (Claude / Gemini / OpenAI) or a text note (Kimi / DeepSeek).
+  5. Injects it into the LLM message as an image content block (Claude / Gemini) or a text note (Kimi).
 
 ### URL References
 - Click the **🔗 button** on a section card (or inside the edit panel).
@@ -510,38 +462,6 @@ All endpoints require a valid `naano_builder_nonce` nonce in the `nonce` POST fi
 
 ---
 
-## postMessage events (live preview iframe ↔ builder)
-
-The builder communicates with the live-preview iframe through `postMessage`. Listed here for plugin authors who want to extend the bridge.
-
-### Parent → iframe
-
-| Event | Payload | Effect |
-|-------|---------|--------|
-| `naano-inspect-mode` | `{active}` | Enable / disable inspect mode (kept for legacy compatibility — inspect is always on by default) |
-| `naano-update-section` | `{sectionId, html}` | Replace a section's HTML in the iframe |
-| `naano-highlight-section` | `{sectionId}` | Outline a section and scroll to it |
-| `naano-loading-section` | `{sectionId, loading}` | Show / hide the loading overlay on a section |
-| `naano-apply-element-style` | `{elId, styles, customCss}` | Apply inline styles and scoped custom CSS to an element |
-| `naano-apply-element-classes` | `{elId, aiClasses, userClasses}` | Update an element's class list |
-| `naano-apply-element-link` | `{elId, href, target, rel}` | Update an `<a>` element's attributes |
-| `naano-apply-element-image` | `{elId, src, alt}` | Update an `<img>` element's source and alt |
-| `naano-delete-element` | `{elId}` | Remove an element from its section |
-| `naano-replace-element-with-widget` *(new in 2.3.1)* | `{elId, widget, src?, alt?, placeholder?}` | Replace an element with a Text or Image widget |
-| `naano-deselect-element` | `{}` | Clear the current selection |
-
-### Iframe → parent
-
-| Event | Payload | Effect |
-|-------|---------|--------|
-| `naano-element-selected` | `{elId, sectionId, tagName, breadcrumb, computed, classes, isCustomHtml, customCss, linkInfo, imageInfo}` | Opens the floating Element Editor |
-| `naano-element-deselected` | `{}` | Clears the editor's selection state |
-| `naano-element-html-updated` | `{sectionId, html}` | A section's HTML was mutated — mark it dirty |
-| `naano-insert-custom-html-above` | `{sectionId}` | The section "+" button was clicked |
-| `naano-element-recycle-click` *(new in 2.3.1)* | `{elId, sectionId, tagName}` | The ♻ recycle button was clicked — open the widget picker modal |
-
----
-
 ## File Structure
 
 ```
@@ -549,19 +469,18 @@ naano-ai-website-builder/
 ├── naano-ai-website-builder.php          # Main plugin entry point, constants, hooks
 ├── assets/
 │   ├── css/
-│   │   └── builder.css                   # Full builder + admin styles (incl. widget picker)
+│   │   └── builder.css                   # Full builder + admin styles
 │   ├── images/
 │   │   └── naano-icon.svg                # Custom white SVG sidebar icon
 │   └── js/
-│       ├── builder.js                    # Builder UI, AJAX, inspector, drag-drop, recycle btn
+│       ├── builder.js                    # Builder UI, AJAX, inspector, drag-drop
 │       └── preview.js                    # Preview modal with responsive toggles
 ├── includes/
 │   ├── interface-llm-provider.php        # LLM provider interface
 │   ├── class-llm-claude.php              # Claude (Anthropic) adapter
 │   ├── class-llm-gemini.php              # Gemini (Google) adapter
-│   ├── class-llm-openai.php              # OpenAI (GPT-5.x with reasoning_effort) adapter
 │   ├── class-llm-kimi.php                # Kimi (Moonshot) adapter
-│   ├── class-llm-deepseek.php            # DeepSeek adapter
+│   ├── class-llm-openai.php              # OpenAI (GPT-5.x with reasoning_effort) adapter
 │   ├── class-llm-router.php              # Provider router + sanitize pipeline
 │   ├── class-llm-utils.php               # Shared cURL defaults
 │   ├── class-payload-compressor.php      # HTML/CSS minification + section placeholders
@@ -578,8 +497,9 @@ naano-ai-website-builder/
 ├── templates/
 │   ├── admin-pages-list.php              # Back-office pages list (table + delete button)
 │   ├── frontend-builder.php              # Full visual builder UI (toolbar, drawer, iframe, inspector)
-│   └── settings-page.php                 # Settings form template
+│   └── settings-page.php                # Settings form template
 ├── README.md                             # This file
+├── RENAMING.md                           # How to rename / rebrand the plugin
 └── readme.txt                            # WordPress.org readme
 ```
 
@@ -596,30 +516,6 @@ naano-ai-website-builder/
 | `naano_system_prompt` | filter | Modify the assembled system prompt before it is sent. |
 | `naano_user_message` | filter | Modify the user message before it is sent. |
 | `naano_sanitized_html` | filter | Modify cleaned HTML after sanitization. |
-
----
-
-## Troubleshooting
-
-### The recycle button doesn't appear after updating
-
-The browser is serving the old `builder.js` from cache. WordPress version-strings every asset URL (`builder.js?ver=…`) — if the version is the same as before, browsers reuse the cached file. Bump `NAANO_VERSION` in the main plugin file, or hard-reload the builder page (`Cmd/Ctrl + Shift + R`).
-
-### Generation is stuck on "queued"
-
-WP-Cron isn't firing. Add the OS-level cron line from the Installation section, or visit any front-end URL to trigger WordPress's request-based cron.
-
-### A section failed during generation
-
-Look for the **Failed sections** drawer field at the bottom of the left drawer. Each entry has a *Retry* button. Most failures are transient (host kill, LLM rate limit) and succeed on retry.
-
-### The API key test fails
-
-Click **Test connection** in Settings — the response contains the provider's actual error message. The most common causes are (1) wrong region for Gemini, (2) expired or rotated keys, (3) outbound firewall blocking HTTPS to the provider.
-
-### Published page looks different from the preview
-
-The preview iframe and the published page use the same assembled HTML, including the body-margin reset and your global CSS. If they diverge, the most likely cause is an active WordPress theme injecting styles. Naano publishes pages as **raw HTML** with no theme wrapping — if your theme is intercepting page rendering through filters, you may need to whitelist Naano-published pages.
 
 ---
 
