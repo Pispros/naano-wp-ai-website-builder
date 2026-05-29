@@ -8,7 +8,7 @@ Stable tag: 2.1.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-An AI-powered section-by-section WordPress website builder using Claude, Gemini, OpenAI, or Kimi. Pure PHP — no external backend needed.
+An AI-powered section-by-section WordPress website builder using Claude, Gemini, OpenAI, Deepseek or Kimi. Pure PHP — no external backend needed.
 
 == Description ==
 
