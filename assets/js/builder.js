@@ -45,6 +45,9 @@
     /** @type {string|null} Tag name of the currently selected element (lowercased). Used to show/hide the Link tab. */
     selectedElTag: null,
 
+    /** @type {boolean} Whether the selected element is button-like. Gates the JS tab + per-button JS apply. */
+    selectedElIsButton: false,
+
     /**
      * Classes that were on the selected element BEFORE the user touched it.
      * The iframe merges these "AI classes" with the user-edited classes
@@ -191,6 +194,17 @@
             "</option>";
         });
         $("#naano-initial-wp-menu, #naano-edit-wp-menu").append(menuOpts);
+      }
+
+      // Pre-fill the "Global CSS" textareas from the server-provided
+      // value so the VERY FIRST live-preview render already carries the
+      // page's custom CSS. Without this the editor opened un-styled: the
+      // global CSS was only fetched later by the async _loadFailedSections
+      // call, which populated the field after the first render and never
+      // re-rendered, so the styling was missing until the user touched it.
+      if (typeof data.globalCss === "string") {
+        $(".naano-global-css-textarea").val(data.globalCss);
+        NaanoBuilder._lastSavedGlobalCss = data.globalCss;
       }
 
       // If we already have sections (page reload), render them.
@@ -1989,9 +2003,42 @@
       NaanoBuilder.selectedElId = null;
       NaanoBuilder.selectedElSectionId = null;
       NaanoBuilder.selectedElTag = null;
+      NaanoBuilder.selectedElIsButton = false;
       NaanoBuilder.selectedElAiClasses = "";
       $("#naano-element-style-panel").hide();
       NaanoBuilder._iframePost({ type: "naano-deselect-element" });
+    },
+
+    /**
+     * Decide whether a selected element should get the "JS" tab.
+     *
+     * This is the AUTHORITATIVE, parent-side test. It deliberately does
+     * NOT depend solely on the iframe's `isButton` flag: it also derives
+     * button-ness from the always-present tagName + classes, so the tab
+     * still appears even if a stale/older preview helper omitted the flag.
+     *
+     * Counts as a button:
+     *   - <button>
+     *   - the iframe already flagged it (e.g. <input type=submit>, role=button)
+     *   - any element whose class list contains btn / button / cta as a
+     *     token, treating - and _ as separators so AI conventions like
+     *     "btn-primary", "hero-button", "cta-link" all match.
+     *
+     * @param {Object} elData
+     * @return {boolean}
+     */
+    _isButtonLike: function (elData) {
+      if (!elData) return false;
+      if (elData.isButton) return true;
+      var tag = (elData.tagName || "").toLowerCase();
+      if (tag === "button") return true;
+      var cls =
+        " " +
+        String(elData.classes || "")
+          .toLowerCase()
+          .replace(/[_-]/g, " ") +
+        " ";
+      return /\s(btn|button|cta)\s/.test(cls);
     },
 
     /**
@@ -2090,6 +2137,15 @@
           .attr("src", imgSrc)
           .attr("alt", imgAlt);
       }
+
+      // JS tab: only show + populate when a button-like element is
+      // selected (see the iframe's isButton detection). The button stays
+      // hidden for every other element type so plain text/divs/images
+      // never sprout a JS tab. The textarea is pre-filled with whatever
+      // code was previously attached so the user edits in place.
+      var isButton = NaanoBuilder._isButtonLike(elData);
+      $('.naano-esp-tab[data-tab="js"]').toggle(isButton);
+      $("#naano-esp-custom-js").val(isButton ? elData.customJs || "" : "");
 
       $("#naano-element-style-panel").show();
     },
@@ -2196,6 +2252,51 @@
       // no-op when the src/alt didn't actually change.
       if ((NaanoBuilder.selectedElTag || "").toLowerCase() === "img") {
         NaanoBuilder._applyElementImage();
+      }
+
+      // 5) Button JS — only when a button-like element is selected (the
+      // JS tab is only visible in that case). The code is sent as a
+      // string; an empty string clears any previously-attached handler.
+      // Sent on its own message so non-button elements are never touched.
+      if (
+        NaanoBuilder.selectedElIsButton ||
+        $('.naano-esp-tab[data-tab="js"]').is(":visible")
+      ) {
+        var customJs = $("#naano-esp-custom-js").val() || "";
+
+        // Validate the syntax up front using the exact same compilation
+        // step the live page will use (new Function). A broken handler
+        // would otherwise fail silently at click time and — on a submit
+        // button — let the form navigate away to a confusing page. We
+        // warn with the precise error but STILL save, so the user never
+        // loses their work and can fix it in place. An empty value is
+        // always valid (it just clears the handler).
+        var jsError = null;
+        if (customJs.trim()) {
+          try {
+            // eslint-disable-next-line no-new-func
+            new Function("event", customJs);
+          } catch (err) {
+            jsError = err && err.message ? err.message : String(err);
+          }
+        }
+
+        NaanoBuilder._iframePost({
+          type: "naano-apply-element-js",
+          elId: NaanoBuilder.selectedElId,
+          customJs: customJs,
+        });
+
+        if (jsError) {
+          NaanoBuilder._toast(
+            NaanoBuilder._i18n("js_syntax_error") + " " + jsError,
+            "error",
+            6000,
+          );
+          // Skip the generic "applied" success toast so the warning is
+          // the last thing the user sees.
+          return;
+        }
       }
 
       NaanoBuilder._toast(NaanoBuilder._i18n("applied"), "success", 1500);
@@ -2514,6 +2615,7 @@
           NaanoBuilder.selectedElSectionId = msg.sectionId;
           NaanoBuilder.selectedElTag = (msg.tagName || "").toLowerCase();
           NaanoBuilder.selectedIsCustomHtml = !!msg.isCustomHtml;
+          NaanoBuilder.selectedElIsButton = NaanoBuilder._isButtonLike(msg);
           // For custom-html widgets we ALWAYS want the editor to feel
           // like Elementor's: clicking the widget pops up the HTML
           // textarea right next to it. Skip the regular style panel
@@ -2640,6 +2742,12 @@
       //     the floating editor panel
       var helperScript = [
         "(function(){",
+        // Mark this document as the BUILDER preview. Per-button custom JS
+        // (data-naano-cust-js) checks this flag at click time and bails
+        // out so it never fires while the user is editing — clicks in the
+        // iframe are reserved for selecting elements. On the published
+        // page this flag is absent, so the JS runs normally.
+        "window.__naanoBuilder=true;",
         'var s=document.createElement("style");',
         "s.textContent=",
         // Hide the section-level hover/selection that no longer applies.
@@ -2883,6 +2991,58 @@
         "  sec.insertBefore(tag,sec.firstChild);",
         "}",
 
+        // Rebuild a section's generated <script data-naano-cust-scripts>
+        // block from every [data-naano-cust-js] attribute it contains.
+        // This is the JS counterpart of regenerateSectionCustomCss and
+        // follows the exact same persistence model:
+        //   - The element's data-naano-cust-js ATTRIBUTE is the single
+        //     source of truth (atomic with the element, auto HTML-escaped
+        //     on serialization, kept by the server-side sanitizer which
+        //     only strips on* handlers / external scripts).
+        //   - The actual <script> block is regenerated from those
+        //     attributes and lives at the END of the section, so on a
+        //     real page load every button exists before the binder runs.
+        //   - The binder is GENERIC (identical for every section): it
+        //     reads each button's code from its attribute at click time
+        //     via new Function, so no user code is ever inlined into the
+        //     <script> body and a stray </script> can't break out.
+        //   - The handler bails out when window.__naanoBuilder is set, so
+        //     button JS only ever executes on the published page, never
+        //     while the user is editing inside the preview iframe.
+        // The block is tagged data-naano-cust-scripts; any prior instance
+        // is removed first so repeated applies never stack duplicate code.
+        "function regenerateSectionCustomScripts(sec){",
+        "  if(!sec)return;",
+        "  var olds=sec.querySelectorAll('script[data-naano-cust-scripts]');",
+        "  for(var i=0;i<olds.length;i++)olds[i].parentNode.removeChild(olds[i]);",
+        "  var nodes=sec.querySelectorAll('[data-naano-cust-js]');",
+        "  var has=false;",
+        "  for(var j=0;j<nodes.length;j++){",
+        "    if((nodes[j].getAttribute('data-naano-cust-js')||'').trim()){has=true;break;}",
+        "  }",
+        "  if(!has)return;",
+        "  var binder=",
+        "    '(function(){'",
+        "    +'var cs=document.currentScript;'",
+        "    +'var root=(cs&&cs.parentNode)?cs.parentNode:document;'",
+        "    +'var ns=root.querySelectorAll(\"[data-naano-cust-js]\");'",
+        "    +'for(var i=0;i<ns.length;i++){(function(el){'",
+        "    +'if(el.__naanoJsBound)return;el.__naanoJsBound=true;'",
+        "    +'el.addEventListener(\"click\",function(event){'",
+        "    +'if(window.__naanoBuilder)return;'",
+        "    +'var code=el.getAttribute(\"data-naano-cust-js\")||\"\";'",
+        "    +'if(!code)return;'",
+        "    +'try{(new Function(\"event\",code)).call(el,event);}'",
+        "    +'catch(err){if(event&&event.preventDefault)event.preventDefault();if(window.console&&window.console.error)window.console.error(\"[naano] button JS error:\",err);}'",
+        "    +'});'",
+        "    +'})(ns[i]);}'",
+        "    +'})();';",
+        "  var tag=document.createElement('script');",
+        "  tag.setAttribute('data-naano-cust-scripts','1');",
+        "  tag.text=binder;",
+        "  sec.appendChild(tag);",
+        "}",
+
         // Notify parent that the section's HTML changed (called whenever
         // we mutate the DOM: style, class, delete, text edit). Critical:
         // we MUST strip transient inspect-mode artifacts (naano-el-hover,
@@ -3110,6 +3270,27 @@
         "    }",
         "  }",
 
+        // Button detection: the "JS" tab is offered ONLY for button-like
+        // elements. We treat as a button: <button>, <input type=button|
+        // submit|reset>, any element with role="button", and <a> elements
+        // that look like buttons (role=button or a class containing
+        // btn/button — the convention AI-generated CTAs follow).
+        "  var nTag=el.tagName;",
+        "  var nType=(el.getAttribute('type')||'').toLowerCase();",
+        "  var nRole=(el.getAttribute('role')||'').toLowerCase();",
+        "  var nClsRaw=(typeof el.className==='string'?el.className:'');",
+        "  var nCls=' '+nClsRaw.toLowerCase().replace(/[_-]/g,' ')+' ';",
+        "  var isButton=nTag==='BUTTON'",
+        "    ||(nTag==='INPUT'&&(nType==='button'||nType==='submit'||nType==='reset'))",
+        "    ||nRole==='button'",
+        "    ||/\\s(btn|button|cta)\\s/.test(nCls);",
+
+        // Pre-populate the JS textarea with the code previously attached
+        // to this button. Like custom CSS, the single source of truth is
+        // an attribute on the element itself (data-naano-cust-js), which
+        // survives serialization and the server-side sanitizer untouched.
+        "  var savedCustomJs=el.getAttribute('data-naano-cust-js')||'';",
+
         '  window.parent.postMessage({type:"naano-element-selected",',
         "    elId:elId,",
         "    sectionId:sectionId,",
@@ -3119,6 +3300,8 @@
         "    classes:existingCls.join(' '),",
         "    isCustomHtml:isCustomHtml,",
         "    customCss:savedCustomCss,",
+        "    isButton:isButton,",
+        "    customJs:savedCustomJs,",
         '    linkInfo:linkInfo,',
         '    imageInfo:imageInfo},"*");',
         "},true);",
@@ -3283,6 +3466,29 @@
         "    notifySectionChanged(el);",
         "  }",
 
+        // Apply per-button custom JS. Mirrors the custom-CSS handler:
+        // the code is stored verbatim on the element's data-naano-cust-js
+        // attribute (the single source of truth), then the section's
+        // <script data-naano-cust-scripts> binder block is regenerated.
+        // An empty string clears the attribute. Only ever sent by the
+        // parent for button-like elements (the JS tab is hidden for
+        // everything else), so we don't need an extra tag check here.
+        '  if(m.type==="naano-apply-element-js"){',
+        "    var el=document.querySelector('[data-naano-el=\"'+m.elId+'\"]');",
+        "    if(!el)return;",
+        "    if(typeof m.customJs==='string'){",
+        "      var js=m.customJs;",
+        "      if(js.trim()){",
+        "        el.setAttribute('data-naano-cust-js',js);",
+        "      }else{",
+        "        el.removeAttribute('data-naano-cust-js');",
+        "      }",
+        "      var secJs=el.closest('[data-section]');",
+        "      if(secJs)regenerateSectionCustomScripts(secJs);",
+        "    }",
+        "    notifySectionChanged(el);",
+        "  }",
+
         // Apply user-provided class names (replaces previous user classes,
         // preserves any existing AI-generated classes that were already
         // there before the user's edit since we tracked them as 'extra').
@@ -3441,6 +3647,12 @@
         // CSS rules. Without this, a refresh would leave the
         // attributes intact but no <style> emitting their effect.
         "document.querySelectorAll('[data-section]').forEach(function(s){regenerateSectionCustomCss(s);});",
+        // Same idea for per-button custom JS: re-materialise the binder
+        // <script> from the persisted data-naano-cust-js attributes so a
+        // srcdoc rebuild keeps the wiring (the binder is a no-op in the
+        // builder thanks to the __naanoBuilder guard, but this keeps the
+        // serialized HTML identical to what the published page ships).
+        "document.querySelectorAll('[data-section]').forEach(function(s){regenerateSectionCustomScripts(s);});",
 
         "}());",
       ].join("");
@@ -3449,9 +3661,12 @@
       // the published page (same CSS will be injected server-side at
       // assembly time). Also reset the default 8px body margin every
       // browser ships with so sections sit flush against the page edges.
+      // We read via the shared .naano-global-css-textarea class (not a
+      // single ID) so we pick up the value regardless of which panel
+      // (create vs edit) currently holds it; both are kept in sync.
       var userGlobalCss = "";
-      var $gcss = $("#naano-global-css");
-      if ($gcss.length) userGlobalCss = $gcss.val() || "";
+      var $gcss = $(".naano-global-css-textarea");
+      if ($gcss.length) userGlobalCss = $gcss.first().val() || "";
       var baseReset =
         "html,body{margin:0;padding:0;}" +
         "body{box-sizing:border-box;}" +

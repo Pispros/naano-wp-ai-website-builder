@@ -3,7 +3,7 @@
  * Plugin Name: Naano AI Website Builder
  * Plugin URI:  https://wordpress.org/plugins/naano-ai-website-builder/
  * Description: AI-powered section-by-section website builder using Claude, Gemini, OpenAI, Kimi, or DeepSeek. Pure PHP — no external backend needed.
- * Version:     2.3.1
+ * Version:     2.3.4
  * Author:      Naano
  * Author URI:  https://github.com/Pispros
  * License:     GPL-2.0-or-later
@@ -18,7 +18,7 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
-define("NAANO_VERSION", "2.3.1");
+define("NAANO_VERSION", "2.3.4");
 define("NAANO_PLUGIN_DIR", plugin_dir_path(__FILE__));
 define("NAANO_PLUGIN_URL", plugin_dir_url(__FILE__));
 define("NAANO_PLUGIN_BASENAME", plugin_basename(__FILE__));

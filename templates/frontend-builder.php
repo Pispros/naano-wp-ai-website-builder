@@ -784,6 +784,13 @@ $naano_translations = $naano_translations ?? [];
        "Image",
        "naano-ai-website-builder",
    ); ?></button>
+			<!-- JS tab: shown only when the selected element is a button
+			     (button / input[button|submit|reset] / a.btn / role=button).
+			     Hidden by default; the JS unhides it on selection. -->
+			<button type="button" class="naano-esp-tab naano-esp-tab--button-only" data-tab="js" style="display:none;"><?php esc_html_e(
+       "JS",
+       "naano-ai-website-builder",
+   ); ?></button>
 			<button type="button" class="naano-esp-tab" data-tab="custom"><?php esc_html_e(
        "Custom CSS",
        "naano-ai-website-builder",
@@ -1103,6 +1110,24 @@ $naano_translations = $naano_translations ?? [];
 				<textarea id="naano-esp-custom-css" class="naano-textarea" rows="6"
 						  placeholder="<?php esc_attr_e(
             'color: red;\nfont-size: 18px;',
+            "naano-ai-website-builder",
+        ); ?>"></textarea>
+			</div>
+
+			<!-- JS pane: runs when this button is clicked on the published
+			     page. The code is attached as the button's click handler;
+			     `this` is the button element and `event` is the click event.
+			     It never runs inside this editor preview. -->
+			<div class="naano-esp-tab-pane" id="naano-esp-pane-js" style="display:none;">
+				<p class="naano-field-help" style="margin-top:0;">
+					<?php esc_html_e(
+         "JavaScript that runs when this button is clicked on the live page. Use `this` for the button and `event` for the click. Does not run inside the editor.",
+         "naano-ai-website-builder",
+     ); ?>
+				</p>
+				<textarea id="naano-esp-custom-js" class="naano-textarea" rows="6" spellcheck="false"
+						  placeholder="<?php esc_attr_e(
+            'alert(\'Hello!\');\n// this.classList.toggle(\'active\');',
             "naano-ai-website-builder",
         ); ?>"></textarea>
 			</div>

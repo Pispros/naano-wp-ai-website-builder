@@ -1439,11 +1439,17 @@ class Naano_Admin_Page
 
         $sections = [];
         $references = [];
+        $global_css = "";
 
         if ($page_id) {
             $sm = new Naano_Section_Manager();
             $rm = new Naano_Reference_Manager();
             $sections = $sm->get_sections($page_id);
+            // Load the saved page-level "Global CSS" so the builder can
+            // pre-fill the textareas AND inject it into the very first
+            // live-preview render — otherwise the editor opens with the
+            // page un-styled until the user touches the CSS field.
+            $global_css = $sm->get_global_css($page_id);
             foreach ($sections as $sec) {
                 $references[$sec["id"]] = $rm->get_references(
                     $page_id,
@@ -1604,6 +1610,7 @@ class Naano_Admin_Page
             "nonce" => wp_create_nonce("naano_builder_nonce"),
             "pageId" => $page_id,
             "sections" => $sections,
+            "globalCss" => $global_css,
             "references" => $references,
             "assets" => $saved_assets,
             "redirects" => $saved_redirects,
@@ -1674,6 +1681,10 @@ class Naano_Admin_Page
                     "naano-ai-website-builder",
                 ),
                 "applied" => __("Applied", "naano-ai-website-builder"),
+                "js_syntax_error" => __(
+                    "⚠ JavaScript syntax error — saved, but the button won't run until fixed:",
+                    "naano-ai-website-builder",
+                ),
                 "section_deleted" => __(
                     "Section deleted.",
                     "naano-ai-website-builder",

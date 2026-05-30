@@ -268,6 +268,8 @@ $naano_section_types = [
 						<div class="naano-esp-tabs">
 							<button type="button" class="naano-esp-tab naano-esp-tab--active" data-tab="style"><?php esc_html_e( 'Style', 'naano-ai-website-builder' ); ?></button>
 							<button type="button" class="naano-esp-tab" data-tab="custom"><?php esc_html_e( 'Custom CSS', 'naano-ai-website-builder' ); ?></button>
+							<!-- JS tab: shown only when the selected element is a button. -->
+							<button type="button" class="naano-esp-tab naano-esp-tab--button-only" data-tab="js" style="display:none;"><?php esc_html_e( 'JS', 'naano-ai-website-builder' ); ?></button>
 						</div>
 						<!-- Style tab -->
 						<div class="naano-esp-tab-pane" id="naano-esp-pane-style">
@@ -348,6 +350,14 @@ $naano_section_types = [
 						<div class="naano-esp-tab-pane" id="naano-esp-pane-custom" style="display:none;">
 							<textarea id="naano-esp-custom-css" class="naano-textarea" rows="6"
 									  placeholder="/* Scoped to this element */&#10;color: red;"></textarea>
+						</div>
+						<!-- JS tab: runs on the published page when this button is
+						     clicked (`this` = the button, `event` = the click).
+						     Never runs inside the editor preview. -->
+						<div class="naano-esp-tab-pane" id="naano-esp-pane-js" style="display:none;">
+							<p class="naano-field-hint"><?php esc_html_e( 'JavaScript that runs when this button is clicked on the live page. Use `this` for the button and `event` for the click. Does not run inside the editor.', 'naano-ai-website-builder' ); ?></p>
+							<textarea id="naano-esp-custom-js" class="naano-textarea" rows="6" spellcheck="false"
+									  placeholder="alert('Hello!');&#10;// this.classList.toggle('active');"></textarea>
 						</div>
 						<div class="naano-esp-actions">
 							<button type="button" class="naano-btn-primary" id="naano-esp-apply-btn"><?php esc_html_e( 'Apply Styles', 'naano-ai-website-builder' ); ?></button>

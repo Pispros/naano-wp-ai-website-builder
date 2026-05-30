@@ -658,6 +658,14 @@ msgstr "Clé API invalide."
 msgid "Invalid sections payload."
 msgstr "Données de sections invalides."
 
+#: templates/builder-page.php:272 templates/frontend-builder.php:789
+msgid "JS"
+msgstr "JS"
+
+#: templates/builder-page.php:358 templates/frontend-builder.php:1119
+msgid "JavaScript that runs when this button is clicked on the live page. Use `this` for the button and `event` for the click. Does not run inside the editor."
+msgstr "JavaScript exécuté au clic sur ce bouton sur la page en ligne. Utilisez `this` pour le bouton et `event` pour le clic. Ne s'exécute pas dans l'éditeur."
+
 #: includes/class-ajax-handler.php:292
 msgid "Job not found or expired."
 msgstr "Tâche introuvable ou expirée."
@@ -1620,6 +1628,10 @@ msgstr "— cliquez sur une section dans l’aperçu —"
 #: templates/admin-pages-list.php:212
 msgid "⚙ Settings"
 msgstr "⚙ Paramètres"
+
+#: includes/class-admin-page.php:1677
+msgid "⚠ JavaScript syntax error — saved, but the button won't run until fixed:"
+msgstr "⚠ Erreur de syntaxe JavaScript — enregistré, mais le bouton ne fonctionnera pas tant qu'elle n'est pas corrigée :"
 
 #: templates/admin-pages-list.php:113
 msgid "⚠ Maintenance mode is ACTIVE."
