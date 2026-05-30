@@ -148,6 +148,20 @@ No data is sent to any of these services without an explicit user action (clicki
 
 == Changelog ==
 
+= 2.3.4 =
+* Global CSS is now applied on the very first live-preview render when you open the editor (passed in the localized page data and pre-filled before the first paint), instead of after the first interaction.
+* Added French translations for the new JS tab (label, help text, and the syntax-error notice); updated .po/.mo/.pot.
+* Cache-bust: NAANO_VERSION bumped so browsers fetch the latest builder.js.
+
+= 2.3.2 =
+* New JS tab in the Element Editor, shown only for button-like elements (button, input[button|submit|reset], role="button", or an <a> with a btn/button/cta class). Type JavaScript that becomes the button's click handler on the published page, with `this` bound to the button and `event` available.
+* Code is stored on the element as a `data-naano-cust-js` attribute and executed by a regenerated `<script>` binder, mirroring the Custom CSS persistence model; both survive the HTML sanitizer.
+* The handler never runs inside the editor preview, and if it throws it calls `event.preventDefault()` so a broken script on a submit button can't navigate the page away.
+* The editor validates the JS syntax on Apply and shows the exact error, while still saving.
+
+= 2.3.1 =
+* Recycle (♻) button on every hovered element in the live preview — swap an element for a fresh Text or Image widget in one click; AI-generated classes are preserved and the section is marked dirty automatically.
+
 = 2.1.3 =
 * Documented all external services (Claude, Gemini, OpenAI, Kimi, Firecrawl) in the readme.
 * Moved every inline `<style>` / `<script>` block in admin screens to enqueued CSS/JS files (or `wp_add_inline_style`).
@@ -171,6 +185,9 @@ No data is sent to any of these services without an explicit user action (clicki
 * Conversation history with automatic trimming.
 
 == Upgrade Notice ==
+
+= 2.3.4 =
+Adds a per-button JS tab to the Element Editor and applies your Global CSS the moment the editor opens. Safe, additive update — recommended for everyone.
 
 = 2.1.3 =
 Compliance fixes for the WordPress.org plugin review (asset enqueueing, external-service disclosure, sanitization). Recommended for everyone.

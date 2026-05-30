@@ -4,10 +4,23 @@
 
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?logo=php)
-![Version](https://img.shields.io/badge/Version-2.3.1-9A3412)
+![Version](https://img.shields.io/badge/Version-2.3.4-9A3412)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
 
 [Documentation](https://github.com/Pispros/naano-wp-ai-website-builder) · [Download latest release](https://github.com/Pispros/naano-wp-ai-website-builder/releases)
+
+---
+
+## What's new (2.3.4)
+
+- **JS tab on buttons** *(2.3.2)* — the floating Element Editor gains a contextual **JS** tab, shown only for button-like elements (`<button>`, `<input type="button|submit|reset">`, `role="button"`, or an `<a>` whose class contains `btn` / `button` / `cta`). Type raw JavaScript and it becomes the button's click handler **on the published page** — no theme files, no enqueue, no build step. Inside the code, `this` is the button and `event` is the click event.
+- **Same persistence model as Custom CSS** — the code is stored verbatim on the element as a `data-naano-cust-js` attribute (single source of truth, auto HTML-escaped), and a generic `<script data-naano-cust-scripts>` block is regenerated at the end of the section. It reads each button's code at click time via `new Function`, so nothing is inlined into the script body (a stray `</script>` can never break out). Both survive the server-side sanitizer, which keeps inline scripts and `data-*` attributes.
+- **Never runs in the editor** — a builder flag short-circuits the handler inside the preview iframe, so clicks there keep selecting elements instead of firing your code.
+- **Broken code no longer hijacks the page** — if your handler throws (syntax or runtime error), the binder calls `event.preventDefault()` and logs to the console, so a faulty script on a `type="submit"` button can't submit the form and land the visitor on a blank/default template.
+- **Syntax checked on Apply** — the editor compiles your code with the same `new Function` the live page uses; on error it shows the exact message in a toast and still saves so you don't lose your work.
+- **Global CSS applied on editor open** *(2.3.4)* — your saved Global CSS is now injected into the very first live-preview render (passed in the localized page data and pre-filled before the first paint). Previously it was fetched asynchronously after the first render, leaving the editor briefly un-styled until you touched the field.
+- **French translations** — the new JS tab label, its help text, and the syntax-error toast ship translated (`.po`/`.mo`/`.pot` updated).
+- **Cache-bust bump** — `NAANO_VERSION` is now `2.3.4` so WordPress regenerates the asset URL and browsers fetch the new `builder.js`.
 
 ---
 
@@ -75,10 +88,11 @@
 - 🏷️ **Classes tab** — add or override CSS class names on the selected element; existing AI-generated classes are preserved
 - 🔗 **Link tab** (auto-shown on `<a>` elements) — edit `href`, `target`, `rel`, or pick an in-page anchor from a dropdown of detected sections (`#header`, `#hero`, …)
 - 💅 **Custom CSS tab** — freeform CSS scoped to `[data-naano-el="…"]` for fine-tuning
+- 🟢 **JS tab** *(new in 2.3.2, buttons only)* — attach a click handler to a button straight from the panel. The code runs on the published page only, with `this` bound to the button and `event` available; errors are caught and never let a submit button navigate away
 - 🗑️ **Delete element** — remove any element directly from the editor; also exposed as a single click in the panel footer
 - 🪄 **Edit-with-AI shortcut** — from the floating panel, jump straight to the AI editor for the section that contains the selected element
 - 💾 **Save changes (manual)** — toolbar button persists all manual edits (text, styles, classes, deletions, global CSS) to a draft store. Always **separate from Publish** so you control when changes go live
-- 📦 **Global CSS textarea** — page-level CSS injected into the assembled HTML; applies to the whole site, survives section regenerations
+- 📦 **Global CSS textarea** — page-level CSS injected into the assembled HTML; applies to the whole site, survives section regenerations, and (since 2.3.4) is applied on the very first preview render when you open the editor
 - 🩹 **Failed sections list with Retry** — sections that failed during the original generate (host kill, timeout) appear in a dedicated drawer with one-click Retry; entries clear automatically as sections recover
 - 🪟 **Default browser margin reset** — the assembled page (and the live preview) ships with `html, body { margin: 0; padding: 0; box-sizing: border-box }` so sections sit flush against the page edges
 - ⚡ **Live apply** — manual style changes are applied to the iframe in real time without regenerating the section
@@ -295,6 +309,7 @@ The built-in element editor works like Elementor's style editor — without bloc
 | **Classes** | Type space-separated CSS class names. Existing AI-generated classes are preserved (the iframe merges your input with the AI's classes on apply). |
 | **Link** *(only on `<a>`)* | Edit `href`, `target` (same/new tab), `rel`. The Anchor dropdown lists every `data-section` ID on the page so you can wire up `#header`, `#contact`, etc. without typing. |
 | **Custom CSS** | Freeform CSS scoped to that element via `[data-naano-el="…"]`. Useful for hover states, transitions, etc. |
+| **JS** *(only on buttons, new in 2.3.2)* | Raw JavaScript that becomes the button's `click` handler **on the published page**. `this` is the button, `event` is the click event. Stored on the element as `data-naano-cust-js`; syntax is validated on Apply. Does not run inside the editor preview. |
 
 ### Footer actions
 
@@ -303,7 +318,7 @@ The built-in element editor works like Elementor's style editor — without bloc
 | **Delete** | Removes the selected element from its section (cannot delete the section root) |
 | **Edit section with AI** | Closes the panel and opens the AI edit drawer for the parent section |
 | **Done** | Deselects without applying any pending changes from the inputs |
-| **Apply** | Pushes the panel's styles + classes + link to the live preview and marks the section as "unsaved" |
+| **Apply** | Pushes the panel's styles + classes + link (+ button JS, when applicable) to the live preview and marks the section as "unsaved" |
 
 ### Recycle button — swap elements for widgets *(new in 2.3.1)*
 
@@ -321,6 +336,24 @@ What's preserved across the swap:
 
 The recycle button has its own hover scope, click handler, and z-index — it never interferes with the section "+" button, the click-to-edit inspect mode, or the floating Element Editor.
 
+### Button JS — run code on click *(new in 2.3.2)*
+
+Select a button and a **JS** tab appears in the floating panel. Type raw JavaScript; on **Apply** it is attached to the button as a `click` handler that runs **on the published page only**.
+
+- **`this`** is the button element, **`event`** is the click event.
+- The code is stored verbatim on the button as a `data-naano-cust-js` attribute and a generic `<script data-naano-cust-scripts>` binder block is regenerated at the end of the section. The binder reads each button's code at click time via `new Function`, so nothing is inlined into the script body.
+- **Never runs in the editor** — a `window.__naanoBuilder` flag short-circuits the handler in the preview iframe so clicks keep selecting elements.
+- **Errors can't hijack the page** — if your code throws, the binder calls `event.preventDefault()` and logs to the console, so a broken handler on a `type="submit"` button can't navigate away. The editor also validates syntax on Apply and shows the exact error in a toast (while still saving).
+
+```js
+// 'this' is the clicked button, 'event' is the click event
+event.preventDefault();      // needed when the button submits a form
+this.textContent = 'Merci !';
+this.disabled = true;
+```
+
+> ⚠️ This executes real JavaScript in the visitor's browser. Only editors you trust should have builder access. For a button that submits a form, call `event.preventDefault()` first (or bind a `submit` handler that does); if you call a REST endpoint, make sure the route is registered with `register_rest_route`.
+
 ### Save vs Publish
 
 The toolbar separates the two operations clearly:
@@ -333,6 +366,8 @@ A `beforeunload` warning prompts you if you try to close the tab with unsaved ma
 ### Global CSS
 
 A textarea in the left drawer (right under URL References) accepts page-level CSS. It's injected into the assembled HTML **after** the platform's reset (`html, body { margin: 0; padding: 0 }` and `box-sizing: border-box`), so you can override anything you want. Persisted alongside section edits via the same **Save changes** button.
+
+Since **2.3.4**, the saved Global CSS is passed in the localized page data and pre-filled into the textareas before the first preview render, so an existing page opens fully styled instead of appearing un-styled until you interact with the field.
 
 ### Failed sections & Retry
 
@@ -526,6 +561,7 @@ The builder communicates with the live-preview iframe through `postMessage`. Lis
 | `naano-apply-element-classes` | `{elId, aiClasses, userClasses}` | Update an element's class list |
 | `naano-apply-element-link` | `{elId, href, target, rel}` | Update an `<a>` element's attributes |
 | `naano-apply-element-image` | `{elId, src, alt}` | Update an `<img>` element's source and alt |
+| `naano-apply-element-js` *(new in 2.3.2)* | `{elId, customJs}` | Store/clear per-button JS (`data-naano-cust-js`) and regenerate the section's binder `<script>` |
 | `naano-delete-element` | `{elId}` | Remove an element from its section |
 | `naano-replace-element-with-widget` *(new in 2.3.1)* | `{elId, widget, src?, alt?, placeholder?}` | Replace an element with a Text or Image widget |
 | `naano-deselect-element` | `{}` | Clear the current selection |
@@ -534,7 +570,7 @@ The builder communicates with the live-preview iframe through `postMessage`. Lis
 
 | Event | Payload | Effect |
 |-------|---------|--------|
-| `naano-element-selected` | `{elId, sectionId, tagName, breadcrumb, computed, classes, isCustomHtml, customCss, linkInfo, imageInfo}` | Opens the floating Element Editor |
+| `naano-element-selected` | `{elId, sectionId, tagName, breadcrumb, computed, classes, isCustomHtml, customCss, isButton, customJs, linkInfo, imageInfo}` | Opens the floating Element Editor (`isButton`/`customJs` drive the JS tab) |
 | `naano-element-deselected` | `{}` | Clears the editor's selection state |
 | `naano-element-html-updated` | `{sectionId, html}` | A section's HTML was mutated — mark it dirty |
 | `naano-insert-custom-html-above` | `{sectionId}` | The section "+" button was clicked |
