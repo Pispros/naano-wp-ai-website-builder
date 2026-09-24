@@ -28,7 +28,7 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
     // kimi-k2.5 temperature-restriction guard below so users who manually
     // pin to kimi-k2.5 in Settings → Model Override still get a valid
     // payload.
-    private const DEFAULT_MODEL = "kimi-k2.6";
+    private const DEFAULT_MODEL = "kimi-k3";
     private const MAX_TOKENS = 40000;
     private const TIMEOUT_SECONDS = 600;
 
@@ -69,7 +69,9 @@ class Naano_LLM_Kimi implements Naano_LLM_Provider_Interface
         ];
 
         // kimi-k2.5 does not allow modifying temperature.
-        if (stripos($this->model, "kimi-k2.5") === false) {
+        if (stripos($this->model, "kimi-k3") !== false) {
+            $payload["temperature"] = 1;
+        } elseif (stripos($this->model, "kimi-k2.5") === false) {
             $payload["temperature"] = 0.6;
         }
 

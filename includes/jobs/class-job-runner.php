@@ -312,8 +312,7 @@ class Naano_Job_Runner
 
     /**
      * Decide what to do when the registered shutdown handler detected an
-     * unexpected worker termination. NEVER retries — the policy is to skip
-     * past the failing step so the rest of the job can complete.
+     * unexpected worker termination.
      *
      * Behaviour by job type and current state:
      *
@@ -336,8 +335,13 @@ class Naano_Job_Runner
      *       recent good HTML (either initial or a previous refine output).
      *       Persist it as-is, advance cursor, schedule next tick.
      *
-     *   update_section, enhance_prompt
-     *     → mark_error. Single-section jobs with nothing to skip toward.
+     *   update_section
+     *     → retry up to 2 times (to tolerate transient LSAPI kills),
+     *       then mark_error
+     *
+     *   enhance_prompt
+     *     → retry up to 2 times (to tolerate transient LSAPI kills),
+     *       then mark_error
      *
      * The skipped section IDs are accumulated in state.failed_sections so
      * the UI can mention which parts of the page didn't get the polish
@@ -353,111 +357,155 @@ class Naano_Job_Runner
         }
 
         $type = (string) ($job["type"] ?? "");
-
-        // Only generate_site has a meaningful "next step" to skip toward.
-        // Other job types are single-shot and must mark_error like before.
-        if ($type !== "generate_site") {
-            Naano_Job_Manager::mark_error($job_id, $reason);
-            return;
-        }
-
         $state = (array) ($job["state"] ?? []);
-        $cursor = (int) ($state["cursor"] ?? 0);
 
-        // cursor=0 means setup never finished. We can't skip to a section
-        // when the prerequisites (URL fetches, sibling pages, nav menu)
-        // aren't in state yet.
-        if ($cursor === 0) {
-            Naano_Job_Manager::mark_error($job_id, $reason);
-            return;
-        }
+        // generate_site: skip-on-fail policy
+        if ($type === "generate_site") {
+            $cursor = (int) ($state["cursor"] ?? 0);
 
-        $payload = (array) ($job["payload"] ?? []);
-        $sections = (array) ($payload["sections"] ?? []);
-        $section_count = count($sections);
-        $section_idx = $cursor - 1;
-        $section_type =
-            $section_idx >= 0 && $section_idx < $section_count
-                ? sanitize_text_field($sections[$section_idx])
-                : "";
-        $section_id = $section_type ? sanitize_title($section_type) : "";
+            // cursor=0 means setup never finished. We can't skip to a section
+            // when the prerequisites (URL fetches, sibling pages, nav menu)
+            // aren't in state yet.
+            if ($cursor === 0) {
+                Naano_Job_Manager::mark_error($job_id, $reason);
+                return;
+            }
 
-        $pending = $state["pending_section"] ?? null;
-        $has_pending_html =
-            is_array($pending) &&
-            ($pending["section_id"] ?? "") === $section_id &&
-            trim((string) ($pending["html"] ?? "")) !== "";
+            $payload = (array) ($job["payload"] ?? []);
+            $sections = (array) ($payload["sections"] ?? []);
+            $section_count = count($sections);
+            $section_idx = $cursor - 1;
+            $section_type =
+                $section_idx >= 0 && $section_idx < $section_count
+                    ? sanitize_text_field($sections[$section_idx])
+                    : "";
+            $section_id = $section_type ? sanitize_title($section_type) : "";
 
-        $failed_sections = (array) ($state["failed_sections"] ?? []);
+            $pending = $state["pending_section"] ?? null;
+            $has_pending_html =
+                is_array($pending) &&
+                ($pending["section_id"] ?? "") === $section_id &&
+                trim((string) ($pending["html"] ?? "")) !== "";
 
-        if ($has_pending_html) {
-            // A refinement pass died but we have good (or at least usable)
-            // init/intermediate HTML. Persist it as-is so the user gets a
-            // section instead of a hole.
-            $current_html = (string) $pending["html"];
-            $page_id = (int) ($payload["page_id"] ?? 0);
+            $failed_sections = (array) ($state["failed_sections"] ?? []);
 
-            try {
-                $section_html = Naano_HTML_Sanitizer::extract_section(
-                    $current_html,
-                    $section_id,
-                );
-                if (!$section_html) {
-                    $section_html = $current_html;
-                }
-                if ($page_id > 0 && $section_id !== "") {
-                    $section_manager = new Naano_Section_Manager();
-                    $section_manager->update_section(
-                        $page_id,
+            if ($has_pending_html) {
+                // A refinement pass died but we have good (or at least usable)
+                // init/intermediate HTML. Persist it as-is so the user gets a
+                // section instead of a hole.
+                $current_html = (string) ($pending["html"] ?? "");
+                $page_id = (int) ($payload["page_id"] ?? 0);
+
+                try {
+                    $section_html = Naano_HTML_Sanitizer::extract_section(
+                        $current_html,
                         $section_id,
-                        $section_html,
-                        $section_type,
                     );
+                    if (!$section_html) {
+                        $section_html = $current_html;
+                    }
+                    if ($page_id > 0 && $section_id !== "") {
+                        $section_manager = new Naano_Section_Manager();
+                        $section_manager->update_section(
+                            $page_id,
+                            $section_id,
+                            $section_html,
+                            $section_type,
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    // If even persisting fails, log it but still advance —
+                    // we'd rather lose one section than block the whole job.
+                    Naano_Job_Manager::log($job_id, [
+                        "phase" => "skip_persist_failed",
+                        "section_id" => $section_id,
+                        "message" => $e->getMessage(),
+                    ]);
                 }
-            } catch (\Throwable $e) {
-                // If even persisting fails, log it but still advance —
-                // we'd rather lose one section than block the whole job.
+
                 Naano_Job_Manager::log($job_id, [
-                    "phase" => "skip_persist_failed",
+                    "phase" => "skip_refine_killed",
                     "section_id" => $section_id,
-                    "message" => $e->getMessage(),
+                    "reason" => $reason,
+                    "note" =>
+                        "Refinement worker was killed; persisted the latest pre-refine HTML and moved on.",
+                ]);
+            } else {
+                // Init was killed, no HTML to salvage. Record the section as
+                // failed and move on.
+                $failed_sections[] = [
+                    "section_id" => $section_id,
+                    "section_type" => $section_type,
+                    "reason" => $reason,
+                ];
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "skip_init_killed",
+                    "section_id" => $section_id,
+                    "reason" => $reason,
+                    "note" =>
+                        "Initial generation worker was killed; section skipped (no HTML produced).",
                 ]);
             }
 
-            Naano_Job_Manager::log($job_id, [
-                "phase" => "skip_refine_killed",
-                "section_id" => $section_id,
-                "reason" => $reason,
-                "note" =>
-                    "Refinement worker was killed; persisted the latest pre-refine HTML and moved on.",
-            ]);
-        } else {
-            // Init was killed, no HTML to salvage. Record the section as
-            // failed and move on.
-            $failed_sections[] = [
-                "section_id" => $section_id,
-                "section_type" => $section_type,
-                "reason" => $reason,
-            ];
-            Naano_Job_Manager::log($job_id, [
-                "phase" => "skip_init_killed",
-                "section_id" => $section_id,
-                "reason" => $reason,
-                "note" =>
-                    "Initial generation worker was killed; section skipped (no HTML produced).",
-            ]);
+            // Advance past the failing section regardless of which sub-step
+            // died. The next tick starts cleanly on the next section.
+            $state["cursor"] = $cursor + 1;
+            $state["pending_section"] = null;
+            $state["failed_sections"] = $failed_sections;
+            Naano_Job_Manager::set_state($job_id, $state);
+
+            // Schedule the next tick. The job stays in "running" status —
+            // it's not an error, we just lost one section.
+            self::schedule_next_step($job_id);
+            return;
         }
 
-        // Advance past the failing section regardless of which sub-step
-        // died. The next tick starts cleanly on the next section.
-        $state["cursor"] = $cursor + 1;
-        $state["pending_section"] = null;
-        $state["failed_sections"] = $failed_sections;
-        Naano_Job_Manager::set_state($job_id, $state);
+        // enhance_prompt: retry policy (max 2 attempts)
+        if ($type === "enhance_prompt") {
+            $attempts = (int) ($state["attempts"] ?? 0);
+            if ($attempts < 2) {
+                $state["attempts"] = $attempts + 1;
+                Naano_Job_Manager::set_state($job_id, $state);
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "retry_enhance_prompt",
+                    "attempt" => $attempts + 1,
+                    "reason" => $reason,
+                ]);
+                self::schedule_next_step($job_id);
+                return;
+            }
+            // Max retries reached
+            Naano_Job_Manager::mark_error(
+                $job_id,
+                $reason . " (max retries exceeded)",
+            );
+            return;
+        }
 
-        // Schedule the next tick. The job stays in "running" status —
-        // it's not an error, we just lost one section.
-        self::schedule_next_step($job_id);
+        // update_section: retry policy (max 2 attempts)
+        if ($type === "update_section") {
+            $attempts = (int) ($state["attempts"] ?? 0);
+            if ($attempts < 2) {
+                $state["attempts"] = $attempts + 1;
+                Naano_Job_Manager::set_state($job_id, $state);
+                Naano_Job_Manager::log($job_id, [
+                    "phase" => "retry_update_section",
+                    "attempt" => $attempts + 1,
+                    "reason" => $reason,
+                ]);
+                self::schedule_next_step($job_id);
+                return;
+            }
+            // Max retries reached
+            Naano_Job_Manager::mark_error(
+                $job_id,
+                $reason . " (max retries exceeded)",
+            );
+            return;
+        }
+
+        // Fallback for unknown types
+        Naano_Job_Manager::mark_error($job_id, $reason);
     }
 
     /**
@@ -811,6 +859,7 @@ class Naano_Job_Runner
     /**
      * State shape (this job type only ever updates ONE section):
      *   [
+     *     'attempts'     => int,    // retry counter (for LSAPI kill policy)
      *     'phase'        => 'init' | 'refine' | null,
      *     'pass'         => int,    // 0 before any refine; 1..P after each refine
      *     'html'         => string, // current best HTML (raw, pre-extract)
@@ -834,6 +883,11 @@ class Naano_Job_Runner
         $redirects = (array) ($payload["redirects"] ?? []);
         $client_refs = (array) ($payload["client_refs"] ?? []);
         $wp_menu_id = (int) ($payload["wp_menu_id"] ?? 0);
+
+        // Initialize attempts counter if not present (for retry policy)
+        if (!isset($state["attempts"])) {
+            $state["attempts"] = 0;
+        }
 
         if (!$page_id || !$section_id || !$instruction) {
             throw new RuntimeException("Invalid update_section payload.");
@@ -1030,10 +1084,18 @@ class Naano_Job_Runner
         $context = (string) ($payload["context"] ?? "initial");
         $page_name = (string) ($payload["page_name"] ?? "");
 
+        // Initialize attempts counter if not present (for retry policy)
+        $state = Naano_Job_Manager::get_state($job_id);
+        if (!isset($state["attempts"])) {
+            $state["attempts"] = 0;
+            Naano_Job_Manager::set_state($job_id, $state);
+        }
+
         Naano_Job_Manager::log($job_id, [
             "phase" => "enhance_prompt:start",
             "context" => $context,
             "raw_text_length" => strlen($raw_text),
+            "attempt" => $state["attempts"],
         ]);
 
         if (!$raw_text) {

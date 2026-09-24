@@ -4,7 +4,7 @@ Tags: ai, website builder, claude, gemini, page builder
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 2.3.4
+Stable tag: 2.3.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -148,6 +148,15 @@ No data is sent to any of these services without an explicit user action (clicki
 
 == Changelog ==
 
+= 2.3.6 =
+* Added: LSAPI-compliant tick-based job scheduling system. Each LLM call now runs in its own WP-Cron tick, ensuring compatibility with shared hosting environments that enforce LSAPI_MAX_PROCESS_TIME limits.
+* Added: Retry policy for `enhance_prompt` and `update_section` jobs (max 2 attempts) to tolerate transient LSAPI kills.
+* Added: Enhanced error handling with tiered recovery — skip failing sections for `generate_site`, retry for single-shot jobs.
+* Fixed: State persistence between ticks ensures multi-step jobs survive host kills and resume cleanly.
+
+= 2.3.5 =
+* Fixed: Kimi-K3 now correctly uses temperature=1 (Kimi-K2.5 still uses the default 0.6, but cannot be changed).
+
 = 2.3.4 =
 * Global CSS is now applied on the very first live-preview render when you open the editor (passed in the localized page data and pre-filled before the first paint), instead of after the first interaction.
 * Added French translations for the new JS tab (label, help text, and the syntax-error notice); updated .po/.mo/.pot.
@@ -185,6 +194,9 @@ No data is sent to any of these services without an explicit user action (clicki
 * Conversation history with automatic trimming.
 
 == Upgrade Notice ==
+
+= 2.3.6 =
+Adds LSAPI-compliant tick-based job scheduling with retry policies for enhanced reliability on shared hosting. Recommended for everyone.
 
 = 2.3.4 =
 Adds a per-button JS tab to the Element Editor and applies your Global CSS the moment the editor opens. Safe, additive update — recommended for everyone.

@@ -75,7 +75,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_generate_site(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         $page_name = sanitize_text_field(wp_unslash($_POST["page_name"] ?? ""));
@@ -205,7 +205,9 @@ class Naano_Ajax_Handler
             "description" => $description,
             "sections" => $sections,
             "initial_references" => $initial_refs,
-            "wp_menu_id" => (int) sanitize_text_field(wp_unslash($_POST["wp_menu"] ?? "0")),
+            "wp_menu_id" => (int) sanitize_text_field(
+                wp_unslash($_POST["wp_menu"] ?? "0"),
+            ),
         ];
 
         $job_id = Naano_Job_Manager::create("generate_site", $payload);
@@ -230,7 +232,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_update_section(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -270,7 +272,9 @@ class Naano_Ajax_Handler
             "assets" => $assets,
             "redirects" => $redirects,
             "client_refs" => $client_refs,
-            "wp_menu_id" => (int) sanitize_text_field(wp_unslash($_POST["wp_menu"] ?? "0")),
+            "wp_menu_id" => (int) sanitize_text_field(
+                wp_unslash($_POST["wp_menu"] ?? "0"),
+            ),
         ];
 
         $job_id = Naano_Job_Manager::create("update_section", $payload);
@@ -287,7 +291,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_poll_job(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $job_id = sanitize_text_field(wp_unslash($_POST["job_id"] ?? ""));
         if (!$job_id) {
@@ -358,7 +362,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_api_key(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -392,7 +396,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_firecrawl_key(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -429,7 +433,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_test_firecrawl(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -506,7 +510,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_global_config(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -543,7 +547,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_enhance_prompt(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $raw_text = sanitize_textarea_field(
             wp_unslash($_POST["raw_text"] ?? ""),
@@ -568,7 +572,9 @@ class Naano_Ajax_Handler
             "page_name" => $page_name,
         ];
 
+        // Create job with initial attempts counter
         $job_id = Naano_Job_Manager::create("enhance_prompt", $payload);
+        Naano_Job_Manager::set_state($job_id, ["attempts" => 0]);
 
         Naano_Job_Runner::schedule_next_step($job_id);
 
@@ -582,7 +588,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_test_connection(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $provider = sanitize_text_field(wp_unslash($_POST["provider"] ?? ""));
         $api_key = sanitize_text_field(wp_unslash($_POST["api_key"] ?? ""));
@@ -619,7 +625,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_assets(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         if (!$page_id) {
@@ -659,7 +665,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_redirects(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         if (!$page_id) {
@@ -698,7 +704,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_add_reference(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -738,7 +744,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_remove_reference(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -770,7 +776,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_delete_section(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         $section_id = sanitize_text_field(
@@ -799,7 +805,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_reorder_sections(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
         $order = array_map(
@@ -829,7 +835,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_export_html(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         $page_id = self::get_int("page_id");
 
@@ -868,7 +874,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_section_html(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -927,9 +933,7 @@ class Naano_Ajax_Handler
             // is the explicit "delete this section" signal handled below).
             $raw_html = (string) ($entry["html"] ?? "");
             $html =
-                $raw_html === ""
-                    ? ""
-                    : Naano_HTML_Sanitizer::clean($raw_html);
+                $raw_html === "" ? "" : Naano_HTML_Sanitizer::clean($raw_html);
             if ($section_id === "") {
                 continue;
             }
@@ -973,7 +977,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_get_failed_sections(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -1006,7 +1010,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_save_as_page(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("publish_pages")) {
             wp_send_json_error([
@@ -1100,7 +1104,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_set_homepage(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("manage_options")) {
             wp_send_json_error([
@@ -1139,7 +1143,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_add_custom_html_section(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -1231,7 +1235,7 @@ class Naano_Ajax_Handler
      */
     public static function handle_naano_update_custom_html_section(): void
     {
-        check_ajax_referer( "naano_builder_nonce", "nonce" );
+        check_ajax_referer("naano_builder_nonce", "nonce");
 
         if (!current_user_can("edit_pages")) {
             wp_send_json_error([
@@ -1371,10 +1375,7 @@ class Naano_Ajax_Handler
 
         update_option("naano_site_slogan", $slogan);
         update_option("naano_site_favicon_url", $favicon_url);
-        update_option(
-            "naano_site_favicon_attachment_id",
-            $favicon_attach_id,
-        );
+        update_option("naano_site_favicon_attachment_id", $favicon_attach_id);
         update_option("naano_maintenance_enabled", $maintenance_enabled);
         update_option("naano_maintenance_page_id", $maintenance_page_id);
 
@@ -1425,10 +1426,7 @@ class Naano_Ajax_Handler
 
         if (!$page_id) {
             wp_send_json_error([
-                "message" => __(
-                    "Missing page_id.",
-                    "naano-ai-website-builder",
-                ),
+                "message" => __("Missing page_id.", "naano-ai-website-builder"),
             ]);
         }
         if (!current_user_can("edit_post", $page_id)) {
@@ -1485,10 +1483,10 @@ class Naano_Ajax_Handler
         // Nonce verification is performed by every caller of get_int() at
         // the top of their handler via check_ajax_referer().
         // phpcs:disable WordPress.Security.NonceVerification.Missing
-        if ( ! isset( $_POST[ $key ] ) ) {
+        if (!isset($_POST[$key])) {
             return 0;
         }
-        return (int) sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+        return (int) sanitize_text_field(wp_unslash($_POST[$key]));
         // phpcs:enable WordPress.Security.NonceVerification.Missing
     }
 }
