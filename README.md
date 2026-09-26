@@ -4,7 +4,7 @@
 
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777BB4?logo=php)
-![Version](https://img.shields.io/badge/Version-2.3.6-9A3412)
+![Version](https://img.shields.io/badge/Version-2.3.9-9A3412)
 ![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
 
 [Documentation](https://github.com/Pispros/naano-wp-ai-website-builder) · [Download latest release](https://github.com/Pispros/naano-wp-ai-website-builder/releases) · [Changelog](CHANGELOG.md)
