@@ -134,7 +134,7 @@ After updating, **hard-reload** the builder page (`Cmd/Ctrl + Shift + R`) to fet
 
 1. **Activate** the plugin
 2. Go to **Naano AI Builder → Settings**
-3. Select your LLM **Provider**, paste your **API Key**, click **Test Connection**
+3. Select your LLM **Provider**, paste your **API Key**, click **Test Connection** and **Save Settings**
 4. Add **Custom Design Variables** (optional)
 5. Click **Save Settings**
 6. Go to **Naano AI Builder → AI Pages** → **Create New Page with AI**
